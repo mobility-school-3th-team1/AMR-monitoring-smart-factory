@@ -46,14 +46,14 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - [x] AmrStatusLogRepository.java
 
 ### 2. DTO 클래스 구현
-- [ ] 요청/응답 DTO 생성 (API 정의.md 기반).
-  - [ ] 인증 관련 DTO (LoginRequestDto, LoginResponseDto 등).
-  - [ ] 대시보드 DTO (DashboardSummaryDto 등).
-  - [ ] AMR 관련 DTO (AmrDto, AmrStatusHistoryDto 등).
-  - [ ] 충전 관련 DTO (ChargingStationDto 등).
-  - [ ] 알람 관련 DTO (AlarmDto 등).
-  - [ ] 작업 이력 DTO (WorkHistoryDto 등).
-  - [ ] 분석 DTO (AnalyticsDto 등).
+- [x] 요청/응답 DTO 생성 (API 정의.md 기반).
+  - [x] 인증 관련 DTO (LoginRequestDto, LoginResponseDto, UserDto, RefreshTokenRequestDto, RefreshTokenResponseDto).
+  - [x] 대시보드 DTO (DashboardSummaryDto, AlarmSummaryDto, RecentAlarmsDto).
+  - [x] AMR 관련 DTO (AmrDto, AmrStatusHistoryDto, AmrPathDto, AmrCommandRequestDto, AmrCommandResponseDto 등).
+  - [x] 충전 관련 DTO (ChargingStationDto, ChargingStationListDto, ForecastBucketDto, ChargingForecastDto).
+  - [x] 알람 관련 DTO (AlarmDto, AlarmListResponseDto, AlarmAckRequestDto, AlarmAckResponseDto).
+  - [x] 작업 이력 DTO (WorkHistoryDto, WorkHistoryListResponseDto).
+  - [x] 분석 DTO (AnalyticsKpiDto, AnalyticsBatteryDto, AnalyticsWorkloadDto).
 
 ### 3. 보안 및 인증 구현
 - [ ] Spring Security 설정 클래스 생성 (JwtAuthenticationFilter, SecurityConfig).
