@@ -14,23 +14,36 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 ### 1. 데이터베이스 설정 및 엔티티 구현
 - [x] application.yaml에 H2 인메모리 DB 설정 추가 (MySQL 대신 개발용).
 - [x] build.gradle에 JPA 및 H2 의존성 추가.
-- [ ] JPA 엔티티 클래스 생성 (데이터 스키마 설계.md의 ERD 기반).
+- [x] JPA 엔티티 클래스 생성 (데이터 스키마 설계.md의 ERD 기반).
   - [x] Site.java
   - [x] Area.java
-  - [ ] EnvSensor.java
-  - [ ] EnvSensor.java
-  - [ ] EnvReading.java
-  - [ ] Product.java
-  - [ ] ProcessMaster.java
-  - [ ] Routing.java
-  - [ ] WorkOrder.java
-  - [ ] AmrChargeStation.java
-  - [ ] AmrChargingSession.java
-  - [ ] Amr.java
-  - [ ] WipLot.java
-  - [ ] AmrTask.java
-  - [ ] AmrStatusLog.java
-- [ ] JPA Repository 인터페이스 생성 (각 엔티티별).
+  - [x] EnvSensor.java
+  - [x] EnvReading.java
+  - [x] Product.java
+  - [x] ProcessMaster.java
+  - [x] Routing.java
+  - [x] WorkOrder.java
+  - [x] AmrChargeStation.java
+  - [x] Amr.java
+  - [x] AmrChargingSession.java
+  - [x] WipLot.java
+  - [x] AmrTask.java
+  - [x] AmrStatusLog.java
+- [x] JPA Repository 인터페이스 생성 (각 엔티티별).
+  - [x] SiteRepository.java
+  - [x] AreaRepository.java
+  - [x] EnvSensorRepository.java
+  - [x] EnvReadingRepository.java
+  - [x] ProductRepository.java
+  - [x] ProcessMasterRepository.java
+  - [x] RoutingRepository.java
+  - [x] WorkOrderRepository.java
+  - [x] AmrChargeStationRepository.java
+  - [x] AmrRepository.java
+  - [x] AmrChargingSessionRepository.java
+  - [x] WipLotRepository.java
+  - [x] AmrTaskRepository.java
+  - [x] AmrStatusLogRepository.java
 
 ### 2. DTO 클래스 구현
 - [ ] 요청/응답 DTO 생성 (API 정의.md 기반).
