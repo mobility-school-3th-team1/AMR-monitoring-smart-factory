@@ -20,6 +20,7 @@ AMR(자율 이동 로봇) 기반 스마트 팩토리 통합 모니터링 시스�
 | [`BE/`](BE/) | 백엔드. 작업 시 [`BE/AGENTS.md`](BE/AGENTS.md)를 우선합니다. |
 | [`DB/`](DB/) | DB 스키마 및 DAS. 작업 시 [`DB/AGENTS.md`](DB/AGENTS.md)를 우선합니다. |
 | [`docs/`](docs/) | 설계 및 명세 문서 |
+| [`docs/ADR/`](docs/ADR/) | 아키텍처 결정 기록 (ADR). 템플릿: [`adr_template.md`](docs/ADR/adr_template.md) |
 | [`.github/`](.github/) | 이슈 및 PR 템플릿 |
 | [`AGENTS.md`](AGENTS.md) | 프로젝트 루트 공통 안내 |
 
@@ -40,6 +41,10 @@ AMR(자율 이동 로봇) 기반 스마트 팩토리 통합 모니터링 시스�
 2. [API 정의](docs/API%20정의.md)로 클라이언트와 서버 간 계약을 파악합니다.
 3. [데이터 스키마 설계](docs/데이터%20스키마%20설계.md)로 저장 구조를 파악합니다.
 4. [협업 컨벤션](docs/협업%20컨벤션.md)으로 브랜치, PR, 문서 수정 순서를 맞춥니다.
+
+### 아키텍처 결정 기록 (ADR)
+
+스택 변경, 경계 변경, 규칙 변경 등 중요한 결정은 [`docs/ADR/`](docs/ADR/)에 ADR 파일로 기록합니다. 파일명 규칙과 작성 방법은 [`docs/ADR/adr_template.md`](docs/ADR/adr_template.md)와 [협업 컨벤션](docs/협업%20컨벤션.md)의 ADR 섹션을 따릅니다.
 
 ## 협업
 
