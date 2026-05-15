@@ -56,9 +56,9 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - [x] 분석 DTO (AnalyticsKpiDto, AnalyticsBatteryDto, AnalyticsWorkloadDto).
 
 ### 3. 보안 및 인증 구현
-- [ ] Spring Security 설정 클래스 생성 (JwtAuthenticationFilter, SecurityConfig).
-- [ ] JWT 유틸리티 클래스 생성 (토큰 생성/검증).
-- [ ] 사용자 엔티티 및 Repository 추가 (기본 사용자 관리).
+- [x] Spring Security 설정 클래스 생성 (JwtAuthenticationFilter, SecurityConfig).
+- [x] JWT 유틸리티 클래스 생성 (토큰 생성/검증).
+- [x] 사용자 엔티티 및 Repository 추가 (기본 사용자 관리).
 
 ### 4. 컨트롤러 구현
 - [ ] AuthController.java (로그인, 리프레시, 로그아웃).
