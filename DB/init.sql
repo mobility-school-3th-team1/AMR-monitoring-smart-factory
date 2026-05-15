@@ -1,5 +1,9 @@
 -- [1] 기존 테이블 삭제 (자식 테이블부터 역순 삭제)
 DROP TABLE IF EXISTS AMR_STATUS_LOG;
+DROP TABLE IF EXISTS AMR_COMMAND;
+DROP TABLE IF EXISTS ALARM_LOG;
+DROP TABLE IF EXISTS REFRESH_TOKEN;
+DROP TABLE IF EXISTS USER_ACCOUNT;
 DROP TABLE IF EXISTS AMR_TASK;
 DROP TABLE IF EXISTS AMR_CHARGING_LOG;
 DROP TABLE IF EXISTS AMR_MASTER;
@@ -171,6 +175,51 @@ CREATE TABLE AMR_STATUS_LOG (
     CONSTRAINT FK_STAT_LOG_AREA FOREIGN KEY (area_id) REFERENCES AREA(area_id)
 );
 
+-- 15. USER_ACCOUNT
+CREATE TABLE USER_ACCOUNT (
+    user_id VARCHAR(50) PRIMARY KEY,
+    username VARCHAR(100) UNIQUE,
+    password_hash VARCHAR(255),
+    display_name VARCHAR(100),
+    role VARCHAR(50),
+    created_at DATETIME
+);
+
+-- 16. REFRESH_TOKEN
+CREATE TABLE REFRESH_TOKEN (
+    token VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(50),
+    expires_at DATETIME,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at DATETIME,
+    CONSTRAINT FK_REFRESH_USER FOREIGN KEY (user_id) REFERENCES USER_ACCOUNT(user_id)
+);
+
+-- 17. ALARM_LOG
+CREATE TABLE ALARM_LOG (
+    alarm_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    source_type VARCHAR(50),
+    source_id VARCHAR(50),
+    level VARCHAR(50),
+    message VARCHAR(255),
+    occurred_at DATETIME,
+    acknowledged BOOLEAN DEFAULT FALSE,
+    acknowledged_at DATETIME
+);
+
+-- 18. AMR_COMMAND
+CREATE TABLE AMR_COMMAND (
+    command_id VARCHAR(50) PRIMARY KEY,
+    amr_id INT,
+    command_type VARCHAR(50),
+    params TEXT,
+    accepted BOOLEAN DEFAULT FALSE,
+    status VARCHAR(50),
+    requested_at DATETIME,
+    executed_at DATETIME,
+    CONSTRAINT FK_COMMAND_AMR FOREIGN KEY (amr_id) REFERENCES AMR_MASTER(amr_id)
+);
+
 
 -- [3] 임시 데이터 삽입
 
@@ -226,3 +275,13 @@ INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_wei
 VALUES (1, 'AREA_INBOUND', 'IDLE', 50, 200, 0, 0, 95, 99, 30.0, '2026-05-15 09:00:00');
 INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_weight, battery_pct, SOH_pct, battery_temp, updated_at)
 VALUES (2, 'AREA_QC', 'CHARGING', 300, 150, 180, 0, 20, 95, 28.5, '2026-05-15 10:45:00');
+
+-- 인증 및 알람 샘플 데이터
+INSERT INTO USER_ACCOUNT (user_id, username, password_hash, display_name, role, created_at)
+VALUES ('user-001', 'admin', '$2a$10$examplehashforadminpassword', '관리자', 'admin', '2026-05-01 08:00:00');
+INSERT INTO REFRESH_TOKEN (token, user_id, expires_at, revoked, created_at)
+VALUES ('refresh-token-example', 'user-001', '2026-05-16 08:00:00', FALSE, '2026-05-15 08:00:00');
+INSERT INTO ALARM_LOG (source_type, source_id, level, message, occurred_at, acknowledged, acknowledged_at)
+VALUES ('CHARGE_STATION', '1', 'warning', '충전 스테이션 1 혼잡 상태', '2026-05-13 14:29:00', FALSE, NULL);
+INSERT INTO AMR_COMMAND (command_id, amr_id, command_type, params, accepted, status, requested_at)
+VALUES ('cmd-001', 1, 'emergencyStop', '{}', TRUE, 'PENDING', '2026-05-15 11:00:00');
