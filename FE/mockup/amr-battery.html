@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Factory - AMR 현황 (FHD No-Scroll)</title>
+    <style>
+        /* 1. FHD 고정 레이아웃 및 테마 설정 */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Malgun Gothic', 'Pretendard', sans-serif; 
+            background-color: #f1f3f5; 
+            color: #2d3436; 
+            display: flex; 
+            height: 100vh; 
+            width: 100vw;
+            overflow: hidden; 
+        }
+        /* Sidebar - 메뉴 확장 */
+        .sidebar { width: 200px; background: #1e293b; color: #cbd5e1; padding: 20px 15px; flex-shrink: 0; }
+        .sidebar h2 { font-size: 0.9rem; margin-bottom: 15px; color: #3b82f6; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .nav-item { display: block; padding: 11px 12px; margin-bottom: 4px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; text-decoration: none; color: #cbd5e1; }
+        .nav-item.active { background: #3b82f6; color: white; font-weight: bold; border: none; }
+
+        .main-container { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        
+        /* Header */
+        .header { height: 52px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(219, 228, 240, 0.9); display: flex; align-items: center; justify-content: space-between; padding: 0 18px 0 22px; flex-shrink: 0; }
+        .header-title { display: flex; flex-direction: column; gap: 2px; }
+        .header-title h2 { font-size: 0.98rem; letter-spacing: -0.02em; color: #1f2937; }
+        .header-title span { font-size: 0.72rem; color: #64748b; }
+        .header-meta { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; color: #64748b; }
+        .pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 999px; background: #f8fafc; border: 1px solid #dbe4f0; white-space: nowrap; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.14); }
+        .btn-logout { padding: 7px 14px; border-radius: 7px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 0.76rem; font-weight: 700; cursor: pointer; }
+
+        /* Content Area */
+        .content-area { flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px; overflow: hidden; }
+
+        /* Widget Common */
+        .widget { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; min-height: 0; }
+        .widget-title { font-size: 0.75rem; font-weight: 700; margin-bottom: 10px; border-left: 3px solid #3b82f6; padding-left: 8px; flex-shrink: 0; }
+
+        .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .sum-card { background: white; border-radius: 8px; padding: 10px 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-top: 3px solid #3b82f6; }
+        .sum-card h4 { font-size: 0.68rem; color: #64748b; margin-bottom: 4px; }
+        .sum-card .val { font-size: 1.15rem; font-weight: 800; color: #1e293b; }
+        .sum-card .sub { font-size: 0.58rem; color: #94a3b8; margin-top: 2px; line-height: 1.35; }
+        
+        /* Row Layouts */
+        .row-top { display: grid; grid-template-columns: 1fr; gap: 10px; height: 50%; }
+        .row-bottom { display: grid; grid-template-columns: 1.8fr 1fr; gap: 10px; flex: 1; min-height: 0; }
+
+        /* Charging Station Cards - Horizontal Layout */
+        .stations-grid { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .station-card { border: 1px solid #dbe4f0; border-radius: 8px; padding: 12px; background: linear-gradient(to right, #fafbfc 0%, #ffffff 100%); display: grid; grid-template-columns: 2fr 1.2fr 2.5fr; gap: 12px; align-items: center; }
+        .station-card.busy { background: linear-gradient(to right, #fffaf0 0%, #ffffff 100%); border-color: #fcd34d; }
+        
+        /* Station Info Left */
+        .station-info { display: flex; flex-direction: column; gap: 6px; }
+        .station-name { font-size: 0.78rem; font-weight: 800; color: #0f172a; }
+        .station-status { font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; font-weight: bold; display: inline-block; width: fit-content; }
+        .status-normal { background: #e8f8f1; color: #0e9f6e; }
+        .status-busy { background: #fff5e6; color: #d97706; }
+        .station-meta { font-size: 0.62rem; color: #64748b; }
+        
+        /* Slot Indicator */
+        .slot-indicator { display: flex; gap: 6px; align-items: center; }
+        .slots-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(18px, 1fr)); gap: 4px; flex: 1; max-width: 120px; }
+        .slot { width: 100%; aspect-ratio: 1; border-radius: 4px; border: 1px solid #cbd5e1; background: #f1f5f9; transition: all 0.2s; }
+        .slot.active { background: #10b981; border-color: #059669; box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
+        .slot-label { font-size: 0.62rem; color: #64748b; white-space: nowrap; }
+        
+        /* AMR List in Card */
+        .amr-list { display: flex; flex-direction: column; gap: 5px; }
+        .amr-row { display: grid; grid-template-columns: 0.7fr 1fr auto; gap: 8px; align-items: center; font-size: 0.65rem; padding: 6px 8px; border-radius: 5px; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .amr-row .left { display: flex; flex-direction: column; gap: 2px; }
+        .amr-row .middle { display: flex; flex-direction: column; gap: 2px; }
+        .amr-row .right { text-align: right; color: #475569; font-size: 0.62rem; line-height: 1.25; font-weight: 600; }
+        .amr-row strong { font-size: 0.68rem; color: #0f172a; font-weight: 700; }
+        .progress { margin-top: 3px; height: 4px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+        .progress > span { display: block; height: 100%; border-radius: 999px; background: #10b981; }
+        .progress.blue > span { background: #3b82f6; }
+        .progress.orange > span { background: #f59e0b; }
+        
+        /* Table Styling */
+        .table-wrapper { flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+        th { background: #f8fafc; padding: 8px; border-bottom: 2px solid #e2e8f0; text-align: left; color: #64748b; position: sticky; top: 0; }
+        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+        .badge { padding: 2px 5px; border-radius: 3px; font-size: 0.6rem; font-weight: bold; }
+        
+        /* Summary & Alarms */
+        .side-widgets { display: flex; flex-direction: column; gap: 10px; }
+        .summary-box { flex: 1; display: flex; align-items: center; justify-content: space-around; }
+        .donut-mini { width: 70px; height: 70px; border-radius: 50%; border: 10px solid #10b981; border-top-color: #f59e0b; border-left-color: #3b82f6; position: relative; }
+        .donut-mini::before { content: "총 12대"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.55rem; font-weight: bold; width: 40px; text-align: center; }
+        
+        .alarm-list { flex: 1; border: 1px solid #f1f5f9; border-radius: 6px; padding: 5px; overflow-y: auto; }
+        .alarm-item { font-size: 0.65rem; padding: 5px; border-bottom: 1px solid #f1f5f9; display: flex; gap: 8px; }
+        .alarm-icon { color: #ef4444; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h2>Fleet Management System</h2>
+        <a class="nav-item" href="dashboard.html">메인 대시보드</a>
+        <a class="nav-item" href="amr-list.html">AMR 관리</a>
+        <a class="nav-item" href="amr-detail.html">AMR 개별 관제</a>
+        <a class="nav-item active" href="amr-battery.html">충전 현황</a>
+        <a class="nav-item" href="work-history.html">작업 이력</a>
+    </aside>
+
+    <div class="main-container">
+        <header class="header">
+            <div class="header-title">
+                <h2>AMR 배터리 현황</h2>
+                <span>충전 스테이션 및 배터리 관리 현황</span>
+            </div>
+            <div class="header-meta">
+                <span class="pill"><span class="dot"></span>실시간 갱신</span>
+                <span class="pill">2026-05-12 09:40:00</span>
+                <button class="btn-logout" onclick="logout()">LOGOUT</button>
+            </div>
+        </header>
+
+        <div class="content-area">
+            <div class="summary-row">
+                <div class="sum-card" style="border-top-color:#3b82f6;"><h4>운영 충전 스테이션</h4><div class="val">4</div><div class="sub">정상 3 / 혼잡 1</div></div>
+                <div class="sum-card" style="border-top-color:#10b981;"><h4>충전 중 AMR</h4><div class="val">11</div><div class="sub">현재 충전기에 연결된 AMR 수</div></div>
+                <div class="sum-card" style="border-top-color:#f59e0b;"><h4>평균 충전률</h4><div class="val">67%</div><div class="sub">전체 스테이션 평균</div></div>
+                <div class="sum-card" style="border-top-color:#ef4444;"><h4>완충 예상</h4><div class="val">1h 20m</div><div class="sub">가장 오래 걸리는 AMR 기준</div></div>
+            </div>
+
+            <div class="row-top">
+                <article class="widget">
+                    <div class="widget-title">충전 스테이션별 현황</div>
+                    <div class="stations-grid">
+                        <!-- Station 1 -->
+                        <div class="station-card">
+                            <div class="station-info">
+                                <div>
+                                    <p class="station-name">충전 스테이션 1 · 원자재 창고</p>
+                                    <p class="station-meta">상태: 정상 · 평균 배터리 61%</p>
+                                </div>
+                                <span class="station-status status-normal">정상</span>
+                            </div>
+                            
+                            <div class="slot-indicator">
+                                <span class="slot-label">충전기 3/4 사용</span>
+                                <div class="slots-container">
+                                    <div class="slot active"></div>
+                                    <div class="slot active"></div>
+                                    <div class="slot active"></div>
+                                    <div class="slot"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="amr-list">
+                                <div class="amr-row"><div class="left"><strong>AMR-01</strong></div><div class="middle"><div class="progress" style="width:78%; background:#e2e8f0;"><span style="width:78%;"></span></div><span style="font-size:0.6rem; color:#64748b;">78%</span></div><div class="right">42분</div></div>
+                                <div class="amr-row"><div class="left"><strong>AMR-02</strong></div><div class="middle"><div class="progress" style="width:45%; background:#e2e8f0;"><span style="width:45%;"></span></div><span style="font-size:0.6rem; color:#64748b;">45%</span></div><div class="right">1h 12m</div></div>
+                                <div class="amr-row"><div class="left"><strong>AMR-06</strong></div><div class="middle"><div class="progress" style="width:61%; background:#e2e8f0;"><span style="width:61%;"></span></div><span style="font-size:0.6rem; color:#64748b;">61%</span></div><div class="right">55분</div></div>
+                            </div>
+                        </div>
+
+                        <!-- Station 2 -->
+                        <div class="station-card">
+                            <div class="station-info">
+                                <div>
+                                    <p class="station-name">충전 스테이션 2 · 포장실</p>
+                                    <p class="station-meta">상태: 정상 · 평균 배터리 54%</p>
+                                </div>
+                                <span class="station-status status-normal">정상</span>
+                            </div>
+                            
+                            <div class="slot-indicator">
+                                <span class="slot-label">충전기 2/4 사용</span>
+                                <div class="slots-container">
+                                    <div class="slot active"></div>
+                                    <div class="slot active"></div>
+                                    <div class="slot"></div>
+                                    <div class="slot"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="amr-list">
+                                <div class="amr-row"><div class="left"><strong>AMR-03</strong></div><div class="middle"><div class="progress" style="width:50%; background:#e2e8f0;"><span style="width:50%;"></span></div><span style="font-size:0.6rem; color:#64748b;">50%</span></div><div class="right">1h 00m</div></div>
+                                <div class="amr-row"><div class="left"><strong>AMR-09</strong></div><div class="middle"><div class="progress" style="width:58%; background:#e2e8f0;"><span style="width:58%;"></span></div><span style="font-size:0.6rem; color:#64748b;">58%</span></div><div class="right">58분</div></div>
+                            </div>
+
+                        </div>
+
+                        <!-- Station 3 -->
+                        <div class="station-card busy">
+                            <div class="station-info">
+                                <div>
+                                    <p class="station-name">충전 스테이션 3 · 출하장</p>
+                                    <p class="station-meta">상태: 혼잡 · 평균 배터리 72%</p>
+                                </div>
+                                <span class="station-status status-busy">혼잡</span>
+                            </div>
+                            
+                            <div class="slot-indicator">
+                                <span class="slot-label">충전기 4/4 사용 (100%)</span>
+                                <div class="slots-container">
+                                    <div class="slot active"></div>
+                                    <div class="slot active"></div>
+                                    <div class="slot active"></div>
+                                    <div class="slot active"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="amr-list">
+                                <div class="amr-row"><div class="left"><strong>AMR-04</strong></div><div class="middle"><div class="progress" style="width:21%; background:#e2e8f0;"><span style="width:21%;"></span></div><span style="font-size:0.6rem; color:#ef4444;">21%</span></div><div class="right">1h 45m</div></div>
+                                <div class="amr-row"><div class="left"><strong>AMR-05</strong></div><div class="middle"><div class="progress" style="width:40%; background:#e2e8f0;"><span style="width:40%;"></span></div><span style="font-size:0.6rem; color:#64748b;">40%</span></div><div class="right">1h 00m</div></div>
+                                <div class="amr-row"><div class="left"><strong>AMR-07</strong></div><div class="middle"><div class="progress" style="width:60%; background:#e2e8f0;"><span style="width:60%;"></span></div><span style="font-size:0.6rem; color:#64748b;">60%</span></div><div class="right">38분</div></div>
+                                <div class="amr-row"><div class="left"><strong>AMR-08</strong></div><div class="middle"><div class="progress" style="width:90%; background:#e2e8f0;"><span style="width:90%;"></span></div><span style="font-size:0.6rem; color:#10b981;">90%</span></div><div class="right">12분</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <div class="row-bottom">
+                <article class="widget">
+                    <div class="widget-title">충전 대기 큐</div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead><tr><th>AMR ID</th><th>대기시간</th><th>충전소</th><th>상태</th></tr></thead>
+                            <tbody>
+                                <tr><td>AMR-04</td><td>1h 45m</td><td>ST 3</td><td><span class="badge" style="background:#fff5e6;color:#d97706;">대기</span></td></tr>
+                                <tr><td>AMR-06</td><td>55m</td><td>ST 1</td><td><span class="badge" style="background:#e8f8f1;color:#0e9f6e;">충전 중</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+                <aside class="side-widgets">
+                    <div class="widget" style="flex:0.6;">
+                        <div class="widget-title">충전 완료 예상</div>
+                        <div class="summary-box">
+                            <div class="donut-mini" style="border-top-color:#10b981;border-left-color:#f59e0b;"></div>
+                            <div style="font-size:0.65rem; line-height:1.6;">
+                                <div><span style="color:#10b981;">●</span> 30분 이내: 3대</div>
+                                <div><span style="color:#3b82f6;">●</span> 1시간 이내: 4대</div>
+                                <div><span style="color:#f59e0b;">●</span> 1시간 초과: 4대</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="widget alarm-list">
+                        <div class="widget-title" style="margin-bottom:6px;">충전 스테이션 알림</div>
+                        <div class="alarm-item">
+                            <span class="alarm-icon">⚠️</span>
+                            <div><strong>충전 스테이션 3 혼잡 상태</strong> (사용률 100%) <br><span style="color:#94a3b8">14:29</span></div>
+                        </div>
+                        <div class="alarm-item">
+                            <span class="alarm-icon">⚠️</span>
+                            <div><strong>AMR-04 완충까지 1시간 45분 예상</strong> <br><span style="color:#94a3b8">14:28</span></div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+    <script>
+        function logout() {
+            window.location.href = 'auth-login.html';
+        }
+    </script>
+</body>
+</html>

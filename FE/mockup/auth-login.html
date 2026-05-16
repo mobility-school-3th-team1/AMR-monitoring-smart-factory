@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Management System - 로그인</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #eef2f7;
+            --panel: #ffffff;
+            --text: #1f2937;
+            --muted: #64748b;
+            --blue: #3b82f6;
+            --ok: #10b981;
+            --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', 'Pretendard', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 30%),
+                linear-gradient(180deg, #f5f8fc 0%, #eef2f7 100%);
+            color: var(--text);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--panel);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 48px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            font-size: 24px;
+        }
+
+        .login-header h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .login-header p {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+            display: block;
+        }
+
+        .form-input {
+            padding: 11px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: 'Malgun Gothic', 'Pretendard', sans-serif;
+            color: var(--text);
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--blue);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #cbd5e1;
+        }
+
+        .form-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn-login {
+            padding: 11px 16px;
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-login:hover {
+            background: #2563eb;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: var(--blue);
+        }
+
+        .remember-me label {
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        .forgot-password {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        .login-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #cbd5e1;
+            font-size: 0.75rem;
+            margin: 4px 0;
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #cbd5e1;
+        }
+
+        .demo-note {
+            background: #fffbeb;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.72rem;
+            color: #92400e;
+            line-height: 1.5;
+        }
+
+        .demo-note strong {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 600px) {
+            .login-card {
+                padding: 36px 24px;
+            }
+
+            .login-header h1 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">⚙️</div>
+                <h1>Fleet Management System</h1>
+                <p>스마트팩토리 자율주행로봇 관리 시스템</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">사용자명</label>
+                    <input 
+                        type="text" 
+                        class="form-input" 
+                        id="username"
+                        placeholder="사용자명을 입력하세요"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">비밀번호</label>
+                    <input 
+                        type="password" 
+                        class="form-input"
+                        id="password"
+                        placeholder="비밀번호를 입력하세요"
+                        required
+                    >
+                </div>
+
+                <div class="form-footer">
+                    <div class="remember-me">
+                        <input type="checkbox" id="remember" name="remember">
+                        <label for="remember">로그인 상태 유지</label>
+                    </div>
+                    <a href="#" class="forgot-password">비밀번호 찾기</a>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-login">로그인</button>
+                </div>
+            </form>
+
+            <div class="login-divider">테스트 계정</div>
+
+            <div class="demo-note">
+                <strong>데모 로그인</strong>
+                사용자명: admin<br>
+                비밀번호: demo123<br>
+                <br>
+                임의의 사용자명과 비밀번호로도 진입 가능합니다.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username.trim() === '' || password.trim() === '') {
+                alert('사용자명과 비밀번호를 입력하세요.');
+                return;
+            }
+            
+            // 데모 목적이므로 임의의 입력값으로 로그인 가능
+            console.log(`로그인 시도: ${username}`);
+            
+            // dashboard로 이동
+            window.location.href = 'dashboard.html';
+        }
+
+        // 엔터 키로 로그인
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleLogin(e);
+            }
+        });
+
+        // 페이지 로드 시 사용자명 입력창에 포커스
+        window.addEventListener('load', () => {
+            document.getElementById('username').focus();
+        });
+    </script>
+</body>
+</html>
