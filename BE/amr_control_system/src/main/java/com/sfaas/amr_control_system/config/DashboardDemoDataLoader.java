@@ -2,12 +2,14 @@ package com.sfaas.amr_control_system.config;
 
 import com.sfaas.amr_control_system.entity.Amr;
 import com.sfaas.amr_control_system.entity.AmrChargeStation;
+import com.sfaas.amr_control_system.entity.AmrChargingSession;
 import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.entity.AmrTask;
 import com.sfaas.amr_control_system.entity.Area;
 import com.sfaas.amr_control_system.entity.Site;
 import com.sfaas.amr_control_system.entity.WorkOrder;
 import com.sfaas.amr_control_system.repository.AmrChargeStationRepository;
+import com.sfaas.amr_control_system.repository.AmrChargingSessionRepository;
 import com.sfaas.amr_control_system.repository.AmrRepository;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.repository.AmrTaskRepository;
@@ -36,6 +38,7 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
     private final AreaRepository areaRepository;
     private final AmrStatusLogRepository amrStatusLogRepository;
     private final AmrChargeStationRepository amrChargeStationRepository;
+    private final AmrChargingSessionRepository amrChargingSessionRepository;
     private final WorkOrderRepository workOrderRepository;
     private final AmrTaskRepository amrTaskRepository;
 
@@ -74,11 +77,23 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
                 createStatusLog(amrs.get(3), assembly, "error", 20, now.minusMinutes(3), 130, 65)
         ));
 
-        AmrChargeStation station = new AmrChargeStation();
-        station.setArea(warehouse);
-        station.setStationName("충전 스테이션 3");
-        station.setStationStatus("혼잡");
-        amrChargeStationRepository.save(station);
+        AmrChargeStation congestedStation = new AmrChargeStation();
+        congestedStation.setArea(warehouse);
+        congestedStation.setStationName("충전 스테이션 3");
+        congestedStation.setStationStatus("혼잡");
+
+        AmrChargeStation normalStation = new AmrChargeStation();
+        normalStation.setArea(assembly);
+        normalStation.setStationName("충전 스테이션 1");
+        normalStation.setStationStatus("normal");
+
+        amrChargeStationRepository.saveAll(List.of(congestedStation, normalStation));
+
+        amrChargingSessionRepository.saveAll(List.of(
+                createActiveSession(amrs.get(1), congestedStation, "charging", now.minusMinutes(25)),
+                createActiveSession(amrs.get(2), congestedStation, "waiting", now.minusMinutes(10)),
+                createCompletedSession(amrs.get(0), normalStation, now.minusHours(6), now.minusHours(5))
+        ));
 
         WorkOrder workOrder = new WorkOrder();
         workOrder.setWoNo("WO-2026-001");
@@ -152,5 +167,34 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
         statusLog.setBatteryTemp(32.5f);
         statusLog.setUpdatedAt(updatedAt);
         return statusLog;
+    }
+
+    private AmrChargingSession createActiveSession(
+            Amr amr,
+            AmrChargeStation station,
+            String sessionStatus,
+            LocalDateTime startTime
+    ) {
+        AmrChargingSession session = new AmrChargingSession();
+        session.setAmr(amr);
+        session.setStation(station);
+        session.setSessionStatus(sessionStatus);
+        session.setStartTime(startTime);
+        return session;
+    }
+
+    private AmrChargingSession createCompletedSession(
+            Amr amr,
+            AmrChargeStation station,
+            LocalDateTime startTime,
+            LocalDateTime endTime
+    ) {
+        AmrChargingSession session = new AmrChargingSession();
+        session.setAmr(amr);
+        session.setStation(station);
+        session.setSessionStatus("completed");
+        session.setStartTime(startTime);
+        session.setEndTime(endTime);
+        return session;
     }
 }
