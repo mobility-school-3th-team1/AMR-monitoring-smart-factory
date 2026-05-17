@@ -5,11 +5,11 @@ import com.sfaas.amr_control_system.dto.DashboardRecentLogDto;
 import com.sfaas.amr_control_system.dto.DashboardRecentLogsResponseDto;
 import com.sfaas.amr_control_system.dto.DashboardSummaryDto;
 import com.sfaas.amr_control_system.dto.RecentAlarmsDto;
-import com.sfaas.amr_control_system.entity.AmrChargeStation;
+import com.sfaas.amr_control_system.entity.Alarm;
 import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.entity.AmrTask;
 import com.sfaas.amr_control_system.entity.WorkOrder;
-import com.sfaas.amr_control_system.repository.AmrChargeStationRepository;
+import com.sfaas.amr_control_system.repository.AlarmRepository;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.repository.AmrTaskRepository;
 import com.sfaas.amr_control_system.repository.WorkOrderRepository;
@@ -22,8 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
@@ -41,7 +39,7 @@ public class DashboardService {
     private final AmrStatusLogRepository amrStatusLogRepository;
     private final AmrTaskRepository amrTaskRepository;
     private final WorkOrderRepository workOrderRepository;
-    private final AmrChargeStationRepository amrChargeStationRepository;
+    private final AlarmRepository alarmRepository;
 
     public DashboardSummaryDto getSummary() {
         List<AmrStatusLog> latestStatusPerAmr = findLatestStatusPerAmr();
@@ -81,9 +79,9 @@ public class DashboardService {
 
     public RecentAlarmsDto getRecentAlarms(Integer limit) {
         int resolvedLimit = limit == null || limit < 1 ? DEFAULT_ALARM_LIMIT : limit;
-        List<AlarmSummaryDto> alarms = buildAlarmCandidates().stream()
-                .sorted(Comparator.comparing(AlarmSummaryDto::getOccurredAt).reversed())
+        List<AlarmSummaryDto> alarms = alarmRepository.findByAcknowledgedFalseOrderByOccurredAtDesc().stream()
                 .limit(resolvedLimit)
+                .map(this::toAlarmSummaryDto)
                 .toList();
 
         RecentAlarmsDto response = new RecentAlarmsDto();
@@ -140,40 +138,16 @@ public class DashboardService {
     }
 
     private int countActiveAlarms() {
-        return buildAlarmCandidates().size();
+        return (int) alarmRepository.countByAcknowledgedFalse();
     }
 
-    private List<AlarmSummaryDto> buildAlarmCandidates() {
-        List<AlarmSummaryDto> alarms = new ArrayList<>();
-
-        for (AmrStatusLog statusLog : amrStatusLogRepository.findAllByOrderByUpdatedAtDesc()) {
-            if (!"error".equals(DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus()))) {
-                continue;
-            }
-            AlarmSummaryDto alarm = new AlarmSummaryDto();
-            alarm.setId(String.format("alarm-amr-%03d", statusLog.getAmrStatlogId()));
-            alarm.setLevel("critical");
-            alarm.setMessage(String.format(
-                    "AMR %s 오류 상태 감지",
-                    statusLog.getAmr() != null ? statusLog.getAmr().getAmrName() : "unknown"
-            ));
-            alarm.setOccurredAt(statusLog.getUpdatedAt());
-            alarms.add(alarm);
-        }
-
-        for (AmrChargeStation station : amrChargeStationRepository.findAll()) {
-            if (!DashboardStatusNormalizer.isCongestedStation(station.getStationStatus())) {
-                continue;
-            }
-            AlarmSummaryDto alarm = new AlarmSummaryDto();
-            alarm.setId(String.format("alarm-station-%03d", station.getStationId()));
-            alarm.setLevel("warning");
-            alarm.setMessage(String.format("%s 혼잡 상태", station.getStationName()));
-            alarm.setOccurredAt(LocalDateTime.now());
-            alarms.add(alarm);
-        }
-
-        return alarms;
+    private AlarmSummaryDto toAlarmSummaryDto(Alarm alarm) {
+        AlarmSummaryDto summary = new AlarmSummaryDto();
+        summary.setId(AlarmIdentifierHelper.formatAlarmId(alarm.getAlarmId()));
+        summary.setLevel(alarm.getLevel());
+        summary.setMessage(alarm.getMessage());
+        summary.setOccurredAt(alarm.getOccurredAt());
+        return summary;
     }
 
     private double calculateAverageTaskTimeMinutes() {

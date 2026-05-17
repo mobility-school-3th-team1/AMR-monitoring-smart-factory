@@ -59,7 +59,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | (병렬) | DB merge 후 Docker·MySQL 연동 | 실제 DB 스키마와 백엔드 연결 | 임시 H2 대신 운영에 가까운 DB 사용 |
 | (병렬) | 루트 통합 Docker | FE·DB·BE를 한 명령으로 기동 | 통합 데모·QA 환경 |
 
-**현재 진행 예정 1순위:** 섹션 4의 **AlarmController** (Charging API 완료, 2026-05-17).
+**현재 진행 예정 1순위:** 섹션 4의 **WorkHistoryController** (Alarm API 완료, 2026-05-17).
 
 ---
 
@@ -93,6 +93,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - [x] WipLot.java
   - [x] AmrTask.java
   - [x] AmrStatusLog.java
+  - [x] Alarm.java (임시, `docs/임시-스키마-변경-알람.md`)
 - [x] JPA Repository 인터페이스 생성 (각 엔티티별).
   - [x] SiteRepository.java
   - [x] AreaRepository.java
@@ -108,6 +109,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - [x] WipLotRepository.java
   - [x] AmrTaskRepository.java
   - [x] AmrStatusLogRepository.java
+  - [x] AlarmRepository.java
 
 ### 2. DTO 클래스 구현
 - [x] 요청/응답 DTO 생성 (API 정의.md 기반).
@@ -115,7 +117,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - [x] 대시보드 DTO (DashboardSummaryDto, AlarmSummaryDto, RecentAlarmsDto).
   - [x] AMR 관련 DTO (AmrDto, AmrStatusHistoryDto, AmrPathDto, AmrCommandRequestDto, AmrCommandResponseDto 등).
   - [x] 충전 관련 DTO (ChargingStationDto, ChargingStationListDto, ForecastBucketDto, ChargingForecastDto).
-  - [x] 알람 관련 DTO (AlarmDto, AlarmListResponseDto, AlarmAckRequestDto, AlarmAckResponseDto).
+  - [x] 알람 관련 DTO (AlarmDto, AlarmListResponseDto, AlarmAckRequestDto, AlarmAckResponseDto, AlarmCreateRequestDto).
   - [x] 작업 이력 DTO (WorkHistoryDto, WorkHistoryListResponseDto).
   - [x] 분석 DTO (AnalyticsKpiDto, AnalyticsBatteryDto, AnalyticsWorkloadDto).
 
@@ -129,8 +131,8 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] DashboardController.java (요약, 최근 알람, 최근 로그).
 - [x] AmrController.java (목록, 상세, 상태 이력, 경로, 제어 명령).
 - [x] ChargingController.java (스테이션, 대기열, 예측, 이력).
-- [ ] **다음 작업** AlarmController.java (알람 목록, 확인 등).
-- [ ] WorkHistoryController.java (작업 이력 조회, 내보내기).
+- [x] AlarmController.java (목록, 상세, 확인, 생성). `docs/임시-스키마-변경-알람.md` 참고.
+- [ ] **다음 작업** WorkHistoryController.java (작업 이력 조회, 내보내기).
 - [ ] AnalyticsController.java (KPI, 배터리 분석 등).
 
 ### 5. 서비스 로직 구현
@@ -138,6 +140,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] DashboardService (KPI·알람·운영 로그).
 - [x] AmrService (목록·상세·이력·경로·명령).
 - [x] ChargingService (스테이션·대기열·예측·이력).
+- [x] AlarmService (목록·상세·확인·생성).
 - [ ] 각 컨트롤러에 대응하는 Service 클래스 생성.
 - [ ] 비즈니스 로직 구현 (데이터 조회, 계산, 검증 등).
 
@@ -164,11 +167,12 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 3. ~~DashboardController 및 DashboardService~~ **완료**
 4. ~~AmrController 및 AmrService~~ **완료**
 5. ~~ChargingController 및 ChargingService~~ **완료**
-6. **다음:** AlarmController 및 AlarmService.
-7. 예외 처리 확장 후 도메인 API 순차 구현.
-8. WebSocket과 실시간 기능 구현.
-9. DB merge 후 MySQL 연동 및 루트 통합 compose.
-10. 테스트 및 문서화.
+6. ~~AlarmController 및 AlarmService~~ **완료** (ALARM 임시 테이블, `docs/임시-스키마-변경-알람.md`).
+7. **다음:** WorkHistoryController 및 WorkHistoryService.
+8. 예외 처리 확장 후 도메인 API 순차 구현.
+9. WebSocket과 실시간 기능 구현.
+10. DB merge 후 MySQL 연동 및 루트 통합 compose.
+11. 테스트 및 문서화.
 
 ## Docker 실행 (BE 폴더에서)
 ```bash
@@ -183,6 +187,7 @@ docker compose up --build
 - Dashboard summary: GET http://localhost:8080/api/v1/dashboard/summary (Bearer 토큰)
 - AMR list: GET http://localhost:8080/api/v1/amrs (Bearer 토큰)
 - Charging stations: GET http://localhost:8080/api/v1/charging/stations (Bearer 토큰)
+- Alarms list: GET http://localhost:8080/api/v1/alarms (Bearer 토큰)
 
 ## 다른 PC에서 JWT 키 갱신 (팀 공유)
 

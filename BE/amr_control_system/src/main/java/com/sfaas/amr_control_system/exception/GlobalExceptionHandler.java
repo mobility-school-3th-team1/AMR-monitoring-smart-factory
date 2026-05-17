@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", exception.getMessage()));
     }
 
-    @ExceptionHandler({AmrNotFoundException.class, ChargingStationNotFoundException.class})
+    @ExceptionHandler({AmrNotFoundException.class, ChargingStationNotFoundException.class, AlarmNotFoundException.class})
     public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("message", exception.getMessage()));
