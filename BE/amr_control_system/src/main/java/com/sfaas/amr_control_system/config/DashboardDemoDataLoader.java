@@ -1,0 +1,143 @@
+package com.sfaas.amr_control_system.config;
+
+import com.sfaas.amr_control_system.entity.Amr;
+import com.sfaas.amr_control_system.entity.AmrChargeStation;
+import com.sfaas.amr_control_system.entity.AmrStatusLog;
+import com.sfaas.amr_control_system.entity.AmrTask;
+import com.sfaas.amr_control_system.entity.Area;
+import com.sfaas.amr_control_system.entity.Site;
+import com.sfaas.amr_control_system.entity.WorkOrder;
+import com.sfaas.amr_control_system.repository.AmrChargeStationRepository;
+import com.sfaas.amr_control_system.repository.AmrRepository;
+import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
+import com.sfaas.amr_control_system.repository.AmrTaskRepository;
+import com.sfaas.amr_control_system.repository.AreaRepository;
+import com.sfaas.amr_control_system.repository.SiteRepository;
+import com.sfaas.amr_control_system.repository.WorkOrderRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Component
+@Order(2)
+@RequiredArgsConstructor
+@Slf4j
+public class DashboardDemoDataLoader implements CommandLineRunner {
+
+    private final AmrRepository amrRepository;
+    private final SiteRepository siteRepository;
+    private final AreaRepository areaRepository;
+    private final AmrStatusLogRepository amrStatusLogRepository;
+    private final AmrChargeStationRepository amrChargeStationRepository;
+    private final WorkOrderRepository workOrderRepository;
+    private final AmrTaskRepository amrTaskRepository;
+
+    @Override
+    public void run(String... args) {
+        if (amrRepository.count() > 0) {
+            return;
+        }
+
+        log.info("Seeding dashboard demo data (H2).");
+
+        Site site = new Site();
+        site.setSiteId("site-001");
+        site.setSiteName("스마트팩토리 1공장");
+        siteRepository.save(site);
+
+        Area warehouse = createArea(site, "원자재 창고", "warehouse");
+        Area assembly = createArea(site, "조립 구역", "assembly");
+        areaRepository.saveAll(List.of(warehouse, assembly));
+
+        List<Amr> amrs = List.of(
+                createAmr("AMR-01"),
+                createAmr("AMR-02"),
+                createAmr("AMR-03"),
+                createAmr("AMR-04")
+        );
+        amrRepository.saveAll(amrs);
+
+        LocalDateTime now = LocalDateTime.now();
+        amrStatusLogRepository.saveAll(List.of(
+                createStatusLog(amrs.get(0), warehouse, "operating", 86, now.minusMinutes(2)),
+                createStatusLog(amrs.get(1), assembly, "charging", 72, now.minusMinutes(5)),
+                createStatusLog(amrs.get(2), warehouse, "waiting", 45, now.minusMinutes(1)),
+                createStatusLog(amrs.get(3), assembly, "error", 20, now.minusMinutes(3))
+        ));
+
+        AmrChargeStation station = new AmrChargeStation();
+        station.setArea(warehouse);
+        station.setStationName("충전 스테이션 3");
+        station.setStationStatus("혼잡");
+        amrChargeStationRepository.save(station);
+
+        WorkOrder workOrder = new WorkOrder();
+        workOrder.setWoNo("WO-2026-001");
+        workOrder.setPlannedQty(156);
+        workOrder.setPlannedStartDate(LocalDate.now().minusDays(1));
+        workOrder.setPlannedEndDate(LocalDate.now().plusDays(7));
+        workOrder.setStatus("in_progress");
+        workOrderRepository.save(workOrder);
+
+        AmrTask completedTask = new AmrTask();
+        completedTask.setAmr(amrs.get(0));
+        completedTask.setTaskType("transport");
+        completedTask.setFromArea(warehouse);
+        completedTask.setToArea(assembly);
+        completedTask.setStatus("completed");
+        completedTask.setPickTime(now.minusMinutes(30));
+        completedTask.setDropTime(now.minusMinutes(21));
+        amrTaskRepository.save(completedTask);
+    }
+
+    private Area createArea(Site site, String areaName, String areaType) {
+        Area area = new Area();
+        area.setSite(site);
+        area.setAreaName(areaName);
+        area.setAreaType(areaType);
+        area.setTempMin(BigDecimal.valueOf(18));
+        area.setTempMax(BigDecimal.valueOf(28));
+        area.setHumidityMin(BigDecimal.valueOf(30));
+        area.setHumidityMax(BigDecimal.valueOf(60));
+        return area;
+    }
+
+    private Amr createAmr(String amrName) {
+        Amr amr = new Amr();
+        amr.setAmrName(amrName);
+        amr.setTotalMileage(1200.0);
+        amr.setLoadMax(500);
+        amr.setBatteryCapacity(100);
+        amr.setInspectionDt(LocalDateTime.now().minusDays(14));
+        return amr;
+    }
+
+    private AmrStatusLog createStatusLog(
+            Amr amr,
+            Area area,
+            String status,
+            int batteryPct,
+            LocalDateTime updatedAt
+    ) {
+        AmrStatusLog statusLog = new AmrStatusLog();
+        statusLog.setAmr(amr);
+        statusLog.setArea(area);
+        statusLog.setStatus(status);
+        statusLog.setPosX(100);
+        statusLog.setPosY(200);
+        statusLog.setYaw(90);
+        statusLog.setLoadWeight(120.5f);
+        statusLog.setBatteryPct(batteryPct);
+        statusLog.setSohPct(95);
+        statusLog.setBatteryTemp(32.5f);
+        statusLog.setUpdatedAt(updatedAt);
+        return statusLog;
+    }
+}
