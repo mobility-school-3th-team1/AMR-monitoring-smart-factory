@@ -1,0 +1,24 @@
+# BE standalone stack (H2). Run from BE/: docker compose up --build
+# FE/DB stacks are separate; project-root integrated compose comes later.
+services:
+  be:
+    build:
+      context: ./amr_control_system
+      dockerfile: Dockerfile
+    container_name: amr-be
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET:-YW1yLXNtYXJ0LWZhY3RvcnktZG9ja2VyLWRldi1rZXkxMg==}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
+    env_file:
+      - path: .env
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped

@@ -8,8 +8,19 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - 기본 Spring Boot 프로젝트 구조 생성됨 (AmrControlSystemApplication.java, 테스트 파일).
 - 설계 문서 확인 완료: 프로젝트 정의서, API 정의, 데이터 스키마 설계, 협업 컨벤션.
 - ERD 및 API 명세 기반으로 구현 필요.
+- BE 전용 Docker 환경 구성 완료 (H2, `BE/docker-compose.yml`). 빌드·실행은 Docker로 수행한다.
 
 ## 개발 계획 (작은 단위로 순차 진행)
+
+### 0. Docker 실행 환경 (BE 단독)
+- [x] `amr_control_system/Dockerfile` (multi-stage, Java 17).
+- [x] `amr_control_system/.dockerignore`.
+- [x] `BE/docker-compose.yml` (서비스 `be`, 포트 8080).
+- [x] `application-docker.yaml` (H2, JWT 환경 변수, Actuator health).
+- [x] `BE/.env.example` (JWT_SECRET 등).
+- [x] Docker로 `docker compose up --build` 기동 및 `/actuator/health` 응답 확인.
+- [ ] DB 영역 merge 후: MySQL 서비스·드라이버·datasource profile 연동 (별도 작업).
+- [ ] FE·DB·BE Docker 완료 후: 프로젝트 루트 통합 `docker-compose` 작성 (별도 작업).
 
 ### 1. 데이터베이스 설정 및 엔티티 구현
 - [x] application.yaml에 H2 인메모리 DB 설정 추가 (MySQL 대신 개발용).
@@ -84,18 +95,27 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 ### 8. 테스트 및 검증
 - [ ] 단위 테스트 작성 (Service, Repository).
 - [ ] 통합 테스트 작성 (Controller).
-- [ ] 빌드 및 실행 검증 (Gradle build, 로컬 실행).
+- [ ] 빌드 및 실행 검증 (Docker: `docker compose build`, `docker compose up`; 테스트는 `docker compose run --rm be` 등).
 
 ### 9. 추가 기능
 - [ ] 파일 내보내기 기능 (Excel/CSV 다운로드).
 - [ ] 캐싱 또는 최적화 (필요 시).
 
 ## 작업 우선순위
-1. 먼저 엔티티와 Repository부터 구현하여 데이터 모델 구축.
-2. DTO와 기본 컨트롤러로 API 골격 완성.
-3. 보안 구현 후 서비스 로직 추가.
+1. Docker로 BE 기동 가능한 환경 확보 (섹션 0).
+2. 인증 API 완성 (Auth refresh/logout, `/api/v1` 경로, JWT 설정, 시드 사용자).
+3. 예외 처리 후 대시보드·도메인 API 순차 구현.
 4. WebSocket과 실시간 기능 구현.
-5. 테스트 및 문서화.
+5. DB merge 후 MySQL 연동 및 루트 통합 compose.
+6. 테스트 및 문서화.
+
+## Docker 실행 (BE 폴더에서)
+```bash
+cp .env.example .env
+docker compose up --build
+```
+- API: http://localhost:8080
+- Health: http://localhost:8080/actuator/health
 
 ## 참고
 - 설계 문서를 변경 시 먼저 수정 후 구현.
