@@ -6,6 +6,7 @@ import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.repository.AlarmRepository;
 import com.sfaas.amr_control_system.repository.AmrChargeStationRepository;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
+import com.sfaas.amr_control_system.util.DashboardStatusNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -42,7 +43,7 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
         List<Alarm> alarms = new ArrayList<>();
 
         for (AmrStatusLog statusLog : amrStatusLogRepository.findAllByOrderByUpdatedAtDesc()) {
-            if (!isErrorStatus(statusLog.getStatus())) {
+            if (!"error".equals(DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus()))) {
                 continue;
             }
             Alarm alarm = new Alarm();
@@ -61,7 +62,7 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
         }
 
         for (AmrChargeStation station : amrChargeStationRepository.findAll()) {
-            if (!isCongestedStation(station.getStationStatus())) {
+            if (!DashboardStatusNormalizer.isCongestedStation(station.getStationStatus())) {
                 continue;
             }
             Alarm alarm = new Alarm();
@@ -77,23 +78,5 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
         if (!alarms.isEmpty()) {
             alarmRepository.saveAll(alarms);
         }
-    }
-
-    private boolean isErrorStatus(String status) {
-        if (status == null) {
-            return false;
-        }
-        String normalized = status.trim().toLowerCase();
-        return normalized.contains("오류") || normalized.contains("error") || normalized.contains("fault");
-    }
-
-    private boolean isCongestedStation(String stationStatus) {
-        if (stationStatus == null) {
-            return false;
-        }
-        String normalized = stationStatus.trim().toLowerCase();
-        return normalized.contains("혼잡")
-                || normalized.contains("congest")
-                || normalized.contains("full");
     }
 }

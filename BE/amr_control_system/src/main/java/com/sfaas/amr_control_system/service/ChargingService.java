@@ -16,6 +16,7 @@ import com.sfaas.amr_control_system.exception.ChargingStationNotFoundException;
 import com.sfaas.amr_control_system.repository.AmrChargeStationRepository;
 import com.sfaas.amr_control_system.repository.AmrChargingSessionRepository;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
+import com.sfaas.amr_control_system.util.DashboardStatusNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

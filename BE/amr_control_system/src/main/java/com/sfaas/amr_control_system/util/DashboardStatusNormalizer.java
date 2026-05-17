@@ -1,11 +1,11 @@
-package com.sfaas.amr_control_system.service;
+package com.sfaas.amr_control_system.util;
 
-final class DashboardStatusNormalizer {
+public final class DashboardStatusNormalizer {
 
     private DashboardStatusNormalizer() {
     }
 
-    static String normalizeAmrStatus(String status) {
+    public static String normalizeAmrStatus(String status) {
         if (status == null) {
             return "waiting";
         }
@@ -22,7 +22,7 @@ final class DashboardStatusNormalizer {
         return "waiting";
     }
 
-    static boolean isCongestedStation(String stationStatus) {
+    public static boolean isCongestedStation(String stationStatus) {
         if (stationStatus == null) {
             return false;
         }
