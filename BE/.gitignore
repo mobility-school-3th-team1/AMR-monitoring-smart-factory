@@ -56,5 +56,8 @@ gradle-app.setting
 
 # End of https://www.toptal.com/developers/gitignore/api/java,gradle
 
-### Docker ###
+### Docker / secrets ###
 .env
+.env.local
+.env.*.local
+!.env.example

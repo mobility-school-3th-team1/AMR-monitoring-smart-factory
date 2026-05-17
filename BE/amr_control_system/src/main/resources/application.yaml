@@ -1,3 +1,7 @@
+server:
+  servlet:
+    context-path: /api/v1
+
 spring:
   application:
     name: amr_control_system
@@ -16,3 +20,21 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+app:
+  demo:
+    password: ${DEMO_USER_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

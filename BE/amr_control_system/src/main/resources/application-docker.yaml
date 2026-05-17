@@ -1,4 +1,8 @@
 # Docker profile: H2 in-memory (temporary until DB area merge provides MySQL).
+server:
+  servlet:
+    context-path: /api/v1
+
 spring:
   datasource:
     url: jdbc:h2:mem:testdb
@@ -19,6 +23,11 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+app:
+  demo:
+    password: ${DEMO_USER_PASSWORD:}
 
 management:
   endpoints:

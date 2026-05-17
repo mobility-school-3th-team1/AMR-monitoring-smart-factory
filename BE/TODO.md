@@ -56,7 +56,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | (병렬) | DB merge 후 Docker·MySQL 연동 | 실제 DB 스키마와 백엔드 연결 | 임시 H2 대신 운영에 가까운 DB 사용 |
 | (병렬) | 루트 통합 Docker | FE·DB·BE를 한 명령으로 기동 | 통합 데모·QA 환경 |
 
-**현재 진행 예정 1순위:** 위 표의 **「로그인·인증 API 완성」** (TODO 섹션 4·5의 Auth 관련 항목).
+**현재 진행 예정 1순위:** 섹션 4의 **DashboardController** (Auth API 완료, 2026-05-17).
 
 ---
 
@@ -122,8 +122,8 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] 사용자 엔티티 및 Repository 추가 (기본 사용자 관리).
 
 ### 4. 컨트롤러 구현
-- [ ] **다음 작업** AuthController.java (로그인, 리프레시, 로그아웃). 로그인만 부분 구현됨.
-- [ ] DashboardController.java (요약, 최근 알람 등).
+- [x] AuthController.java (로그인, 리프레시, 로그아웃). `/api/v1/auth/*`, 시드 사용자 admin/demo123.
+- [ ] **다음 작업** DashboardController.java (요약, 최근 알람 등).
 - [ ] AmrController.java (AMR 목록, 상세, 상태 이력 등).
 - [ ] ChargingController.java (충전 스테이션, 대기열, 예측 등).
 - [ ] AlarmController.java (알람 목록, 확인 등).
@@ -131,6 +131,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] AnalyticsController.java (KPI, 배터리 분석 등).
 
 ### 5. 서비스 로직 구현
+- [x] AuthenticationService (로그인, refresh, logout).
 - [ ] 각 컨트롤러에 대응하는 Service 클래스 생성.
 - [ ] 비즈니스 로직 구현 (데이터 조회, 계산, 검증 등).
 
@@ -139,8 +140,8 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] 이벤트 발행 서비스 구현 (실시간 데이터 스트리밍).
 
 ### 7. 예외 처리 및 로깅
-- [ ] 전역 예외 처리 클래스 (@RestControllerAdvice).
-- [ ] 커스텀 예외 클래스 정의.
+- [x] 전역 예외 처리 클래스 (@RestControllerAdvice) — 인증 관련 최소 구현.
+- [x] 커스텀 예외 클래스 정의 (InvalidRefreshTokenException 등, 도메인별 확장 예정).
 
 ### 8. 테스트 및 검증
 - [ ] 단위 테스트 작성 (Service, Repository).
@@ -153,19 +154,85 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ## 작업 우선순위
 1. ~~Docker로 BE 기동 가능한 환경 확보 (섹션 0).~~ **완료**
-2. **다음:** 인증 API 완성 (Auth refresh/logout, `/api/v1` 경로, JWT 설정, 시드 사용자).
-3. 예외 처리 후 대시보드·도메인 API 순차 구현.
-4. WebSocket과 실시간 기능 구현.
-5. DB merge 후 MySQL 연동 및 루트 통합 compose.
-6. 테스트 및 문서화.
+2. ~~인증 API 완성~~ **완료** (Auth login/refresh/logout, `/api/v1`, 시드 사용자).
+3. **다음:** DashboardController 및 대응 Service.
+4. 예외 처리 확장 후 도메인 API 순차 구현.
+5. WebSocket과 실시간 기능 구현.
+6. DB merge 후 MySQL 연동 및 루트 통합 compose.
+7. 테스트 및 문서화.
 
 ## Docker 실행 (BE 폴더에서)
 ```bash
 cp .env.example .env
+# .env 에 JWT_SECRET 설정 (아래 「다른 PC에서 JWT 키 갱신」 참고)
 docker compose up --build
 ```
+`JWT_SECRET` 등 민감 값은 `.env`에만 두며, `.env`는 Git에 커밋하지 않는다.
 - API: http://localhost:8080
-- Health: http://localhost:8080/actuator/health
+- Health: http://localhost:8080/api/v1/actuator/health
+- Auth login: POST http://localhost:8080/api/v1/auth/login
+
+## 다른 PC에서 JWT 키 갱신 (팀 공유)
+
+`.env`는 Git에 포함되지 않으므로, **저장소를 clone/pull한 각 PC마다** 로컬 `BE/.env`를 직접 만들거나 갱신해야 한다.  
+과거 커밋에 JWT 시크릿이 노출된 적이 있다면, **예전 값은 폐기**하고 아래 절차로 **새 키를 발급**한다 (PC마다 동일한 키를 쓸 필요는 없고, 로컬·개발용이면 PC별로 달라도 된다).
+
+### 1) 최초 설정 (`.env`가 없을 때)
+
+```bash
+cd BE
+cp .env.example .env
+```
+
+### 2) 새 JWT_SECRET 발급
+
+**Linux / macOS / Git Bash**
+```bash
+openssl rand -base64 32
+```
+
+**Windows PowerShell**
+```powershell
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+```
+
+출력된 문자열을 `BE/.env`의 `JWT_SECRET`에 넣는다.
+
+### 3) `.env` 예시
+
+값에 `+`, `/`, `=`가 포함되면 **반드시 따옴표**로 감싼다.
+
+```env
+JWT_SECRET="<위에서 생성한 Base64 문자열>"
+JWT_EXPIRATION=3600000
+JWT_REFRESH_EXPIRATION=604800000
+DEMO_USER_PASSWORD=demo123
+```
+
+- `DEMO_USER_PASSWORD`: API 명세 개발용 계정(`admin` / `demo123`). 로그인 테스트에 필요하면 설정한다. 비우면 시드 사용자는 생성되지 않는다.
+
+### 4) 기동 및 확인
+
+```bash
+cd BE
+docker compose up --build
+```
+
+브라우저 또는 curl로 확인:
+- Health: http://localhost:8080/api/v1/actuator/health → `{"status":"UP"}`
+- Login: `POST http://localhost:8080/api/v1/auth/login` (body: `{"username":"admin","password":"demo123"}`)
+
+### 5) 이미 `.env`가 있을 때 (키만 교체)
+
+1. `BE/.env`를 연다.
+2. `JWT_SECRET` 값만 새로 생성한 문자열로 **교체**한다 (예전에 Git에 올라갔을 수 있는 값은 사용하지 않는다).
+3. `docker compose down` 후 `docker compose up --build`로 재기동한다.
+4. 이전에 발급된 access/refresh 토큰은 무효이므로, **다시 로그인**해 테스트한다.
+
+### 주의
+
+- `.env` 파일을 Slack·이메일·Issue에 붙여 넣지 않는다. 공유가 필요하면 **1Password 등 비밀 관리 도구** 또는 팀 합의된 안전한 채널을 사용한다.
+- 운영(스테이징/프로덕션) 환경은 별도 시크릿을 사용하고, 개발 PC `.env`와 동일하게 두지 않는다.
 
 ## 참고
 - 설계 문서를 변경 시 먼저 수정 후 구현.
