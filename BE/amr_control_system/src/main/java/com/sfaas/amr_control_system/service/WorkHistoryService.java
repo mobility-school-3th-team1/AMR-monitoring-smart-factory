@@ -6,13 +6,17 @@ import com.sfaas.amr_control_system.entity.AmrTask;
 import com.sfaas.amr_control_system.exception.WorkHistoryNotFoundException;
 import com.sfaas.amr_control_system.repository.AmrTaskRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -25,6 +29,7 @@ public class WorkHistoryService {
     private static final int DEFAULT_LIMIT = 20;
     private static final String CSV_HEADER = "id,amrId,taskType,startTime,endTime,from,to,result";
     private static final DateTimeFormatter CSV_TIME_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final Sort PICK_TIME_DESC = Sort.by(Sort.Order.desc("pickTime").nullsLast());
 
     private final AmrTaskRepository amrTaskRepository;
 
@@ -40,15 +45,19 @@ public class WorkHistoryService {
         int resolvedPage = page == null || page < 1 ? DEFAULT_PAGE : page;
         int resolvedLimit = limit == null || limit < 1 ? DEFAULT_LIMIT : limit;
 
-        List<WorkHistoryDto> filtered = findFilteredWorkHistories(amrId, taskType, from, to, result);
+        Specification<AmrTask> specification = WorkHistoryTaskSpecification.withFilters(
+                amrId, taskType, from, to, result
+        );
+        Pageable pageable = PageRequest.of(resolvedPage - 1, resolvedLimit, PICK_TIME_DESC);
+        Page<AmrTask> taskPage = amrTaskRepository.findAll(specification, pageable);
 
-        int fromIndex = Math.min((resolvedPage - 1) * resolvedLimit, filtered.size());
-        int toIndex = Math.min(fromIndex + resolvedLimit, filtered.size());
-        List<WorkHistoryDto> pageData = filtered.subList(fromIndex, toIndex);
+        List<WorkHistoryDto> pageData = taskPage.getContent().stream()
+                .map(this::toWorkHistoryDto)
+                .toList();
 
         WorkHistoryListResponseDto response = new WorkHistoryListResponseDto();
         response.setData(pageData);
-        response.setTotal(filtered.size());
+        response.setTotal((int) taskPage.getTotalElements());
         return response;
     }
 
@@ -63,7 +72,12 @@ public class WorkHistoryService {
     }
 
     public byte[] exportWorkHistories(String amrId, LocalDateTime from, LocalDateTime to, String taskType) {
-        List<WorkHistoryDto> filtered = findFilteredWorkHistories(amrId, taskType, from, to, null);
+        Specification<AmrTask> specification = WorkHistoryTaskSpecification.withFilters(
+                amrId, taskType, from, to, null
+        );
+        List<WorkHistoryDto> filtered = amrTaskRepository.findAll(specification, PICK_TIME_DESC).stream()
+                .map(this::toWorkHistoryDto)
+                .toList();
         String csvBody = buildCsvRows(filtered);
         return csvBody.getBytes(StandardCharsets.UTF_8);
     }
@@ -74,24 +88,6 @@ public class WorkHistoryService {
 
     public String buildBulkExportFileName() {
         return "work-histories-export.csv";
-    }
-
-    private List<WorkHistoryDto> findFilteredWorkHistories(
-            String amrId,
-            String taskType,
-            LocalDateTime from,
-            LocalDateTime to,
-            String result
-    ) {
-        return amrTaskRepository.findAll().stream()
-                .map(this::toWorkHistoryDto)
-                .filter(dto -> matchesAmrIdFilter(dto, amrId))
-                .filter(dto -> matchesTaskTypeFilter(dto, taskType))
-                .filter(dto -> matchesFromFilter(dto, from))
-                .filter(dto -> matchesToFilter(dto, to))
-                .filter(dto -> matchesResultFilter(dto, result))
-                .sorted(Comparator.comparing(WorkHistoryDto::getStartTime, Comparator.nullsLast(Comparator.reverseOrder())))
-                .toList();
     }
 
     private AmrTask findTaskOrThrow(String workHistoryId) {
@@ -128,41 +124,6 @@ public class WorkHistoryService {
             return "in_progress";
         }
         return normalized;
-    }
-
-    private boolean matchesAmrIdFilter(WorkHistoryDto dto, String amrId) {
-        if (amrId == null || amrId.isBlank()) {
-            return true;
-        }
-        return amrId.trim().equalsIgnoreCase(dto.getAmrId());
-    }
-
-    private boolean matchesTaskTypeFilter(WorkHistoryDto dto, String taskType) {
-        if (taskType == null || taskType.isBlank()) {
-            return true;
-        }
-        return taskType.trim().equalsIgnoreCase(dto.getTaskType());
-    }
-
-    private boolean matchesFromFilter(WorkHistoryDto dto, LocalDateTime from) {
-        if (from == null || dto.getStartTime() == null) {
-            return true;
-        }
-        return !dto.getStartTime().isBefore(from);
-    }
-
-    private boolean matchesToFilter(WorkHistoryDto dto, LocalDateTime to) {
-        if (to == null || dto.getStartTime() == null) {
-            return true;
-        }
-        return !dto.getStartTime().isAfter(to);
-    }
-
-    private boolean matchesResultFilter(WorkHistoryDto dto, String result) {
-        if (result == null || result.isBlank()) {
-            return true;
-        }
-        return result.trim().equalsIgnoreCase(dto.getResult());
     }
 
     private String buildCsvRows(List<WorkHistoryDto> workHistories) {
