@@ -121,6 +121,16 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
         activeTask.setStatus("in_progress");
         activeTask.setPickTime(now.minusMinutes(8));
         amrTaskRepository.save(activeTask);
+
+        AmrTask failedTask = new AmrTask();
+        failedTask.setAmr(amrs.get(2));
+        failedTask.setTaskType("transport");
+        failedTask.setFromArea(warehouse);
+        failedTask.setToArea(assembly);
+        failedTask.setStatus("failed");
+        failedTask.setPickTime(now.minusHours(2));
+        failedTask.setDropTime(now.minusHours(1).minusMinutes(45));
+        amrTaskRepository.save(failedTask);
     }
 
     private Area createArea(Site site, String areaName, String areaType) {
