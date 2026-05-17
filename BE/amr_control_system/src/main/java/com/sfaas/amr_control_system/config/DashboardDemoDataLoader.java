@@ -66,10 +66,12 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
 
         LocalDateTime now = LocalDateTime.now();
         amrStatusLogRepository.saveAll(List.of(
-                createStatusLog(amrs.get(0), warehouse, "operating", 86, now.minusMinutes(2)),
-                createStatusLog(amrs.get(1), assembly, "charging", 72, now.minusMinutes(5)),
-                createStatusLog(amrs.get(2), warehouse, "waiting", 45, now.minusMinutes(1)),
-                createStatusLog(amrs.get(3), assembly, "error", 20, now.minusMinutes(3))
+                createStatusLog(amrs.get(0), warehouse, "operating", 90, now.minusMinutes(30), 50, 100),
+                createStatusLog(amrs.get(0), warehouse, "operating", 88, now.minusMinutes(20), 80, 120),
+                createStatusLog(amrs.get(0), assembly, "operating", 86, now.minusMinutes(2), 123, 57),
+                createStatusLog(amrs.get(1), assembly, "charging", 72, now.minusMinutes(5), 140, 70),
+                createStatusLog(amrs.get(2), warehouse, "waiting", 45, now.minusMinutes(1), 100, 200),
+                createStatusLog(amrs.get(3), assembly, "error", 20, now.minusMinutes(3), 130, 65)
         ));
 
         AmrChargeStation station = new AmrChargeStation();
@@ -95,6 +97,15 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
         completedTask.setPickTime(now.minusMinutes(30));
         completedTask.setDropTime(now.minusMinutes(21));
         amrTaskRepository.save(completedTask);
+
+        AmrTask activeTask = new AmrTask();
+        activeTask.setAmr(amrs.get(1));
+        activeTask.setTaskType("transport");
+        activeTask.setFromArea(assembly);
+        activeTask.setToArea(warehouse);
+        activeTask.setStatus("in_progress");
+        activeTask.setPickTime(now.minusMinutes(8));
+        amrTaskRepository.save(activeTask);
     }
 
     private Area createArea(Site site, String areaName, String areaType) {
@@ -124,14 +135,16 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
             Area area,
             String status,
             int batteryPct,
-            LocalDateTime updatedAt
+            LocalDateTime updatedAt,
+            int posX,
+            int posY
     ) {
         AmrStatusLog statusLog = new AmrStatusLog();
         statusLog.setAmr(amr);
         statusLog.setArea(area);
         statusLog.setStatus(status);
-        statusLog.setPosX(100);
-        statusLog.setPosY(200);
+        statusLog.setPosX(posX);
+        statusLog.setPosY(posY);
         statusLog.setYaw(90);
         statusLog.setLoadWeight(120.5f);
         statusLog.setBatteryPct(batteryPct);

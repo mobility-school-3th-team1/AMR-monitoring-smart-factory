@@ -22,4 +22,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("message", exception.getMessage()));
     }
+
+    @ExceptionHandler(AmrNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleAmrNotFound(AmrNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", exception.getMessage()));
+    }
+
+    @ExceptionHandler({InvalidAmrCommandException.class, IllegalArgumentException.class})
+    public ResponseEntity<Map<String, String>> handleBadRequest(RuntimeException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", exception.getMessage()));
+    }
 }

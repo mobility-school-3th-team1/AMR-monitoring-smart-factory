@@ -50,14 +50,15 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 |------|------|-----------|------|
 | 1 | ~~로그인·인증 API 완성~~ | 완료 | |
 | 2 | ~~대시보드 API~~ | 완료 | |
-| 3 | **AMR API** | AMR 목록·상세·이력·경로·제어 | 핵심 모니터링 화면 연동 |
-| 4 | **공통 오류 응답 정리** | API 실패 시 형식을 통일 | 프론트·운영이 오류를 일관되게 처리 |
-| 5 | 충전·알람 등 도메인 API | 설계 문서의 나머지 REST API 순차 구현 | 기능별 화면 연동 |
-| 6 | 실시간(WebSocket) | 위치·알람 등 실시간 푸시 | 대시보드 실시간 갱신 |
+| 3 | ~~AMR API~~ | 완료 | |
+| 4 | **충전 API** | 충전 스테이션·대기열·예측 | 충전 관리 화면 연동 |
+| 5 | **공통 오류 응답 정리** | API 실패 시 형식을 통일 | 프론트·운영이 오류를 일관되게 처리 |
+| 6 | 알람 등 도메인 API | 설계 문서의 나머지 REST API 순차 구현 | 기능별 화면 연동 |
+| 7 | 실시간(WebSocket) | 위치·알람 등 실시간 푸시 | 대시보드 실시간 갱신 |
 | (병렬) | DB merge 후 Docker·MySQL 연동 | 실제 DB 스키마와 백엔드 연결 | 임시 H2 대신 운영에 가까운 DB 사용 |
 | (병렬) | 루트 통합 Docker | FE·DB·BE를 한 명령으로 기동 | 통합 데모·QA 환경 |
 
-**현재 진행 예정 1순위:** 섹션 4의 **AmrController** (Dashboard API 완료, 2026-05-17).
+**현재 진행 예정 1순위:** 섹션 4의 **ChargingController** (Amr API 완료, 2026-05-17).
 
 ---
 
@@ -125,8 +126,8 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 ### 4. 컨트롤러 구현
 - [x] AuthController.java (로그인, 리프레시, 로그아웃). `/api/v1/auth/*`, 시드 사용자 admin/demo123.
 - [x] DashboardController.java (요약, 최근 알람, 최근 로그).
-- [ ] **다음 작업** AmrController.java (AMR 목록, 상세, 상태 이력 등).
-- [ ] ChargingController.java (충전 스테이션, 대기열, 예측 등).
+- [x] AmrController.java (목록, 상세, 상태 이력, 경로, 제어 명령).
+- [ ] **다음 작업** ChargingController.java (충전 스테이션, 대기열, 예측 등).
 - [ ] AlarmController.java (알람 목록, 확인 등).
 - [ ] WorkHistoryController.java (작업 이력 조회, 내보내기).
 - [ ] AnalyticsController.java (KPI, 배터리 분석 등).
@@ -134,6 +135,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 ### 5. 서비스 로직 구현
 - [x] AuthenticationService (로그인, refresh, logout).
 - [x] DashboardService (KPI·알람·운영 로그).
+- [x] AmrService (목록·상세·이력·경로·명령).
 - [ ] 각 컨트롤러에 대응하는 Service 클래스 생성.
 - [ ] 비즈니스 로직 구현 (데이터 조회, 계산, 검증 등).
 
@@ -158,11 +160,12 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 1. ~~Docker로 BE 기동 가능한 환경 확보 (섹션 0).~~ **완료**
 2. ~~인증 API 완성~~ **완료** (Auth login/refresh/logout, `/api/v1`, 시드 사용자).
 3. ~~DashboardController 및 DashboardService~~ **완료**
-4. **다음:** AmrController 및 AmrService.
-5. 예외 처리 확장 후 도메인 API 순차 구현.
-6. WebSocket과 실시간 기능 구현.
-7. DB merge 후 MySQL 연동 및 루트 통합 compose.
-8. 테스트 및 문서화.
+4. ~~AmrController 및 AmrService~~ **완료**
+5. **다음:** ChargingController 및 ChargingService.
+6. 예외 처리 확장 후 도메인 API 순차 구현.
+7. WebSocket과 실시간 기능 구현.
+8. DB merge 후 MySQL 연동 및 루트 통합 compose.
+9. 테스트 및 문서화.
 
 ## Docker 실행 (BE 폴더에서)
 ```bash
@@ -175,6 +178,7 @@ docker compose up --build
 - Health: http://localhost:8080/api/v1/actuator/health
 - Auth login: POST http://localhost:8080/api/v1/auth/login
 - Dashboard summary: GET http://localhost:8080/api/v1/dashboard/summary (Bearer 토큰)
+- AMR list: GET http://localhost:8080/api/v1/amrs (Bearer 토큰)
 
 ## 다른 PC에서 JWT 키 갱신 (팀 공유)
 
