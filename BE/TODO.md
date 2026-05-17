@@ -40,7 +40,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 **실행 방법 (개발자·검증 담당)**  
 `BE` 폴더에서: `docker compose up --build`  
-상태 확인: http://localhost:8080/actuator/health
+상태 확인: http://localhost:8080/api/v1/actuator/health
 
 ---
 
