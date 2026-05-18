@@ -16,7 +16,7 @@ related_files:
 ### 배경
 
 - 본 프로젝트는 Node-RED(DAS)로 AMR 위치·작업을 **시뮬레이션**한다. 실제 AMR 설비 제어기와의 직접 연동은 범위에 포함하지 않는다.
-- 비상 정지(Emergency Stop)는 `docs/화면 설계서.md` SCR-03 ⑥ 및 시연 시나리오에 포함된다.
+- 비상 정지(Emergency Stop)는 `docs/화면 설계서.md` SCR-03 ⑤ 및 시연 시나리오에 포함된다.
 - DAS와 프론트엔드(FE)는 **MQTT**로 연결된다. 백엔드(BE)는 REST API, WebSocket, DB(MySQL)를 담당한다.
 - DAS·FE·BE 기능 구현 논의에서, 시뮬레이션 특성상 **운행 상태는 DB 데이터로 관리**하고, DAS 좌표 중단은 **FE가 MQTT로 고지**하는 흐름으로 합의하였다.
 - 기존 `POST /api/v1/amrs/{amrId}/commands` 및 `AMR_COMMAND` 테이블(`DB/init.sql`)은 존재하나, BE↔DAS 경계와 `accepted` 의미가 문서에 명시되어 있지 않았다.

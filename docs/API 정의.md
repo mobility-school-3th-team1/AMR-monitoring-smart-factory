@@ -130,6 +130,53 @@
 
 쿼리 파라미터: page, limit
 
+### GET /environment/areas/current
+
+설명: 구역별 최신 환경 센서값 조회 (메인 대시보드 SCR-01 ③)
+
+쿼리 파라미터: areaId (선택, 미지정 시 전체 구역)
+
+데이터 출처: `ENV_SENSOR`, `ENV_SENSOR_LOG`(센서별 최신 `measured_at` 1건). BE는 DB 집계만 수행한다.
+
+응답 예시:
+
+```json
+{
+    "data": [
+        {
+            "areaId": "AREA_ASSEMBLE_01",
+            "areaName": "조립 구역 1",
+            "readings": [
+                {
+                    "sensorType": "TEMP",
+                    "sensorName": "온도 센서 2호",
+                    "value": 24.5,
+                    "unit": "°C",
+                    "status": "normal",
+                    "measuredAt": "2026-05-13T08:20:00Z"
+                },
+                {
+                    "sensorType": "HUMIDITY",
+                    "sensorName": "습도 센서 2호",
+                    "value": 48.0,
+                    "unit": "%",
+                    "status": "normal",
+                    "measuredAt": "2026-05-13T08:20:00Z"
+                },
+                {
+                    "sensorType": "PARTICLE",
+                    "sensorName": "파티클 센서 2호",
+                    "value": 42.0,
+                    "unit": "ug/m3",
+                    "status": "normal",
+                    "measuredAt": "2026-05-13T08:20:00Z"
+                }
+            ]
+        }
+    ]
+}
+```
+
 ## 3. AMR(AMR Fleet)
 
 ### GET /amrs
@@ -420,9 +467,47 @@
 
 ### GET /analytics/kpis
 
-설명: 기간별 KPI 집계
+설명: 기간별 KPI 집계. SCR-02 ③④(일별 오류·시간 준수율), SCR-03 ⑦(시간 준수율) 차트에 사용한다.
 
-쿼리 파라미터: from, to, groupBy=hour|day
+쿼리 파라미터: from, to, groupBy=hour|day (`groupBy=day` 권장: 일별 오류·준수율 차트)
+
+버킷별 추가 필드:
+
+- `errorCount`: 해당 기간에 `AMR_STATUS_LOG.status = 'ERROR'`로 기록된 건수(일별·시간별 버킷). `EMERGENCY_STOP`은 포함하지 않는다.
+- `scheduleComplianceRate`: 해당 기간에 **완료**된 `AMR_TASK`(`pick_time`, `drop_time` 존재) 중, 실제 소요(분) ≤ 연결 `PR_ROUTING.standard_lead_time`(분)인 비율(0~100). `AMR_TASK`·`WIP_LOT`·`PR_ROUTING` 조인으로 산출한다.
+
+응답 예시 (`groupBy=day`):
+
+```json
+{
+    "data": [
+        {
+            "timestamp": "2026-05-12T00:00:00Z",
+            "productionCount": 150,
+            "activeAlarms": 2,
+            "amrOperating": 8,
+            "amrWaiting": 2,
+            "amrCharging": 10,
+            "avgBatteryPercent": 65,
+            "averageTaskTimeMin": 9.1,
+            "errorCount": 3,
+            "scheduleComplianceRate": 88.5
+        },
+        {
+            "timestamp": "2026-05-13T00:00:00Z",
+            "productionCount": 156,
+            "activeAlarms": 3,
+            "amrOperating": 9,
+            "amrWaiting": 2,
+            "amrCharging": 11,
+            "avgBatteryPercent": 67,
+            "averageTaskTimeMin": 9.3,
+            "errorCount": 1,
+            "scheduleComplianceRate": 91.0
+        }
+    ]
+}
+```
 
 ### GET /analytics/battery
 
@@ -432,9 +517,25 @@
 
 ### GET /analytics/workload
 
-설명: 작업 건수 및 비중 통계 조회
+설명: 작업 건수 및 비중 통계 조회 (SCR-05 ②③)
 
 쿼리 파라미터: from, to, groupBy=amr|taskType|hour
+
+- `groupBy=hour`: 시간대별 작업 건수(SCR-05 ②)
+- `groupBy=amr`: AMR별 작업 건수·비중(SCR-05 ③)
+
+데이터 출처: `AMR_TASK`(`pick_time` 기준 집계).
+
+응답 예시 (`groupBy=hour`):
+
+```json
+{
+    "data": [
+        { "timestamp": "2026-05-13T08:00:00Z", "taskCount": 5 },
+        { "timestamp": "2026-05-13T09:00:00Z", "taskCount": 8 }
+    ]
+}
+```
 
 ## 8. 실시간 스트리밍(WebSocket)
 
