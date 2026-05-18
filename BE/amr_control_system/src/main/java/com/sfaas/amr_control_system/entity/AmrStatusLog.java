@@ -1,6 +1,14 @@
 package com.sfaas.amr_control_system.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -13,7 +21,7 @@ public class AmrStatusLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "amr_statlog_id")
-    private Integer amrStatlogId;
+    private Long amrStatlogId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "amr_id")
@@ -36,12 +44,12 @@ public class AmrStatusLog {
     private Integer yaw;
 
     @Column(name = "load_weight")
-    private Float loadWeight;
+    private Integer loadWeight;
 
     @Column(name = "battery_pct")
     private Integer batteryPct;
 
-    @Column(name = "soh_pct")
+    @Column(name = "SOH_pct")
     private Integer sohPct;
 
     @Column(name = "battery_temp")

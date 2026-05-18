@@ -10,12 +10,15 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+
 @Component
 @Order(1)
 @RequiredArgsConstructor
 @Slf4j
 public class DemoUserDataLoader implements CommandLineRunner {
 
+    public static final String DEMO_USER_ID = "user-001";
     public static final String DEMO_USERNAME = "admin";
     public static final String DEMO_DISPLAY_NAME = "관리자";
     public static final String DEMO_ROLE = "admin";
@@ -38,10 +41,12 @@ public class DemoUserDataLoader implements CommandLineRunner {
         }
 
         User demoUser = new User();
+        demoUser.setUserId(DEMO_USER_ID);
         demoUser.setUsername(DEMO_USERNAME);
-        demoUser.setPassword(passwordEncoder.encode(demoPassword));
+        demoUser.setPasswordHash(passwordEncoder.encode(demoPassword));
         demoUser.setDisplayName(DEMO_DISPLAY_NAME);
         demoUser.setRole(DEMO_ROLE);
+        demoUser.setCreatedAt(LocalDate.now());
         userRepository.save(demoUser);
     }
 }

@@ -109,7 +109,7 @@ public class AnalyticsService {
         LocalDateTime rangeStart = resolveFrom(from, rangeEnd);
         String resolvedGroupBy = resolveTimeGroupBy(groupBy);
         Integer filterAmrId = parseOptionalAmrId(amrId);
-        Integer filterAreaId = resolveStationAreaId(stationId);
+        String filterAreaId = resolveStationAreaId(stationId);
 
         List<AmrStatusLog> logs = amrStatusLogRepository.findAllByOrderByUpdatedAtDesc().stream()
                 .filter(log -> log.getUpdatedAt() != null)
@@ -331,7 +331,7 @@ public class AnalyticsService {
         return AmrIdentifierHelper.parseAmrId(amrId);
     }
 
-    private Integer resolveStationAreaId(String stationId) {
+    private String resolveStationAreaId(String stationId) {
         if (stationId == null || stationId.isBlank()) {
             return null;
         }

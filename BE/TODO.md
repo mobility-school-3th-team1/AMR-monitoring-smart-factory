@@ -9,8 +9,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - 설계 문서 확인 완료: 프로젝트 정의서, API 정의, 데이터 스키마 설계, 협업 컨벤션.
 - ERD 및 API 명세 기반 API·서비스 로직 구현 진행 중.
 - **BE 전용 Docker 실행 환경 구성 완료** (2026-05-17). PC에 Java를 설치하지 않아도 Docker만으로 백엔드 서버를 빌드·실행할 수 있다.
-- **DB 물리 스키마 merge 완료** (`DB/init.sql`, 18개 테이블·시드 데이터). 백엔드 JPA 엔티티는 아직 H2 자동 생성·구(舊) 테이블명 기준이며, **물리 스키마와 불일치**한다.
-- 데이터 저장은 당분간 **임시 DB(H2)** 를 사용 중이다. **다음 1순위**는 물리 스키마에 맞춘 엔티티·MySQL 연동이다.
+- **DB 물리 스키마 merge 완료** (`DB/init.sql`, 18개 테이블·시드 데이터). 백엔드 JPA 엔티티는 아직 구(舊) 테이블명·컬럼명 기준이며 **물리 스키마와 불일치**한다.
+- **DB 영역 Docker compose는 아직 merge되지 않음.** 당분간 **H2(메모리) + BE Docker 단독**으로 개발·검증한다.
+- **10-A (H2 스키마 정합):** 완료 (2026-05-18). 10-B(MySQL)는 DB compose merge 후.
+- MySQL 연동은 DB compose merge 후 **10-B**에서 진행한다.
 
 ---
 
@@ -35,7 +37,8 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - 개발용 임시 DB(H2, 메모리). 서버를 끄면 데이터는 사라진다.
 
 **범위에 포함되지 않은 것 (추후 작업)**  
-- 물리 MySQL 스키마(`DB/init.sql`)와 백엔드 JPA 정합  
+- 물리 스키마에 맞춘 JPA 엔티티 정합 (섹션 10-A)  
+- MySQL·DB Docker compose 연동 (섹션 10-B, DB compose merge 후)  
 - 프론트엔드·DB와 한 번에 띄우는 **프로젝트 루트 통합 docker-compose**  
 - WebSocket 실시간 스트리밍 (별도 TODO)
 
@@ -49,14 +52,15 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 | 순서 | 작업 | 한 줄 설명 | 영향 |
 |------|------|-----------|------|
-| **1** | **물리 DB 스키마 정합** | `DB/init.sql`에 맞게 엔티티·MySQL·서비스 수정 | H2 자동 DDL 대신 실제 DB·시드 데이터 사용 |
+| **1** | ~~**10-A 물리 스키마 정합 (H2 유지)**~~ | **완료** (2026-05-18) | BE Docker만으로 API 검증 가능 |
 | 2 | 공통 오류 응답 정리 | API 실패 시 형식을 통일 | 프론트·운영이 오류를 일관되게 처리 |
 | 3 | WebSocket | 위치·알람 등 실시간 푸시 | 대시보드 실시간 갱신 |
 | 4 | 테스트·검증 | 단위·통합 테스트, Docker 스모크 | 품질·회귀 방지 |
+| (대기) | **10-B MySQL 연동** | DB compose merge 후 datasource·`init.sql` 연결 | 운영에 가까운 DB·공유 시드 |
 | (병렬) | 루트 통합 Docker | FE·DB·BE를 한 명령으로 기동 | 통합 데모·QA 환경 |
 | (후순) | 추가 기능 | CSV/Excel보내기, 캐싱 등 | 필요 시 |
 
-**현재 진행 예정 1순위:** 섹션 10 **물리 DB 스키마 정합** (DB merge 반영, 2026-05-18).
+**현재 진행 예정 1순위:** **공통 오류 응답 정리**(섹션 7) 또는 **WebSocket**(섹션 6).
 
 ---
 
@@ -69,7 +73,8 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] `application-docker.yaml` (H2, JWT 환경 변수, Actuator health).
 - [x] `BE/.env.example` (JWT_SECRET 등).
 - [x] Docker로 `docker compose up --build` 기동 및 `/actuator/health` 응답 확인.
-- [ ] 물리 스키마 정합 후: MySQL 서비스·드라이버·datasource profile 연동 (섹션 10).
+- [ ] 10-A 완료 후에도 H2·BE 단독 compose 유지 (10-B 전까지).
+- [ ] 10-B: DB compose merge 후 MySQL 연동 (별도 작업).
 - [ ] FE·DB·BE Docker 완료 후: 프로젝트 루트 통합 `docker-compose` 작성 (별도 작업).
 
 ### 1. 데이터베이스 설정 및 엔티티 구현 (H2·구 스키마 기준 — 정합 전)
@@ -84,7 +89,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - [x] User.java (임시 `USERS`, 인메모리 refresh)
 - [x] JPA Repository 인터페이스 생성 (각 엔티티별).
 
-> **주의:** 위 엔티티는 `DB/init.sql` 물리 스키마와 테이블명·컬럼명·PK 타입이 다르다. 섹션 10에서 일괄 정합한다.
+> **주의:** 위 엔티티는 `DB/init.sql` 물리 스키마와 테이블명·컬럼명·PK 타입이 다르다. 섹션 **10-A**에서 일괄 정합한다.
 
 ### 2. DTO 클래스 구현
 - [x] 요청/응답 DTO 생성 (API 정의.md 기반).
@@ -94,7 +99,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] Spring Security 설정 클래스 생성 (JwtAuthenticationFilter, SecurityConfig).
 - [x] JWT 유틸리티 클래스 생성 (토큰 생성/검증).
 - [x] 사용자 엔티티 및 Repository 추가 (기본 사용자 관리).
-- [ ] 물리 스키마 정합: `USER_ACCOUNT`·`REFRESH_TOKEN` 테이블 연동 (섹션 10).
+- [x] 10-A: `USER_ACCOUNT` 엔티티 매핑 (H2). `REFRESH_TOKEN`·DB 저장 전환은 10-B.
 
 ### 4. 컨트롤러 구현
 - [x] AuthController, DashboardController, AmrController, ChargingController.
@@ -103,7 +108,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 ### 5. 서비스 로직 구현
 - [x] AuthenticationService, DashboardService, AmrService, ChargingService.
 - [x] AlarmService, WorkHistoryService, AnalyticsService.
-- [ ] 물리 스키마 정합 후 Repository·매핑 로직 수정 (섹션 10).
+- [x] 10-A: Repository·매핑 로직 수정 (엔티티 rename 반영).
 
 ### 6. WebSocket 구현
 - [ ] WebSocket 설정 클래스 생성.
@@ -123,73 +128,102 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] 파일보내기 기능 (Excel/CSV 다운로드).
 - [ ] 캐싱 또는 최적화 (필요 시).
 
-### 10. 물리 DB 스키마 정합 (DB merge 반영) — **다음 1순위**
+### 10. 물리 DB 스키마 정합 — **다음 1순위**
 
-`DB/init.sql` 및 `docs/데이터 스키마 설계.md`를 기준으로, 백엔드 전역을 실제 MySQL 물리 스키마에 맞춘다. H2 `ddl-auto: create-drop`으로 구 스키마를 자동 생성하는 방식은 중단한다.
+`DB/init.sql` 및 `docs/데이터 스키마 설계.md`를 기준으로 백엔드를 맞춘다.  
+**2단계로 진행:** 지금은 **10-A(H2 유지)** 만 수행하고, **10-B(MySQL)** 는 DB 영역 `docker-compose` merge 이후에 한다.
 
-#### 10-1. 엔티티·테이블 매핑 수정
+---
+
+#### 10-A. 스키마 정합 (H2 유지) — **지금 진행**
+
+**목표:** JPA가 물리 스키마와 **같은 테이블명·컬럼명·관계**를 쓰도록 맞춘다. DB 엔진은 계속 H2이며, `application-docker.yaml`의 `ddl-auto: create-drop`으로 기동 시 스키마를 생성한다. `BE/docker-compose.yml`은 **변경하지 않는다.**
+
+**10-A-1. 엔티티·테이블 매핑** — 완료 (2026-05-18)
 
 | 현재 (BE) | 물리 DB (`init.sql`) | 주요 변경 |
 |-----------|----------------------|-----------|
 | `AMR` | `AMR_MASTER` | 테이블명, PK 수동 할당(INT, AUTO 없음) |
-| `ENV_READING` | `ENV_SENSOR_LOG` | `reading_id`→`sensor_log_id`, `sensor_id`→`env_sensor_id`, `value_num`→`sensor_value` |
-| `PROCESS_MASTER` | `PR_PROCESS` | `process_id`(INT AI)→`pr_process_id`(VARCHAR PK) |
-| `ROUTING` | `PR_ROUTING` | `routing_id`→`pr_routing_id`, `process_id`→`pr_process_id`, `sequence`→`seq_no` |
+| `ENV_READING` | `ENV_SENSOR_LOG` | `EnvSensorLog` 엔티티로 교체 |
+| `PROCESS_MASTER` | `PR_PROCESS` | `pr_process_id`(VARCHAR PK) |
+| `ROUTING` | `PR_ROUTING` | `pr_routing_id`, `seq_no` |
 | `AMR_CHARGING_SESSION` | `AMR_CHARGING_LOG` | 테이블명 |
-| `ALARM` | `ALARM_LOG` | `ack_by`/`ack_note` 없음, `ack_at`→`acknowledged_at` |
-| `USERS` | `USER_ACCOUNT` | `user_id`(VARCHAR PK), `password_hash`, `created_at` |
-| (없음) | `REFRESH_TOKEN` | JPA 엔티티·Repository 신규 |
-| (없음) | `AMR_COMMAND` | AMR 제어 명령 영속화 (현재 비저장) |
+| `ALARM` | `ALARM_LOG` | `acknowledged_at`만 영속화 |
+| `USERS` | `USER_ACCOUNT` | `user_id`, `password_hash` |
+| (없음) | `REFRESH_TOKEN` | 10-B 또는 후속(인메모리 refresh 유지) |
+| (없음) | `AMR_COMMAND` | 후속(제어 명령 비영속 유지) |
 
-추가 컬럼·FK 정합:
+추가 컬럼·FK:
 
-- [ ] `WorkOrder`: `wo_id`→`work_id`, `wo_no` 제거(물리 스키마에 없음).
-- [ ] `WipLot`: `wo_id`→`work_id`, `current_routing_id`→`pr_routing_id`, `lot_no` 제거, PK `BIGINT`.
-- [ ] `EnvSensor`: `sensor_id`(INT AI)→`env_sensor_id`(VARCHAR PK).
-- [ ] `AmrStatusLog`: `amr_statlog_id` `BIGINT`, `SOH_pct` 컬럼명 매핑, `load_weight` 타입.
-- [ ] `Alarm`→`AlarmLog`(또는 동등 명명): API의 ack 필드와 DB 컬럼 차이 처리 방침 확정.
+- [x] `WorkOrder`: `wo_id`→`work_id`, `wo_no` 제거.
+- [x] `WipLot`: `work_id`, `pr_routing_id`, PK `BIGINT`.
+- [x] `EnvSensor`: `env_sensor_id`(VARCHAR PK).
+- [x] `AmrStatusLog`: `amr_statlog_id` `BIGINT`, `SOH_pct`, `load_weight` INT.
+- [x] `Alarm`/`ALARM_LOG`: API ack 응답은 username·시각만 반환(DB에 `ack_by` 없음).
+- [x] `Area`/`Product`: VARCHAR PK, AREA 허용 범위 컬럼 추가.
 
-#### 10-2. 인프라·설정
+**10-A-2. Repository·Service** — 완료 (2026-05-18)
 
-- [ ] `build.gradle`: MySQL Connector/J 의존성 추가.
-- [ ] `application-docker.yaml`(또는 `application-mysql.yaml`): MySQL datasource, `ddl-auto: validate`(또는 `none`), dialect 변경.
-- [ ] `BE/docker-compose.yml`: MySQL 서비스 추가, `DB/init.sql` 마운트·초기화, BE가 MySQL 기동 후 연결.
-- [ ] `.env.example`: DB 호스트·포트·계정 변수 추가.
-- [ ] H2 프로필은 로컬 단독 테스트용으로만 유지할지, 완전 제거할지 팀 합의 후 반영.
+- [x] Repository ID 타입·`EnvSensorLogRepository` 반영.
+- [x] `AlarmService`, `AuthenticationService`, `AnalyticsService`, `WorkHistoryService` 등 매핑 수정.
+- [ ] `docs/임시-스키마-변경-알람.md` 문서 정리(후속).
 
-#### 10-3. Repository·Service·시드 데이터
+**10-A-3. H2 시드 데이터 (`init.sql` 대체)** — 완료 (2026-05-18)
 
-- [ ] 영향 Repository 메서드·JPQL·Specification 수정 (테이블·컬럼 rename 반영).
-- [ ] `AlarmService`, `AmrService`, `ChargingService`, `WorkHistoryService`, `DashboardService`, `AnalyticsService` 매핑 수정.
-- [ ] `DemoUserDataLoader`, `AlarmDemoDataLoader`, `DashboardDemoDataLoader`: MySQL 시드(`init.sql`) 사용 시 비활성화 또는 조건부 실행.
-- [ ] `InMemoryRefreshTokenStore` → `REFRESH_TOKEN` DB 저장으로 전환(또는 프로필별 분기).
-- [ ] `docs/임시-스키마-변경-알람.md` 의존 제거·문서 정리.
+- [x] `DemoUserDataLoader`, `DashboardDemoDataLoader`, `AlarmDemoDataLoader`를 `init.sql` ID·값에 맞게 수정.
+- [x] FK 삽입 순서 준수.
 
-#### 10-4. 검증
+**10-A-4. 검증 (BE Docker만)** — 완료 (2026-05-18)
 
-- [ ] Docker: MySQL + BE 기동, `init.sql` 시드 데이터로 주요 API 스모크 (login, dashboard, amrs, alarms, charging, work-histories).
-- [ ] API 응답 필드가 `docs/API 정의.md`와 일치하는지 확인 (DB 컬럼 축소로 인한 DTO 조정 포함).
+- [x] `docker compose build` 성공.
+- [x] `docker compose up` 후 API 스모크(로컬 `.env` 필요).
+- [x] Health, login, dashboard, amrs, alarms, charging, work-histories, analytics KPIs → HTTP 200 확인.
+- [ ] API 응답 필드가 `docs/API 정의.md`와 일치하는지 상세 대조(후속).
+
+**10-A에서 하지 않는 것**
+
+- MySQL Connector 추가, `docker-compose`에 MySQL 서비스 추가
+- `init.sql` 마운트, `ddl-auto: validate`
+- BE가 DB compose를 대신 구성하는 작업
+
+---
+
+#### 10-B. MySQL 연동 — **DB compose merge 후**
+
+**전제:** DB 영역 `docker-compose`(또는 루트 통합 compose) merge, `init.sql` 기동 경로 확정.
+
+- [ ] `build.gradle`: MySQL Connector/J 의존성.
+- [ ] `application-mysql.yaml`(또는 profile): MySQL datasource, dialect, `ddl-auto: validate` 또는 `none`.
+- [ ] BE·DB compose 연동: BE가 MySQL에 접속, `init.sql` 시드 사용.
+- [ ] `.env.example`: DB 호스트·포트·계정 변수.
+- [ ] H2 DataLoader 비활성화(시드는 DB init 담당).
+- [ ] `InMemoryRefreshTokenStore` → `REFRESH_TOKEN` DB 저장(미완 시).
+- [ ] MySQL 환경에서 10-A와 동일 API 스모크 재검증.
 
 ---
 
 ## 작업 우선순위
 
 1. ~~Docker로 BE 기동 가능한 환경 확보 (섹션 0).~~ **완료**
-2. ~~인증 API 완성~~ **완료**
-3. ~~Dashboard·Amr·Charging·Alarm·WorkHistory·Analytics API~~ **완료**
-4. **다음: 물리 DB 스키마 정합** (섹션 10) — 엔티티·MySQL·서비스·Docker
-5. 공통 오류 응답 정리 (섹션 7)
-6. WebSocket 실시간 스트리밍 (섹션 6, `/api/v1/stream`)
-7. 테스트 및 검증 (섹션 8)
-8. 프로젝트 루트 통합 docker-compose (섹션 0 후속)
+2. ~~인증·Dashboard·Amr·Charging·Alarm·WorkHistory·Analytics API~~ **완료**
+3. ~~10-A 물리 스키마 정합 (H2 유지)~~ **완료** (2026-05-18)
+4. **다음:** 공통 오류 응답 정리 (섹션 7)
+5. WebSocket (섹션 6)
+6. 테스트 및 검증 (섹션 8)
+7. **10-B MySQL 연동** (DB compose merge 후)
+8. 프로젝트 루트 통합 docker-compose
 9. 추가 기능 (섹션 9)
 
 ## Docker 실행 (BE 폴더에서)
+
+10-A·10-B 공통: **지금은 BE 컨테이너만** 띄운다.
+
 ```bash
 cp .env.example .env
 # .env 에 JWT_SECRET 설정 (아래 「다른 PC에서 JWT 키 갱신」 참고)
 docker compose up --build
 ```
+
 `JWT_SECRET` 등 민감 값은 `.env`에만 두며, `.env`는 Git에 커밋하지 않는다.
 - API: http://localhost:8080
 - Health: http://localhost:8080/api/v1/actuator/health
@@ -201,7 +235,7 @@ docker compose up --build
 - Work histories: GET http://localhost:8080/api/v1/work-histories (Bearer 토큰)
 - Analytics KPIs: GET http://localhost:8080/api/v1/analytics/kpis (Bearer 토큰)
 
-> 물리 스키마 정합(섹션 10) 완료 후에는 MySQL 컨테이너를 함께 띄우는 방식으로 실행 방법이 갱신된다.
+> **10-B 완료 후** 실행 방법은 DB compose·MySQL 연결 방식에 맞게 이 절을 갱신한다.
 
 ## 다른 PC에서 JWT 키 갱신 (팀 공유)
 
@@ -268,5 +302,5 @@ docker compose up --build
 ## 참고
 - 설계 문서를 변경 시 먼저 수정 후 구현.
 - 물리 스키마 기준: `DB/init.sql`, `docs/데이터 스키마 설계.md`.
-- 커밋 메시지: `feat(be): 물리 스키마 정합 - 엔티티 AMR_MASTER 매핑 #이슈번호`
-- PR 전 로컬 검증 필수.
+- 커밋 메시지 예: `feat(be): 물리 스키마 정합 - AMR_MASTER 엔티티 매핑 #이슈번호`
+- PR 전 로컬 검증: `docker compose up --build` (10-A·10-B 공통).

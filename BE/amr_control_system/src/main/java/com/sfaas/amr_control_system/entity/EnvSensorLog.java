@@ -11,32 +11,29 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "AMR_CHARGING_LOG")
-public class AmrChargingSession {
+@Table(name = "ENV_SENSOR_LOG")
+public class EnvSensorLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "charging_session_id")
-    private Long chargingSessionId;
+    @Column(name = "sensor_log_id")
+    private Long sensorLogId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "amr_id")
-    private Amr amr;
+    @JoinColumn(name = "env_sensor_id")
+    private EnvSensor envSensor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "station_id")
-    private AmrChargeStation station;
+    @Column(name = "sensor_value", precision = 10, scale = 2)
+    private BigDecimal sensorValue;
 
-    @Column(name = "session_status", length = 50)
-    private String sessionStatus;
+    @Column(name = "sensor_status", length = 50)
+    private String sensorStatus;
 
-    @Column(name = "start_time")
-    private LocalDateTime startTime;
-
-    @Column(name = "end_time")
-    private LocalDateTime endTime;
+    @Column(name = "measured_at")
+    private LocalDateTime measuredAt;
 }

@@ -69,18 +69,15 @@ public class AlarmService {
             throw new IllegalArgumentException("Alarm is already acknowledged.");
         }
 
+        LocalDateTime acknowledgedAt = LocalDateTime.now();
         alarm.setAcknowledged(true);
-        alarm.setAckBy(username);
-        alarm.setAckAt(LocalDateTime.now());
-        if (request != null && request.getNote() != null && !request.getNote().isBlank()) {
-            alarm.setAckNote(request.getNote().trim());
-        }
+        alarm.setAcknowledgedAt(acknowledgedAt);
         alarmRepository.save(alarm);
 
         AlarmAckResponseDto response = new AlarmAckResponseDto();
         response.setAcknowledged(true);
-        response.setAckBy(alarm.getAckBy());
-        response.setAckAt(alarm.getAckAt());
+        response.setAckBy(username);
+        response.setAckAt(acknowledgedAt);
         return response;
     }
 
