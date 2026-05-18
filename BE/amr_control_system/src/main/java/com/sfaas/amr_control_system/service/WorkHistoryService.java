@@ -29,7 +29,7 @@ public class WorkHistoryService {
     private static final int DEFAULT_LIMIT = 20;
     private static final String CSV_HEADER = "id,amrId,taskType,startTime,endTime,from,to,result";
     private static final DateTimeFormatter CSV_TIME_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-    private static final Sort PICK_TIME_DESC = Sort.by(Sort.Order.desc("pickTime").nullsLast());
+    private static final Sort PICK_TIME_DESC = Sort.by(Sort.Direction.DESC, "pickTime");
 
     private final AmrTaskRepository amrTaskRepository;
 
@@ -91,7 +91,7 @@ public class WorkHistoryService {
     }
 
     private AmrTask findTaskOrThrow(String workHistoryId) {
-        Integer taskId = WorkHistoryIdentifierHelper.parseWorkHistoryId(workHistoryId);
+        Long taskId = WorkHistoryIdentifierHelper.parseWorkHistoryId(workHistoryId);
         return amrTaskRepository.findById(taskId)
                 .orElseThrow(() -> new WorkHistoryNotFoundException(workHistoryId));
     }

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Component
 @Order(3)
@@ -31,14 +32,17 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (alarmRepository.count() > 0) {
-            return;
-        }
         if (amrStatusLogRepository.count() == 0) {
             return;
         }
 
-        log.info("Seeding alarm demo data from operational records (H2).");
+        boolean supplementalSeeded = alarmRepository.findAll().stream()
+                .anyMatch(alarm -> "amr".equalsIgnoreCase(alarm.getSourceType()));
+        if (supplementalSeeded) {
+            return;
+        }
+
+        log.info("Seeding supplemental alarm demo data from operational records (H2).");
 
         List<Alarm> alarms = new ArrayList<>();
 
@@ -48,9 +52,7 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
             }
             Alarm alarm = new Alarm();
             alarm.setSourceType("amr");
-            alarm.setSourceId(statusLog.getAmr() != null
-                    ? String.format("amr-%02d", statusLog.getAmr().getAmrId())
-                    : null);
+            alarm.setSourceId(formatAmrSourceId(statusLog));
             alarm.setLevel("critical");
             alarm.setMessage(String.format(
                     "AMR %s 오류 상태 감지",
@@ -65,9 +67,16 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
             if (!DashboardStatusNormalizer.isCongestedStation(station.getStationStatus())) {
                 continue;
             }
+            String sourceId = String.valueOf(station.getStationId());
+            boolean alreadyExists = alarmRepository.findAll().stream()
+                    .anyMatch(alarm -> "station".equalsIgnoreCase(alarm.getSourceType())
+                            && sourceId.equals(alarm.getSourceId()));
+            if (alreadyExists) {
+                continue;
+            }
             Alarm alarm = new Alarm();
             alarm.setSourceType("station");
-            alarm.setSourceId("station-" + station.getStationId());
+            alarm.setSourceId(sourceId);
             alarm.setLevel("warning");
             alarm.setMessage(String.format("%s 혼잡 상태", station.getStationName()));
             alarm.setOccurredAt(LocalDateTime.now());
@@ -78,5 +87,12 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
         if (!alarms.isEmpty()) {
             alarmRepository.saveAll(alarms);
         }
+    }
+
+    private String formatAmrSourceId(AmrStatusLog statusLog) {
+        if (statusLog.getAmr() == null || statusLog.getAmr().getAmrId() == null) {
+            return null;
+        }
+        return String.format(Locale.ROOT, "amr-%02d", statusLog.getAmr().getAmrId());
     }
 }

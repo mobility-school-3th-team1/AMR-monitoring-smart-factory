@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface AmrTaskRepository extends JpaRepository<AmrTask, Integer>, JpaSpecificationExecutor<AmrTask> {
+public interface AmrTaskRepository extends JpaRepository<AmrTask, Long>, JpaSpecificationExecutor<AmrTask> {
 
     List<AmrTask> findByPickTimeIsNotNullAndDropTimeIsNotNull();
 

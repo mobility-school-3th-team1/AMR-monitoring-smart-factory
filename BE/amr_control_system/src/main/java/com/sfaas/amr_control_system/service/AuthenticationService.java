@@ -89,14 +89,10 @@ public class AuthenticationService {
 
     private UserDto toUserDto(User user) {
         UserDto userDto = new UserDto();
-        userDto.setId(formatUserId(user.getId()));
+        userDto.setId(user.getUserId());
         userDto.setUsername(user.getUsername());
         userDto.setDisplayName(user.getDisplayName());
         userDto.setRole(user.getRole());
         return userDto;
-    }
-
-    private String formatUserId(Long id) {
-        return String.format("user-%03d", id);
     }
 }

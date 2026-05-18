@@ -1,26 +1,34 @@
 package com.sfaas.amr_control_system.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
 
-@Entity
-@Table(name = "USERS")
+import java.time.LocalDate;
+
 @Data
+@Entity
+@Table(name = "USER_ACCOUNT")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "user_id", length = 50)
+    private String userId;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "username", nullable = false, unique = true, length = 100)
     private String username;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(name = "password_hash", nullable = false, length = 255)
+    private String passwordHash;
 
-    @Column(nullable = false)
+    @Column(name = "display_name", length = 100)
     private String displayName;
 
-    @Column(nullable = false)
+    @Column(name = "role", length = 50)
     private String role;
+
+    @Column(name = "created_at")
+    private LocalDate createdAt;
 }

@@ -1,17 +1,22 @@
 package com.sfaas.amr_control_system.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "PROCESS_MASTER")
+@Table(name = "PR_PROCESS")
 public class ProcessMaster {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "process_id")
-    private Integer processId;
+    @Column(name = "pr_process_id", length = 50)
+    private String prProcessId;
 
     @Column(name = "process_name", length = 100)
     private String processName;

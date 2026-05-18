@@ -1,17 +1,19 @@
 package com.sfaas.amr_control_system.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @Entity
-@Table(name = "AMR")
+@Table(name = "AMR_MASTER")
 public class Amr {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "amr_id")
     private Integer amrId;
 
@@ -28,5 +30,5 @@ public class Amr {
     private Integer batteryCapacity;
 
     @Column(name = "inspection_dt")
-    private LocalDateTime inspectionDt;
+    private LocalDate inspectionDt;
 }

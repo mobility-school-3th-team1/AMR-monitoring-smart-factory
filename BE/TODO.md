@@ -9,7 +9,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - 설계 문서 확인 완료: 프로젝트 정의서, API 정의, 데이터 스키마 설계, 협업 컨벤션.
 - ERD 및 API 명세 기반 API·서비스 로직 구현 진행 중.
 - **BE 전용 Docker 실행 환경 구성 완료** (2026-05-17). PC에 Java를 설치하지 않아도 Docker만으로 백엔드 서버를 빌드·실행할 수 있다.
-- 데이터 저장은 당분간 **임시 DB(H2)** 를 사용한다. DB 담당 영역 merge 후 MySQL로 전환 예정.
+- **DB 물리 스키마 merge 완료** (`DB/init.sql`). **10-A (H2 스키마 정합·API 스모크):** 완료 (2026-05-18).
+- **DB 영역 Docker compose는 아직 merge되지 않음.** 당분간 **H2 + BE Docker**로 시연·개발.
+- **DAS·FE·BE 합의:** AMR 비상 정지는 BE가 DB 상태를 갱신한 뒤 `accepted` 응답, FE가 DAS(MQTT)에 정지 고지 (설계 문서 반영 예정, 섹션 11).
+- **시연 최우선:** WebSocket → AMR 정지(DB 반영) → (병렬) FE·BE 통합 기동.
 
 ---
 
@@ -34,9 +37,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - 개발용 임시 DB(H2, 메모리). 서버를 끄면 데이터는 사라진다.
 
 **범위에 포함되지 않은 것 (추후 작업)**  
-- MySQL 등 DB 담당자 merge 결과 반영  
+- 물리 스키마에 맞춘 JPA 엔티티 정합 (섹션 10-A)  
+- MySQL·DB Docker compose 연동 (섹션 10-B, DB compose merge 후)  
 - 프론트엔드·DB와 한 번에 띄우는 **프로젝트 루트 통합 docker-compose**  
-- 로그인·대시보드 등 **비즈니스 API** 구현 (별도 TODO)
+- WebSocket 실시간 스트리밍 (별도 TODO)
 
 **실행 방법 (개발자·검증 담당)**  
 `BE` 폴더에서: `docker compose up --build`  
@@ -44,23 +48,20 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ---
 
-## 다음 예정 작업 (팀 공유용)
+## 다음 예정 작업 (팀 공유용) — 시연 우선
 
 | 순서 | 작업 | 한 줄 설명 | 영향 |
 |------|------|-----------|------|
-| 1 | ~~로그인·인증 API 완성~~ | 완료 | |
-| 2 | ~~대시보드 API~~ | 완료 | |
-| 3 | ~~AMR API~~ | 완료 | |
-| 4 | ~~충전 API~~ | 완료 | |
-| 5 | ~~알람 API~~ | 완료 | |
-| 5 | ~~작업 이력·분석 API~~ | 완료 | |
-| 5 | **공통 오류 응답 정리** | API 실패 시 형식을 통일 | 프론트·운영이 오류를 일관되게 처리 |
-| 6 | 알람 등 도메인 API | 설계 문서의 나머지 REST API 순차 구현 | 기능별 화면 연동 |
-| 7 | 실시간(WebSocket) | 위치·알람 등 실시간 푸시 | 대시보드 실시간 갱신 |
-| (병렬) | DB merge 후 Docker·MySQL 연동 | 실제 DB 스키마와 백엔드 연결 | 임시 H2 대신 운영에 가까운 DB 사용 |
-| (병렬) | 루트 통합 Docker | FE·DB·BE를 한 명령으로 기동 | 통합 데모·QA 환경 |
+| ~~0~~ | ~~10-A 물리 스키마 정합~~ | **완료** (2026-05-18) | REST API 스모크 통과 |
+| **1** | **WebSocket + 데모 이벤트** | `/api/v1/stream`, 위치·상태·알람 푸시 | 시연 시 화면이 “살아 있음” |
+| **2** | **AMR 비상 정지 (DB 반영)** | `POST .../commands` → DB 갱신 → `accepted` | 합의한 정지 시나리오의 BE 구간 |
+| **3** | **설계 문서 반영** | 정지·DAS·MQTT 흐름 명세 (섹션 11) | FE·DB·BE 구현 기준 통일 |
+| (병렬) | **FE·BE 통합 기동** | 루트/문서화된 compose, CORS·URL | 시연 당일 원클릭 기동 |
+| 4 | 공통 오류 응답 정리 | API 실패 형식 통일 | FE 연동 품질 |
+| (대기) | **10-B MySQL 연동** | DB compose merge 후 | 시연 필수 아님 |
+| (후순) | 단위·통합 테스트, CSV 등 | 회귀·부가 기능 | 시연 이후 |
 
-**현재 진행 예정 1순위:** 섹션 6 **WebSocket** (REST API 컨트롤러 완료, 2026-05-17).
+**현재 진행 예정 1순위:** 섹션 **6 WebSocket** (시연용 주기 이벤트 포함).
 
 ---
 
@@ -73,87 +74,53 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] `application-docker.yaml` (H2, JWT 환경 변수, Actuator health).
 - [x] `BE/.env.example` (JWT_SECRET 등).
 - [x] Docker로 `docker compose up --build` 기동 및 `/actuator/health` 응답 확인.
-- [ ] DB 영역 merge 후: MySQL 서비스·드라이버·datasource profile 연동 (별도 작업).
+- [ ] 10-A 완료 후에도 H2·BE 단독 compose 유지 (10-B 전까지).
+- [ ] 10-B: DB compose merge 후 MySQL 연동 (별도 작업).
 - [ ] FE·DB·BE Docker 완료 후: 프로젝트 루트 통합 `docker-compose` 작성 (별도 작업).
 
-### 1. 데이터베이스 설정 및 엔티티 구현
+### 1. 데이터베이스 설정 및 엔티티 구현 (H2·구 스키마 기준 — 정합 전)
 - [x] application.yaml에 H2 인메모리 DB 설정 추가 (MySQL 대신 개발용).
 - [x] build.gradle에 JPA 및 H2 의존성 추가.
-- [x] JPA 엔티티 클래스 생성 (데이터 스키마 설계.md의 ERD 기반).
-  - [x] Site.java
-  - [x] Area.java
-  - [x] EnvSensor.java
-  - [x] EnvReading.java
-  - [x] Product.java
-  - [x] ProcessMaster.java
-  - [x] Routing.java
-  - [x] WorkOrder.java
-  - [x] AmrChargeStation.java
-  - [x] Amr.java
-  - [x] AmrChargingSession.java
-  - [x] WipLot.java
-  - [x] AmrTask.java
-  - [x] AmrStatusLog.java
-  - [x] Alarm.java (임시, `docs/임시-스키마-변경-알람.md`)
+- [x] JPA 엔티티 클래스 생성 (초기 ERD·임시 스키마 기반).
+  - [x] Site.java, Area.java, EnvSensor.java, EnvReading.java, Product.java
+  - [x] ProcessMaster.java, Routing.java, WorkOrder.java, WipLot.java
+  - [x] AmrChargeStation.java, Amr.java, AmrChargingSession.java
+  - [x] AmrTask.java, AmrStatusLog.java
+  - [x] Alarm.java (임시 `ALARM`, `docs/임시-스키마-변경-알람.md`)
+  - [x] User.java (임시 `USERS`, 인메모리 refresh)
 - [x] JPA Repository 인터페이스 생성 (각 엔티티별).
-  - [x] SiteRepository.java
-  - [x] AreaRepository.java
-  - [x] EnvSensorRepository.java
-  - [x] EnvReadingRepository.java
-  - [x] ProductRepository.java
-  - [x] ProcessMasterRepository.java
-  - [x] RoutingRepository.java
-  - [x] WorkOrderRepository.java
-  - [x] AmrChargeStationRepository.java
-  - [x] AmrRepository.java
-  - [x] AmrChargingSessionRepository.java
-  - [x] WipLotRepository.java
-  - [x] AmrTaskRepository.java
-  - [x] AmrStatusLogRepository.java
-  - [x] AlarmRepository.java
+
+> **주의:** 위 엔티티는 `DB/init.sql` 물리 스키마와 테이블명·컬럼명·PK 타입이 다르다. 섹션 **10-A**에서 일괄 정합한다.
 
 ### 2. DTO 클래스 구현
 - [x] 요청/응답 DTO 생성 (API 정의.md 기반).
-  - [x] 인증 관련 DTO (LoginRequestDto, LoginResponseDto, UserDto, RefreshTokenRequestDto, RefreshTokenResponseDto).
-  - [x] 대시보드 DTO (DashboardSummaryDto, AlarmSummaryDto, RecentAlarmsDto).
-  - [x] AMR 관련 DTO (AmrDto, AmrStatusHistoryDto, AmrPathDto, AmrCommandRequestDto, AmrCommandResponseDto 등).
-  - [x] 충전 관련 DTO (ChargingStationDto, ChargingStationListDto, ForecastBucketDto, ChargingForecastDto).
-  - [x] 알람 관련 DTO (AlarmDto, AlarmListResponseDto, AlarmAckRequestDto, AlarmAckResponseDto, AlarmCreateRequestDto).
-  - [x] 작업 이력 DTO (WorkHistoryDto, WorkHistoryListResponseDto).
-  - [x] 분석 DTO (AnalyticsKpiDto, AnalyticsBatteryDto, AnalyticsWorkloadDto).
+  - [x] 인증, 대시보드, AMR, 충전, 알람, 작업 이력, 분석 DTO.
 
 ### 3. 보안 및 인증 구현
 - [x] Spring Security 설정 클래스 생성 (JwtAuthenticationFilter, SecurityConfig).
 - [x] JWT 유틸리티 클래스 생성 (토큰 생성/검증).
 - [x] 사용자 엔티티 및 Repository 추가 (기본 사용자 관리).
+- [x] 10-A: `USER_ACCOUNT` 엔티티 매핑 (H2). `REFRESH_TOKEN`·DB 저장 전환은 10-B.
 
 ### 4. 컨트롤러 구현
-- [x] AuthController.java (로그인, 리프레시, 로그아웃). `/api/v1/auth/*`, 시드 사용자 admin/demo123.
-- [x] DashboardController.java (요약, 최근 알람, 최근 로그).
-- [x] AmrController.java (목록, 상세, 상태 이력, 경로, 제어 명령).
-- [x] ChargingController.java (스테이션, 대기열, 예측, 이력).
-- [x] AlarmController.java (목록, 상세, 확인, 생성). `docs/임시-스키마-변경-알람.md` 참고.
-- [x] WorkHistoryController.java (작업 이력 조회, 내보내기).
-- [x] AnalyticsController.java (KPI, 배터리, 작업량 분석).
+- [x] AuthController, DashboardController, AmrController, ChargingController.
+- [x] AlarmController, WorkHistoryController, AnalyticsController.
 
 ### 5. 서비스 로직 구현
-- [x] AuthenticationService (로그인, refresh, logout).
-- [x] DashboardService (KPI·알람·운영 로그).
-- [x] AmrService (목록·상세·이력·경로·명령).
-- [x] ChargingService (스테이션·대기열·예측·이력).
-- [x] AlarmService (목록·상세·확인·생성).
-- [x] WorkHistoryService (목록·상세·CSV export).
-- [x] AnalyticsService (KPI·배터리·작업량 집계).
-- [ ] 각 컨트롤러에 대응하는 Service 클래스 생성.
-- [ ] 비즈니스 로직 구현 (데이터 조회, 계산, 검증 등).
+- [x] AuthenticationService, DashboardService, AmrService, ChargingService.
+- [x] AlarmService, WorkHistoryService, AnalyticsService.
+- [x] 10-A: Repository·매핑 로직 수정 (엔티티 rename 반영).
 
-### 6. WebSocket 구현
-- [ ] WebSocket 설정 클래스 생성.
-- [ ] 이벤트 발행 서비스 구현 (실시간 데이터 스트리밍).
+### 6. WebSocket 구현 — **시연 1순위**
+- [ ] WebSocket 설정 (`/api/v1/stream`), 연결 시 JWT 인증.
+- [ ] 이벤트 발행 서비스 (`amrs.position.updated`, `amrs.status.updated`, `alarms.created`, `dashboard.summary.updated` 등).
+- [ ] 시연용 주기 발행(선택): AMR 좌표·상태가 주기적으로 갱신되도록 스케줄 또는 DAS 연동 전 임시 시뮬레이터.
+- [ ] AMR 정지 후 `amrs.status.updated` 등으로 FE에 상태 반영 (섹션 11과 연동).
 
 ### 7. 예외 처리 및 로깅
 - [x] 전역 예외 처리 클래스 (@RestControllerAdvice) — 인증 관련 최소 구현.
 - [x] 커스텀 예외 클래스 정의 (InvalidRefreshTokenException 등, 도메인별 확장 예정).
+- [ ] 공통 오류 응답 형식 통일 (API 정의·프론트 연동 기준).
 
 ### 8. 테스트 및 검증
 - [ ] 단위 테스트 작성 (Service, Repository).
@@ -161,30 +128,116 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] 빌드 및 실행 검증 (Docker: `docker compose build`, `docker compose up`; 테스트는 `docker compose run --rm be` 등).
 
 ### 9. 추가 기능
-- [ ] 파일 내보내기 기능 (Excel/CSV 다운로드).
+- [ ] 파일보내기 기능 (Excel/CSV 다운로드).
 - [ ] 캐싱 또는 최적화 (필요 시).
 
-## 작업 우선순위
-1. ~~Docker로 BE 기동 가능한 환경 확보 (섹션 0).~~ **완료**
-2. ~~인증 API 완성~~ **완료** (Auth login/refresh/logout, `/api/v1`, 시드 사용자).
-3. ~~DashboardController 및 DashboardService~~ **완료**
-4. ~~AmrController 및 AmrService~~ **완료**
-5. ~~ChargingController 및 ChargingService~~ **완료**
-6. ~~AlarmController 및 AlarmService~~ **완료** (ALARM 임시 테이블, `docs/임시-스키마-변경-알람.md`).
-7. ~~WorkHistoryController 및 WorkHistoryService~~ **완료**
-8. ~~AnalyticsController 및 AnalyticsService~~ **완료**
-9. **다음:** WebSocket 실시간 스트리밍 (`/api/v1/stream`).
-10. 예외 처리 확장·테스트·MySQL 연동.
-9. WebSocket과 실시간 기능 구현.
-10. DB merge 후 MySQL 연동 및 루트 통합 compose.
-11. 테스트 및 문서화.
+### 10. 물리 DB 스키마 정합 — **완료 (10-A, 2026-05-18)**
+
+`DB/init.sql` 및 `docs/데이터 스키마 설계.md`를 기준으로 백엔드를 맞춘다.  
+**2단계로 진행:** 지금은 **10-A(H2 유지)** 만 수행하고, **10-B(MySQL)** 는 DB 영역 `docker-compose` merge 이후에 한다.
+
+---
+
+#### 10-A. 스키마 정합 (H2 유지) — **지금 진행**
+
+**목표:** JPA가 물리 스키마와 **같은 테이블명·컬럼명·관계**를 쓰도록 맞춘다. DB 엔진은 계속 H2이며, `application-docker.yaml`의 `ddl-auto: create-drop`으로 기동 시 스키마를 생성한다. `BE/docker-compose.yml`은 **변경하지 않는다.**
+
+**10-A-1. 엔티티·테이블 매핑** — 완료 (2026-05-18)
+
+| 현재 (BE) | 물리 DB (`init.sql`) | 주요 변경 |
+|-----------|----------------------|-----------|
+| `AMR` | `AMR_MASTER` | 테이블명, PK 수동 할당(INT, AUTO 없음) |
+| `ENV_READING` | `ENV_SENSOR_LOG` | `EnvSensorLog` 엔티티로 교체 |
+| `PROCESS_MASTER` | `PR_PROCESS` | `pr_process_id`(VARCHAR PK) |
+| `ROUTING` | `PR_ROUTING` | `pr_routing_id`, `seq_no` |
+| `AMR_CHARGING_SESSION` | `AMR_CHARGING_LOG` | 테이블명 |
+| `ALARM` | `ALARM_LOG` | `acknowledged_at`만 영속화 |
+| `USERS` | `USER_ACCOUNT` | `user_id`, `password_hash` |
+| (없음) | `REFRESH_TOKEN` | 10-B 또는 후속(인메모리 refresh 유지) |
+| (없음) | `AMR_COMMAND` | 후속(제어 명령 비영속 유지) |
+
+추가 컬럼·FK:
+
+- [x] `WorkOrder`: `wo_id`→`work_id`, `wo_no` 제거.
+- [x] `WipLot`: `work_id`, `pr_routing_id`, PK `BIGINT`.
+- [x] `EnvSensor`: `env_sensor_id`(VARCHAR PK).
+- [x] `AmrStatusLog`: `amr_statlog_id` `BIGINT`, `SOH_pct`, `load_weight` INT.
+- [x] `Alarm`/`ALARM_LOG`: API ack 응답은 username·시각만 반환(DB에 `ack_by` 없음).
+- [x] `Area`/`Product`: VARCHAR PK, AREA 허용 범위 컬럼 추가.
+
+**10-A-2. Repository·Service** — 완료 (2026-05-18)
+
+- [x] Repository ID 타입·`EnvSensorLogRepository` 반영.
+- [x] `AlarmService`, `AuthenticationService`, `AnalyticsService`, `WorkHistoryService` 등 매핑 수정.
+- [ ] `docs/임시-스키마-변경-알람.md` 문서 정리(후속).
+
+**10-A-3. H2 시드 데이터 (`init.sql` 대체)** — 완료 (2026-05-18)
+
+- [x] `DemoUserDataLoader`, `DashboardDemoDataLoader`, `AlarmDemoDataLoader`를 `init.sql` ID·값에 맞게 수정.
+- [x] FK 삽입 순서 준수.
+
+**10-A-4. 검증 (BE Docker만)** — 완료 (2026-05-18)
+
+- [x] `docker compose build` 성공.
+- [x] `docker compose up` 후 API 스모크(로컬 `.env` 필요).
+- [x] Health, login, dashboard, amrs, alarms, charging, work-histories, analytics KPIs → HTTP 200 확인.
+- [ ] API 응답 필드가 `docs/API 정의.md`와 일치하는지 상세 대조(후속).
+
+**10-A에서 하지 않는 것**
+
+- MySQL Connector 추가, `docker-compose`에 MySQL 서비스 추가
+- `init.sql` 마운트, `ddl-auto: validate`
+- BE가 DB compose를 대신 구성하는 작업
+
+---
+
+#### 10-B. MySQL 연동 — **DB compose merge 후**
+
+**전제:** DB 영역 `docker-compose`(또는 루트 통합 compose) merge, `init.sql` 기동 경로 확정.
+
+- [ ] `build.gradle`: MySQL Connector/J 의존성.
+- [ ] `application-mysql.yaml`(또는 profile): MySQL datasource, dialect, `ddl-auto: validate` 또는 `none`.
+- [ ] BE·DB compose 연동: BE가 MySQL에 접속, `init.sql` 시드 사용.
+- [ ] `.env.example`: DB 호스트·포트·계정 변수.
+- [ ] H2 DataLoader 비활성화(시드는 DB init 담당).
+- [ ] `InMemoryRefreshTokenStore` → `REFRESH_TOKEN` DB 저장(미완 시).
+- [ ] MySQL 환경에서 10-A와 동일 API 스모크 재검증.
+
+---
+
+### 11. AMR 비상 정지 및 DAS 연동 (합의 반영) — **시연 2순위**
+
+팀 합의: FE → BE(명령·DB 갱신·`accepted`) → FE → DAS(MQTT 정지 고지). BE는 DAS와 직접 통신하지 않음.
+
+- [ ] `docs/` 설계 문서 반영 (프로젝트 정의서·API 정의·필요 시 ERD 주석). 상세는 본 문서 하단 「AMR 정지 합의」 참고.
+- [ ] `AmrCommand` 엔티티·Repository (`AMR_COMMAND` 테이블).
+- [ ] `AmrService.sendCommand`: `emergencyStop` 등 시 DB 트랜잭션 내
+  - `AMR_COMMAND` INSERT (`accepted=true`, `status` 등)
+  - 최신 `AMR_STATUS_LOG` 상태 갱신(예: `STOPPED`/`ERROR`) 또는 신규 로그 행 INSERT
+  - (선택) 진행 중 `AMR_TASK` 상태 정리
+- [ ] DB 커밋 성공 후에만 HTTP 200 + `accepted: true` 응답.
+- [ ] (WebSocket 구현 시) `amrs.status.updated` 이벤트 발행.
+- [ ] FE·DAS: MQTT 토픽·페이로드는 FE·DB 영역 문서에 정의 (BE 범위 밖).
+
+## 작업 우선순위 (시연 기준)
+
+1. ~~Docker·REST API·10-A~~ **완료**
+2. **WebSocket + 시연용 이벤트** (섹션 6)
+3. **AMR 비상 정지 DB 반영 + 설계 문서** (섹션 11)
+4. **FE·BE 통합 시연 경로** (루트 compose 또는 runbook)
+5. 공통 오류 응답 (섹션 7)
+6. 10-B MySQL, 테스트·추가 기능 (시연 후)
 
 ## Docker 실행 (BE 폴더에서)
+
+10-A·10-B 공통: **지금은 BE 컨테이너만** 띄운다.
+
 ```bash
 cp .env.example .env
 # .env 에 JWT_SECRET 설정 (아래 「다른 PC에서 JWT 키 갱신」 참고)
 docker compose up --build
 ```
+
 `JWT_SECRET` 등 민감 값은 `.env`에만 두며, `.env`는 Git에 커밋하지 않는다.
 - API: http://localhost:8080
 - Health: http://localhost:8080/api/v1/actuator/health
@@ -195,6 +248,8 @@ docker compose up --build
 - Alarms list: GET http://localhost:8080/api/v1/alarms (Bearer 토큰)
 - Work histories: GET http://localhost:8080/api/v1/work-histories (Bearer 토큰)
 - Analytics KPIs: GET http://localhost:8080/api/v1/analytics/kpis (Bearer 토큰)
+
+> **10-B 완료 후** 실행 방법은 DB compose·MySQL 연결 방식에 맞게 이 절을 갱신한다.
 
 ## 다른 PC에서 JWT 키 갱신 (팀 공유)
 
@@ -258,7 +313,22 @@ docker compose up --build
 - `.env` 파일을 Slack·이메일·Issue에 붙여 넣지 않는다. 공유가 필요하면 **1Password 등 비밀 관리 도구** 또는 팀 합의된 안전한 채널을 사용한다.
 - 운영(스테이징/프로덕션) 환경은 별도 시크릿을 사용하고, 개발 PC `.env`와 동일하게 두지 않는다.
 
+## AMR 정지 합의 (설계 문서 반영용 메모)
+
+DAS·DB·BE·FE 논의 결과. 구현·문서 수정 시 기준.
+
+```
+[1] FE  --POST /amrs/{id}/commands (emergencyStop)-->  BE
+[2] BE  --트랜잭션-->  DB (AMR_COMMAND, AMR_STATUS_LOG 등 운행 상태)
+[3] BE  --200 { accepted: true, commandId }-->  FE
+[4] FE  --MQTT-->  DAS  (좌표 갱신·작업 시뮬 중단)
+```
+
+- 시뮬레이션: 실제 AMR 없음. 운행 상태는 **DB가 기준**, DAS는 MQTT로 좌표·작업 생성.
+- BE ↔ DAS 직접 연동 없음 (현업형 설비 제어 경로 생략, 프로젝트 시연 목적).
+- `accepted: true` 의미: **DB 반영 완료 후** 응답 (현재 BE는 DB 미반영·즉시 true → 섹션 11에서 수정).
+
 ## 참고
 - 설계 문서를 변경 시 먼저 수정 후 구현.
-- 커밋 메시지: `feat(be): 엔티티 클래스 추가 #이슈번호`
-- PR 전 로컬 검증 필수.
+- 물리 스키마 기준: `DB/init.sql`, `docs/데이터 스키마 설계.md`.
+- PR 전 로컬 검증: `docker compose up --build`.
