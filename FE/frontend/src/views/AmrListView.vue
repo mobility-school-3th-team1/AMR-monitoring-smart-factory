@@ -90,6 +90,9 @@ import api from '@/plugins/axios'
 
 const router = useRouter()
 
+const AMR_LIST_LIMIT = 50
+const POLLING_INTERVAL_MS = 15000
+
 // 상태
 const isLoading = ref(true)
 const loadError = ref(null)
@@ -137,7 +140,7 @@ const stats = computed(() => {
 // API 호출
 async function loadAmrs() {
   try {
-    const res = await api.get('/amrs?page=1&limit=50')
+    const res = await api.get(`/amrs?page=1&limit=${AMR_LIST_LIMIT}`)
     robots.value = (res.data.data || []).map(mapAmr)
     loadError.value = null
   } catch (err) {
@@ -152,7 +155,7 @@ let refreshTimer = null
 
 onMounted(() => {
   loadAmrs()
-  refreshTimer = setInterval(loadAmrs, 15000)
+  refreshTimer = setInterval(loadAmrs, POLLING_INTERVAL_MS)
 })
 
 onUnmounted(() => {
