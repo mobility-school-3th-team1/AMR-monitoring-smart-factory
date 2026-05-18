@@ -1,10 +1,14 @@
+# Environment files (secrets) — never commit
+.env
+.env.local
+.env.*.local
+!.env.example
+
 node_modules/
 /FE/frontend/node_modules/
 /BE/amr_control_system/.gradle/
 /BE/amr_control_system/.gradle
 /dist/
-.env
-.env.local
 .DS_Store
 .vscode/
 .idea/

@@ -1,0 +1,26 @@
+# BE standalone stack (H2). Run from BE/: docker compose up --build
+# Requires BE/.env (copy from .env.example and set JWT_SECRET).
+services:
+  be:
+    build:
+      context: ./amr_control_system
+      dockerfile: Dockerfile
+    container_name: amr-be
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}
+    env_file:
+      - path: .env
+        required: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
