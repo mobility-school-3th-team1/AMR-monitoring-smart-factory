@@ -9,10 +9,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - 설계 문서 확인 완료: 프로젝트 정의서, API 정의, 데이터 스키마 설계, 협업 컨벤션.
 - ERD 및 API 명세 기반 API·서비스 로직 구현 진행 중.
 - **BE 전용 Docker 실행 환경 구성 완료** (2026-05-17). PC에 Java를 설치하지 않아도 Docker만으로 백엔드 서버를 빌드·실행할 수 있다.
-- **DB 물리 스키마 merge 완료** (`DB/init.sql`, 18개 테이블·시드 데이터). 백엔드 JPA 엔티티는 아직 구(舊) 테이블명·컬럼명 기준이며 **물리 스키마와 불일치**한다.
-- **DB 영역 Docker compose는 아직 merge되지 않음.** 당분간 **H2(메모리) + BE Docker 단독**으로 개발·검증한다.
-- **10-A (H2 스키마 정합):** 완료 (2026-05-18). 10-B(MySQL)는 DB compose merge 후.
-- MySQL 연동은 DB compose merge 후 **10-B**에서 진행한다.
+- **DB 물리 스키마 merge 완료** (`DB/init.sql`). **10-A (H2 스키마 정합·API 스모크):** 완료 (2026-05-18).
+- **DB 영역 Docker compose는 아직 merge되지 않음.** 당분간 **H2 + BE Docker**로 시연·개발.
+- **DAS·FE·BE 합의:** AMR 비상 정지는 BE가 DB 상태를 갱신한 뒤 `accepted` 응답, FE가 DAS(MQTT)에 정지 고지 (설계 문서 반영 예정, 섹션 11).
+- **시연 최우선:** WebSocket → AMR 정지(DB 반영) → (병렬) FE·BE 통합 기동.
 
 ---
 
@@ -48,19 +48,20 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ---
 
-## 다음 예정 작업 (팀 공유용)
+## 다음 예정 작업 (팀 공유용) — 시연 우선
 
 | 순서 | 작업 | 한 줄 설명 | 영향 |
 |------|------|-----------|------|
-| **1** | ~~**10-A 물리 스키마 정합 (H2 유지)**~~ | **완료** (2026-05-18) | BE Docker만으로 API 검증 가능 |
-| 2 | 공통 오류 응답 정리 | API 실패 시 형식을 통일 | 프론트·운영이 오류를 일관되게 처리 |
-| 3 | WebSocket | 위치·알람 등 실시간 푸시 | 대시보드 실시간 갱신 |
-| 4 | 테스트·검증 | 단위·통합 테스트, Docker 스모크 | 품질·회귀 방지 |
-| (대기) | **10-B MySQL 연동** | DB compose merge 후 datasource·`init.sql` 연결 | 운영에 가까운 DB·공유 시드 |
-| (병렬) | 루트 통합 Docker | FE·DB·BE를 한 명령으로 기동 | 통합 데모·QA 환경 |
-| (후순) | 추가 기능 | CSV/Excel보내기, 캐싱 등 | 필요 시 |
+| ~~0~~ | ~~10-A 물리 스키마 정합~~ | **완료** (2026-05-18) | REST API 스모크 통과 |
+| **1** | **WebSocket + 데모 이벤트** | `/api/v1/stream`, 위치·상태·알람 푸시 | 시연 시 화면이 “살아 있음” |
+| **2** | **AMR 비상 정지 (DB 반영)** | `POST .../commands` → DB 갱신 → `accepted` | 합의한 정지 시나리오의 BE 구간 |
+| **3** | **설계 문서 반영** | 정지·DAS·MQTT 흐름 명세 (섹션 11) | FE·DB·BE 구현 기준 통일 |
+| (병렬) | **FE·BE 통합 기동** | 루트/문서화된 compose, CORS·URL | 시연 당일 원클릭 기동 |
+| 4 | 공통 오류 응답 정리 | API 실패 형식 통일 | FE 연동 품질 |
+| (대기) | **10-B MySQL 연동** | DB compose merge 후 | 시연 필수 아님 |
+| (후순) | 단위·통합 테스트, CSV 등 | 회귀·부가 기능 | 시연 이후 |
 
-**현재 진행 예정 1순위:** **공통 오류 응답 정리**(섹션 7) 또는 **WebSocket**(섹션 6).
+**현재 진행 예정 1순위:** 섹션 **6 WebSocket** (시연용 주기 이벤트 포함).
 
 ---
 
@@ -110,9 +111,11 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] AlarmService, WorkHistoryService, AnalyticsService.
 - [x] 10-A: Repository·매핑 로직 수정 (엔티티 rename 반영).
 
-### 6. WebSocket 구현
-- [ ] WebSocket 설정 클래스 생성.
-- [ ] 이벤트 발행 서비스 구현 (실시간 데이터 스트리밍).
+### 6. WebSocket 구현 — **시연 1순위**
+- [ ] WebSocket 설정 (`/api/v1/stream`), 연결 시 JWT 인증.
+- [ ] 이벤트 발행 서비스 (`amrs.position.updated`, `amrs.status.updated`, `alarms.created`, `dashboard.summary.updated` 등).
+- [ ] 시연용 주기 발행(선택): AMR 좌표·상태가 주기적으로 갱신되도록 스케줄 또는 DAS 연동 전 임시 시뮬레이터.
+- [ ] AMR 정지 후 `amrs.status.updated` 등으로 FE에 상태 반영 (섹션 11과 연동).
 
 ### 7. 예외 처리 및 로깅
 - [x] 전역 예외 처리 클래스 (@RestControllerAdvice) — 인증 관련 최소 구현.
@@ -128,7 +131,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] 파일보내기 기능 (Excel/CSV 다운로드).
 - [ ] 캐싱 또는 최적화 (필요 시).
 
-### 10. 물리 DB 스키마 정합 — **다음 1순위**
+### 10. 물리 DB 스키마 정합 — **완료 (10-A, 2026-05-18)**
 
 `DB/init.sql` 및 `docs/데이터 스키마 설계.md`를 기준으로 백엔드를 맞춘다.  
 **2단계로 진행:** 지금은 **10-A(H2 유지)** 만 수행하고, **10-B(MySQL)** 는 DB 영역 `docker-compose` merge 이후에 한다.
@@ -202,17 +205,28 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ---
 
-## 작업 우선순위
+### 11. AMR 비상 정지 및 DAS 연동 (합의 반영) — **시연 2순위**
 
-1. ~~Docker로 BE 기동 가능한 환경 확보 (섹션 0).~~ **완료**
-2. ~~인증·Dashboard·Amr·Charging·Alarm·WorkHistory·Analytics API~~ **완료**
-3. ~~10-A 물리 스키마 정합 (H2 유지)~~ **완료** (2026-05-18)
-4. **다음:** 공통 오류 응답 정리 (섹션 7)
-5. WebSocket (섹션 6)
-6. 테스트 및 검증 (섹션 8)
-7. **10-B MySQL 연동** (DB compose merge 후)
-8. 프로젝트 루트 통합 docker-compose
-9. 추가 기능 (섹션 9)
+팀 합의: FE → BE(명령·DB 갱신·`accepted`) → FE → DAS(MQTT 정지 고지). BE는 DAS와 직접 통신하지 않음.
+
+- [ ] `docs/` 설계 문서 반영 (프로젝트 정의서·API 정의·필요 시 ERD 주석). 상세는 본 문서 하단 「AMR 정지 합의」 참고.
+- [ ] `AmrCommand` 엔티티·Repository (`AMR_COMMAND` 테이블).
+- [ ] `AmrService.sendCommand`: `emergencyStop` 등 시 DB 트랜잭션 내
+  - `AMR_COMMAND` INSERT (`accepted=true`, `status` 등)
+  - 최신 `AMR_STATUS_LOG` 상태 갱신(예: `STOPPED`/`ERROR`) 또는 신규 로그 행 INSERT
+  - (선택) 진행 중 `AMR_TASK` 상태 정리
+- [ ] DB 커밋 성공 후에만 HTTP 200 + `accepted: true` 응답.
+- [ ] (WebSocket 구현 시) `amrs.status.updated` 이벤트 발행.
+- [ ] FE·DAS: MQTT 토픽·페이로드는 FE·DB 영역 문서에 정의 (BE 범위 밖).
+
+## 작업 우선순위 (시연 기준)
+
+1. ~~Docker·REST API·10-A~~ **완료**
+2. **WebSocket + 시연용 이벤트** (섹션 6)
+3. **AMR 비상 정지 DB 반영 + 설계 문서** (섹션 11)
+4. **FE·BE 통합 시연 경로** (루트 compose 또는 runbook)
+5. 공통 오류 응답 (섹션 7)
+6. 10-B MySQL, 테스트·추가 기능 (시연 후)
 
 ## Docker 실행 (BE 폴더에서)
 
@@ -299,8 +313,22 @@ docker compose up --build
 - `.env` 파일을 Slack·이메일·Issue에 붙여 넣지 않는다. 공유가 필요하면 **1Password 등 비밀 관리 도구** 또는 팀 합의된 안전한 채널을 사용한다.
 - 운영(스테이징/프로덕션) 환경은 별도 시크릿을 사용하고, 개발 PC `.env`와 동일하게 두지 않는다.
 
+## AMR 정지 합의 (설계 문서 반영용 메모)
+
+DAS·DB·BE·FE 논의 결과. 구현·문서 수정 시 기준.
+
+```
+[1] FE  --POST /amrs/{id}/commands (emergencyStop)-->  BE
+[2] BE  --트랜잭션-->  DB (AMR_COMMAND, AMR_STATUS_LOG 등 운행 상태)
+[3] BE  --200 { accepted: true, commandId }-->  FE
+[4] FE  --MQTT-->  DAS  (좌표 갱신·작업 시뮬 중단)
+```
+
+- 시뮬레이션: 실제 AMR 없음. 운행 상태는 **DB가 기준**, DAS는 MQTT로 좌표·작업 생성.
+- BE ↔ DAS 직접 연동 없음 (현업형 설비 제어 경로 생략, 프로젝트 시연 목적).
+- `accepted: true` 의미: **DB 반영 완료 후** 응답 (현재 BE는 DB 미반영·즉시 true → 섹션 11에서 수정).
+
 ## 참고
 - 설계 문서를 변경 시 먼저 수정 후 구현.
 - 물리 스키마 기준: `DB/init.sql`, `docs/데이터 스키마 설계.md`.
-- 커밋 메시지 예: `feat(be): 물리 스키마 정합 - AMR_MASTER 엔티티 매핑 #이슈번호`
-- PR 전 로컬 검증: `docker compose up --build` (10-A·10-B 공통).
+- PR 전 로컬 검증: `docker compose up --build`.
