@@ -126,10 +126,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 
-// 상태
-const isLoading = ref(true)
-const error = ref(null)
-const dashboardData = ref({
+// 기본값 — API 응답에서 누락된 필드를 0으로 보호
+const DASHBOARD_DEFAULTS = {
   productionCount: 0,
   activeAlarms: 0,
   amrOperating: 0,
@@ -137,7 +135,12 @@ const dashboardData = ref({
   amrWaiting: 0,
   avgBatteryPercent: 0,
   averageTaskTimeMin: 0
-})
+}
+
+// 상태
+const isLoading = ref(true)
+const error = ref(null)
+const dashboardData = ref({ ...DASHBOARD_DEFAULTS })
 const amrList = ref([])
 const recentAlarms = ref([])
 const recentLogs = ref([])
@@ -156,7 +159,7 @@ const fetchDashboardData = async (showLoading = false) => {
       api.get('/amrs?page=1&limit=20')
     ])
 
-    dashboardData.value = { ...dashboardData.value, ...summaryRes.data }
+    dashboardData.value = { ...DASHBOARD_DEFAULTS, ...summaryRes.data }
     recentAlarms.value = alarmsRes.data.data || []
     recentLogs.value = logsRes.data.data || []
     amrList.value = amrsRes.data.data || []
