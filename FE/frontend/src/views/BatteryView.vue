@@ -77,25 +77,27 @@ const queueRows = [
 
 <style scoped>
 .view-stack {
-  display: grid;
-  gap: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
 }
 
 .view-stack__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
+  flex: 0 0 auto;
 }
 
 .station-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
-.station-card {
-  padding: 18px;
-}
+.station-card { padding: 12px; }
 
 .station-card__name {
   margin: 0 0 8px;
@@ -116,11 +118,16 @@ const queueRows = [
 
 .simple-table th,
 .simple-table td {
-  padding: 14px 12px;
+  padding: 10px 10px;
   border-bottom: 1px solid rgba(217, 228, 240, 0.95);
   text-align: left;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
 }
+
+/* allow panels to not force page scroll; make the last panel fill remaining space and scroll internally */
+.view-stack > .section-panel { min-height: 0; }
+.view-stack > .section-panel:last-of-type { flex: 1 1 auto; min-height: 0; }
+.view-stack > .section-panel:last-of-type .section-panel__body { overflow: auto; }
 
 .simple-table th {
   color: var(--color-text-muted);
