@@ -1,5 +1,10 @@
 # custom
 **/application-*.yaml
+!src/main/resources/application-docker.yaml
+
+.env
+.env.local
+.env.*.local
 
 HELP.md
 .gradle

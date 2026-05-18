@@ -55,3 +55,9 @@ gradle-app.setting
 *.hprof
 
 # End of https://www.toptal.com/developers/gitignore/api/java,gradle
+
+### Docker / secrets ###
+.env
+.env.local
+.env.*.local
+!.env.example
