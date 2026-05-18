@@ -62,13 +62,15 @@ const handleLogout = async () => {
   await router.push('/login')
 }
 
+let clockTimer = null
+
 onMounted(() => {
   updateTime()
-  const timer = setInterval(updateTime, 1000)
-  
-  onUnmounted(() => {
-    clearInterval(timer)
-  })
+  clockTimer = setInterval(updateTime, 1000)
+})
+
+onUnmounted(() => {
+  clearInterval(clockTimer)
 })
 </script>
 
@@ -174,10 +176,5 @@ onMounted(() => {
 
 .btn-logout:active {
   transform: scale(0.995);
-}
-
-@media (max-width: 800px) {
-  .app-topbar__description { display: none; }
-  .app-topbar__eyebrow { display: none; }
 }
 </style>
