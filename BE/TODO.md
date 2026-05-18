@@ -18,8 +18,8 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 | 영역 | 설계 (`docs/API 정의.md` 등) | 현재 BE | 우선순위 |
 |------|------------------------------|---------|----------|
-| `GET /dashboard/summary` | `amrError`, `amrErrorUnresolved` | **12-B 완료** (Docker 스모크 대기) | — |
-| `POST /amrs/{id}/commands` | DB 반영 후 `accepted: true` | **12-C 완료** (emergencyStop, Docker 스모크 대기) | — |
+| `GET /dashboard/summary` | `amrError`, `amrErrorUnresolved` | **12-B 완료** (Docker 스모크 검증됨) | — |
+| `POST /amrs/{id}/commands` | DB 반영 후 `accepted: true` | **12-C 완료** (Docker 스모크 검증됨) | — |
 | AMR `status` | `OPERATING`/`IDLE`/`CHARGING`/`ERROR`/`EMERGENCY_STOP` | **12-A 완료** (대문자 enum·normalizer) | — |
 | `AmrStatusLog` | `fault_code`, `fault_recovered_at`, `emergency_resolved_at` | **12-A 완료** (엔티티·시드) | — |
 | 운행 자동 복구 | ~60초 후 IDLE 등, FE `resume` 없음 | **12-D 완료** (`AmrAutoRecoveryService`) | — |
@@ -39,14 +39,14 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 |------|------|-----------|---------|
 | ~~0~~ | ~~10-A 물리 스키마 정합~~ | **완료** (2026-05-18) | — |
 | ~~—~~ | ~~설계 문서 반영~~ | dev에 API·화면·ADR 반영 완료 | — |
-| **1** | **Phase A: REST 시연 경로** | 필수 REST(12-A~E) 코드 완료, **12-G 스모크**·12-F 선택 | **지금** |
-| **2** | **Phase B: WebSocket 최소** | `amrs.status.updated`, `dashboard.summary.updated` (+ 선택 위치 tick) | A 완료 후 |
+| **1** | **Phase A: REST 시연 경로** | 필수 REST·**12-G Docker 스모크** 완료. 잔여: **12-F** 선택 | **완료** |
+| **2** | **Phase B: WebSocket 최소** | `amrs.status.updated`, `dashboard.summary.updated` (+ 선택 위치 tick) | **지금** |
 | (병렬) | **FE·BE 통합** | CORS·프록시·runbook (FE/인프라) | BE: Security·헬스 URL 문서화 |
 | 3 | 공통 오류 응답 | API 실패 형식 통일 | 시연 직전·직후 |
 | (대기) | **10-B MySQL** | DB compose merge 후 | 시연 필수 아님 |
 | (후순) | Analytics KPI 확장, 테스트·CSV | `errorCount` 등 | 시연 후 |
 
-**현재 BE 1순위:** **12-G** Phase A Docker 스모크 체크리스트 (또는 **Phase B** WebSocket).
+**현재 BE 1순위:** **Phase B-6** WebSocket 최소 (또는 **12-F** 환경 API 선택).
 
 ---
 
@@ -70,7 +70,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - `amrError`: `status IN ('ERROR', 'EMERGENCY_STOP')`
   - `amrErrorUnresolved`: (`ERROR` AND `fault_recovered_at IS NULL`) OR (`EMERGENCY_STOP` AND `emergency_resolved_at IS NULL`)
 - [x] `avgBatteryPercent` 유지.
-- [ ] Docker 스모크: summary JSON에 신규 필드 포함 확인 (H2 시드 기준 amr-04 1대 → `amrError`·`amrErrorUnresolved` ≥ 1).
+- [x] Docker 스모크: summary JSON에 신규 필드 포함 확인 (2026-05-18, `amrError`·`amrErrorUnresolved` ≥ 1).
 
 ### 12-C. AMR 제어·비상 정지 (`POST /amrs/{amrId}/commands`) — 완료 (2026-05-18)
 
@@ -81,7 +81,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
   - 진행 중 `AMR_TASK` → `CANCELLED` + `drop_time`
   - **commit 성공 후에만** HTTP 200 + `accepted: true`
 - [x] `goTo`/`pause`/`resume`/`cancelTask`: 문법은 허용, 실행 시 400 (`emergencyStop`만 DB 반영).
-- [ ] Docker 스모크: 정지 전후 `GET /dashboard/summary`, `GET /amrs/{id}` 상태 변경 확인.
+- [x] Docker 스모크: 정지 전후 summary·`GET /amrs/{id}` 상태 변경 (2026-05-18, 테스트 AMR `amr-02`).
 
 ### 12-D. 운행 자동 복구 (시연) — 완료 (2026-05-18)
 
@@ -89,7 +89,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] `AmrAutoRecoveryService` `@Scheduled`: 미해결 `ERROR`/`EMERGENCY_STOP`, `updated_at` 기준 경과 후 복구.
   - `EMERGENCY_STOP` → `emergency_resolved_at`, `status = IDLE`
   - `ERROR` → `fault_recovered_at`, `fault_code`/`fault_message` null, `status = IDLE`
-- [ ] 복구 후 `amrError`/`amrErrorUnresolved` 감소 Docker 스모크.
+- [x] 복구 후 `amrError`/`amrErrorUnresolved` 감소 Docker 스모크 (2026-05-18, 65초 대기 후 0 확인).
 - [x] FE `resume` 미사용 (BE에서 차단하지 않음, `emergencyStop`만 실행).
 
 ### 12-E. AMR 목록·필터 (`GET /amrs`) — 완료 (2026-05-18)
@@ -105,13 +105,13 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] `DashboardDemoDataLoader`에 `ENV_SENSOR_LOG` 시드 추가 (`init.sql`에는 INSERT 없음, H2 시연용).
 - [ ] 미구현 시 FE는 하드코딩 유지 가능 → **Phase A 필수 아님**.
 
-### 12-G. Phase A 검증 체크리스트
+### 12-G. Phase A 검증 체크리스트 — Docker 스모크 검증됨 (2026-05-18)
 
-- [ ] `docker compose up --build` 후 로그인.
-- [ ] `GET /dashboard/summary` → `amrError`, `amrErrorUnresolved` 존재.
-- [ ] `POST /amrs/amr-01/commands` `emergencyStop` → summary 에러 수치 유지/증가.
-- [ ] 60초(설정값) 대기 → summary 에러 수치 감소, `GET /amrs/amr-01` status 복구.
-- [ ] `GET /amrs?status=ERROR,EMERGENCY_STOP&sort=unresolvedFirst` (에러 목록·정렬).
+- [x] `docker compose up --build` 후 로그인.
+- [x] `GET /dashboard/summary` → `amrError`, `amrErrorUnresolved` 존재.
+- [x] `POST /amrs/amr-02/commands` `emergencyStop` → summary `amrError` 유지·증가 (체크리스트 예시는 `amr-01`과 동등).
+- [x] 60초(설정값) 대기 → summary 에러 수치 감소, `GET /amrs/amr-02` status `IDLE` 복구.
+- [x] `GET /amrs?status=ERROR,EMERGENCY_STOP&sort=unresolvedFirst` (에러 목록·정렬).
 
 ---
 
@@ -210,6 +210,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 - `GET /amrs`: `status` 콤마 OR, `sort=unresolvedFirst`, `AmrController` `sort` 파라미터.
 
+### [완료] Phase A Docker 스모크 (2026-05-18)
+
+- `BE`에서 `docker compose up -d --build` → 로그인 → summary·amrs 필터·`emergencyStop`(amr-02) → 65초 대기 자동 복구·추가 엔드포인트(alarms, charging, work-histories, analytics) HTTP 200.
+
 ---
 
 ## 개발 계획 (레거시 섹션·참고)
@@ -240,10 +244,9 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 
 ## 작업 우선순위 (BE 담당자용)
 
-1. **Phase A-12-G** — Docker 시연 스모크 체크리스트 (12-A~E 코드 완료)
-2. **Phase A-12-F** — environment API (시간 있을 때, 선택)
-3. **Phase B-6** — WebSocket 최소
-4. **Phase C** — analytics KPI, 오류 응답, 테스트, 10-B
+1. **Phase B-6** — WebSocket 최소
+2. **Phase A-12-F** — environment API (선택)
+3. **Phase C** — analytics KPI, 오류 응답, 테스트, 10-B
 
 **한 번에 하나의 Phase A 하위 태스크만** 진행한다 (`AGENTS.md` 규칙).
 
