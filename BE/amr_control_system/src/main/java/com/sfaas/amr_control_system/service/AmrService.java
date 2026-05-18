@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +55,7 @@ public class AmrService {
     private static final String COMMAND_STATUS_EXECUTED = "EXECUTED";
     private static final String TASK_STATUS_CANCELLED = "CANCELLED";
     private static final String EMPTY_JSON_PARAMS = "{}";
+    private static final String SORT_UNRESOLVED_FIRST = "unresolvedfirst";
 
     private final AmrRepository amrRepository;
     private final AmrStatusLogRepository amrStatusLogRepository;
@@ -66,17 +69,24 @@ public class AmrService {
             String status,
             Integer batteryMin,
             Integer batteryMax,
-            String search
+            String search,
+            String sort
     ) {
         int resolvedPage = page == null || page < 1 ? DEFAULT_PAGE : page;
         int resolvedLimit = limit == null || limit < 1 ? DEFAULT_LIMIT : limit;
 
         List<AmrDto> filtered = amrRepository.findAll().stream()
-                .map(this::toAmrDto)
-                .filter(dto -> matchesStatusFilter(dto, status))
-                .filter(dto -> matchesBatteryFilter(dto, batteryMin, batteryMax))
-                .filter(dto -> matchesSearchFilter(dto, search))
-                .sorted(Comparator.comparing(AmrDto::getName))
+                .map(amr -> {
+                    AmrStatusLog latestLog = amrStatusLogRepository
+                            .findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
+                            .orElse(null);
+                    return new AmrListRow(buildAmrDto(amr, latestLog), latestLog);
+                })
+                .filter(row -> matchesStatusFilter(row.dto(), status))
+                .filter(row -> matchesBatteryFilter(row.dto(), batteryMin, batteryMax))
+                .filter(row -> matchesSearchFilter(row.dto(), search))
+                .sorted(amrListRowComparator(sort))
+                .map(AmrListRow::dto)
                 .toList();
 
         int fromIndex = Math.min((resolvedPage - 1) * resolvedLimit, filtered.size());
@@ -240,6 +250,10 @@ public class AmrService {
     private AmrDto toAmrDto(Amr amr) {
         AmrStatusLog latestLog = amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
                 .orElse(null);
+        return buildAmrDto(amr, latestLog);
+    }
+
+    private AmrDto buildAmrDto(Amr amr, AmrStatusLog latestLog) {
         AmrTask activeTask = amrTaskRepository.findFirstByAmr_AmrIdAndDropTimeIsNullOrderByPickTimeDesc(amr.getAmrId())
                 .orElse(null);
 
@@ -308,11 +322,67 @@ public class AmrService {
         };
     }
 
-    private boolean matchesStatusFilter(AmrDto dto, String status) {
-        if (status == null || status.isBlank()) {
+    private boolean matchesStatusFilter(AmrDto dto, String statusQuery) {
+        if (statusQuery == null || statusQuery.isBlank()) {
             return true;
         }
-        return status.trim().equalsIgnoreCase(dto.getStatus());
+        Set<String> wantedStatuses = parseStatusFilterTokens(statusQuery);
+        return wantedStatuses.contains(dto.getStatus());
+    }
+
+    private Set<String> parseStatusFilterTokens(String statusQuery) {
+        return Arrays.stream(statusQuery.split(","))
+                .map(String::trim)
+                .filter(token -> !token.isEmpty())
+                .map(token -> DashboardStatusNormalizer.normalizeAmrStatus(token))
+                .collect(Collectors.toSet());
+    }
+
+    private Comparator<AmrListRow> amrListRowComparator(String sort) {
+        Comparator<AmrListRow> byName = Comparator.comparing(
+                row -> row.dto().getName(),
+                Comparator.nullsLast(String::compareToIgnoreCase)
+        );
+        if (sort == null || sort.isBlank()) {
+            return byName;
+        }
+        if (!SORT_UNRESOLVED_FIRST.equals(sort.trim().toLowerCase(Locale.ROOT))) {
+            return byName;
+        }
+        return Comparator
+                .comparing((AmrListRow row) -> isUnresolvedAmrStatus(row.latestLog()))
+                .reversed()
+                .thenComparingInt(row -> emergencyStopBeforeErrorSortRank(row.dto().getStatus()))
+                .thenComparing(row -> row.dto().getName(), Comparator.nullsLast(String::compareToIgnoreCase));
+    }
+
+    /**
+     * 미해결 ERROR·EMERGENCY_STOP만 true. {@code docs/API 정의.md} §3 GET /amrs sort=unresolvedFirst.
+     */
+    private boolean isUnresolvedAmrStatus(AmrStatusLog latestLog) {
+        if (latestLog == null) {
+            return false;
+        }
+        String normalized = DashboardStatusNormalizer.normalizeAmrStatus(latestLog.getStatus());
+        return DashboardStatusNormalizer.isUnresolvedAmrError(
+                normalized,
+                latestLog.getFaultRecoveredAt(),
+                latestLog.getEmergencyResolvedAt()
+        );
+    }
+
+    /** 동률 시 EMERGENCY_STOP이 ERROR보다 앞(작은 값). */
+    private int emergencyStopBeforeErrorSortRank(String normalizedStatus) {
+        if (DashboardStatusNormalizer.STATUS_EMERGENCY_STOP.equals(normalizedStatus)) {
+            return 0;
+        }
+        if (DashboardStatusNormalizer.STATUS_ERROR.equals(normalizedStatus)) {
+            return 1;
+        }
+        return 2;
+    }
+
+    private record AmrListRow(AmrDto dto, AmrStatusLog latestLog) {
     }
 
     private boolean matchesBatteryFilter(AmrDto dto, Integer batteryMin, Integer batteryMax) {

@@ -23,7 +23,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | AMR `status` | `OPERATING`/`IDLE`/`CHARGING`/`ERROR`/`EMERGENCY_STOP` | **12-A 완료** (대문자 enum·normalizer) | — |
 | `AmrStatusLog` | `fault_code`, `fault_recovered_at`, `emergency_resolved_at` | **12-A 완료** (엔티티·시드) | — |
 | 운행 자동 복구 | ~60초 후 IDLE 등, FE `resume` 없음 | **12-D 완료** (`AmrAutoRecoveryService`) | — |
-| `GET /amrs` | `status` 콤마, `sort=unresolvedFirst`, `faultCode` | 단일 status·소문자 비교, sort 없음 | **A-권장** |
+| `GET /amrs` | `status` 콤마, `sort=unresolvedFirst`, 응답 `faultCode` | **12-E 완료** (`faultCode` 쿼리는 `docs/API 정의.md` §3 미정의) | — |
 | `GET /environment/areas/current` | SCR-01 ③ | 컨트롤러·서비스 없음 | **A-선택** |
 | `GET /analytics/kpis` | `errorCount`, `scheduleComplianceRate` | 필드 없음 | **B (시연 후)** |
 | `WS /api/v1/stream` | 5종 이벤트, JWT | 미구현 | **B (REST 후)** |
@@ -39,14 +39,14 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 |------|------|-----------|---------|
 | ~~0~~ | ~~10-A 물리 스키마 정합~~ | **완료** (2026-05-18) | — |
 | ~~—~~ | ~~설계 문서 반영~~ | dev에 API·화면·ADR 반영 완료 | — |
-| **1** | **Phase A: REST 시연 경로** | 대시보드 에러 KPI, E-Stop DB, 자동 복구, status 정합 | **지금** |
+| **1** | **Phase A: REST 시연 경로** | 필수 REST(12-A~E) 코드 완료, **12-G 스모크**·12-F 선택 | **지금** |
 | **2** | **Phase B: WebSocket 최소** | `amrs.status.updated`, `dashboard.summary.updated` (+ 선택 위치 tick) | A 완료 후 |
 | (병렬) | **FE·BE 통합** | CORS·프록시·runbook (FE/인프라) | BE: Security·헬스 URL 문서화 |
 | 3 | 공통 오류 응답 | API 실패 형식 통일 | 시연 직전·직후 |
 | (대기) | **10-B MySQL** | DB compose merge 후 | 시연 필수 아님 |
 | (후순) | Analytics KPI 확장, 테스트·CSV | `errorCount` 등 | 시연 후 |
 
-**현재 BE 1순위:** **12-E** AMR 목록 필터·정렬 (Phase A REST 잔여, Docker 스모크 권장).
+**현재 BE 1순위:** **12-G** Phase A Docker 스모크 체크리스트 (또는 **Phase B** WebSocket).
 
 ---
 
@@ -92,11 +92,11 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] 복구 후 `amrError`/`amrErrorUnresolved` 감소 Docker 스모크.
 - [x] FE `resume` 미사용 (BE에서 차단하지 않음, `emergencyStop`만 실행).
 
-### 12-E. AMR 목록·필터 (`GET /amrs`) — 다음
+### 12-E. AMR 목록·필터 (`GET /amrs`) — 완료 (2026-05-18)
 
-- [ ] `status` 쿼리: 콤마 구분 (`ERROR,EMERGENCY_STOP`) OR 조건.
-- [ ] `sort=unresolvedFirst`: 미해결 우선, 동일 시 `EMERGENCY_STOP` 우선.
-- [ ] 응답 `status`·`faultCode`가 설계 enum/필드와 일치하는지 확인.
+- [x] `status` 쿼리: 콤마 구분 (`ERROR,EMERGENCY_STOP`) OR 조건.
+- [x] `sort=unresolvedFirst`: 미해결 우선, 동일 시 `EMERGENCY_STOP` 우선, 그다음 이름.
+- [x] 응답 `status`·`faultCode`: `AmrDto`·`buildAmrDto`와 설계 enum 정합.
 
 ### 12-F. 환경 API (선택, SCR-01 ③)
 
@@ -111,7 +111,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [ ] `GET /dashboard/summary` → `amrError`, `amrErrorUnresolved` 존재.
 - [ ] `POST /amrs/amr-01/commands` `emergencyStop` → summary 에러 수치 유지/증가.
 - [ ] 60초(설정값) 대기 → summary 에러 수치 감소, `GET /amrs/amr-01` status 복구.
-- [ ] `GET /amrs?status=ERROR,EMERGENCY_STOP&sort=unresolvedFirst` (12-E 완료 시).
+- [ ] `GET /amrs?status=ERROR,EMERGENCY_STOP&sort=unresolvedFirst` (에러 목록·정렬).
 
 ---
 
@@ -206,6 +206,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 - `AmrAutoRecoveryService`, `DemoRecoveryProperties`, `SchedulingConfig`. 시드 ERROR `updated_at` = 기동 시각(60초 후 복구).
 
+### [완료] 12-E AMR 목록 필터·정렬 (2026-05-18)
+
+- `GET /amrs`: `status` 콤마 OR, `sort=unresolvedFirst`, `AmrController` `sort` 파라미터.
+
 ---
 
 ## 개발 계획 (레거시 섹션·참고)
@@ -222,24 +226,24 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 |-----------|---------|------|
 | `AMR_MASTER` 등 | `init.sql` | 10-A 완료 |
 | `ENV_SENSOR_LOG` | 엔티티 있음 | **로그 시드·API는 Phase A-12-F** |
-| `AMR_COMMAND` | DDL만 | **Phase A-12-C** |
+| `AMR_COMMAND` | DDL만 | **12-C 완료** |
 
-### 11. AMR 비상 정지 — 12-C 완료, 12-D·Phase B 잔여
+### 11. AMR 비상 정지 — 12-C·12-D 완료, Phase B 잔여
 
 - [x] `AmrCommand` 엔티티·Repository
 - [x] `sendCommand` DB 트랜잭션 (`EMERGENCY_STOP`)
 - [x] commit 후 `accepted: true`
+- [x] 자동 복구(12-D)
 - [ ] (Phase B) WebSocket `amrs.status.updated` 발행
 
 ---
 
 ## 작업 우선순위 (BE 담당자용)
 
-1. **Phase A-12-E** — amrs 필터·정렬 (에러 카드 클릭 시나리오, 12-A~D 완료)
-2. **Phase A-12-G** — Docker 시연 스모크 체크리스트
-3. **Phase A-12-F** — environment API (시간 있을 때)
-4. **Phase B-6** — WebSocket 최소
-5. **Phase C** — analytics KPI, 오류 응답, 테스트, 10-B
+1. **Phase A-12-G** — Docker 시연 스모크 체크리스트 (12-A~E 코드 완료)
+2. **Phase A-12-F** — environment API (시간 있을 때, 선택)
+3. **Phase B-6** — WebSocket 최소
+4. **Phase C** — analytics KPI, 오류 응답, 테스트, 10-B
 
 **한 번에 하나의 Phase A 하위 태스크만** 진행한다 (`AGENTS.md` 규칙).
 
@@ -258,7 +262,8 @@ docker compose up --build
 | Health | http://localhost:8080/api/v1/actuator/health |
 | Login | POST http://localhost:8080/api/v1/auth/login |
 | Summary | GET http://localhost:8080/api/v1/dashboard/summary |
-| AMRs | GET http://localhost:8080/api/v1/amrs |
+| AMRs (에러 목록) | GET …/amrs?status=ERROR,EMERGENCY_STOP&sort=unresolvedFirst |
+| AMRs (전체) | GET http://localhost:8080/api/v1/amrs |
 | Emergency stop | POST http://localhost:8080/api/v1/amrs/{amrId}/commands |
 | Environment (Phase A-F 후) | GET http://localhost:8080/api/v1/environment/areas/current |
 
