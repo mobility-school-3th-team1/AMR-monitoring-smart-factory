@@ -29,6 +29,8 @@ jwt:
 app:
   demo:
     password: ${DEMO_USER_PASSWORD:}
+    recovery-seconds: 60
+    recovery-check-interval-ms: 10000
 
 management:
   endpoints:

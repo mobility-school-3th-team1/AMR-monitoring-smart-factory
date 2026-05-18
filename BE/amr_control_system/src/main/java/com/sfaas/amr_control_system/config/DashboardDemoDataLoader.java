@@ -96,7 +96,7 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
                         20,
                         90,
                         31.0f,
-                        now.minusMinutes(3),
+                        now,
                         "SENSOR_FAULT",
                         "LiDAR data invalid",
                         null,
