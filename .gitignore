@@ -3,3 +3,17 @@
 .env.local
 .env.*.local
 !.env.example
+
+node_modules/
+/FE/frontend/node_modules/
+/BE/amr_control_system/.gradle/
+/BE/amr_control_system/.gradle
+/dist/
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+.cache/
+.turbo/
+.parcel-cache/
+coverage/
