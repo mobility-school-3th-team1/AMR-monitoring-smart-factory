@@ -5,6 +5,7 @@ created_at: "2026-05-18"
 author: "@dapin1490"
 related_files:
   - "docs/프로젝트 정의서.md"
+  - "docs/화면 설계서.md"
   - "docs/API 정의.md"
   - "docs/데이터 스키마 설계.md"
   - "DB/init.sql"
@@ -15,7 +16,7 @@ related_files:
 ### 배경
 
 - 본 프로젝트는 Node-RED(DAS)로 AMR 위치·작업을 **시뮬레이션**한다. 실제 AMR 설비 제어기와의 직접 연동은 범위에 포함하지 않는다.
-- 비상 정지(Emergency Stop)는 프로젝트 정의서 화면 설계(AMR 개별 관제 ⑥) 및 시연 시나리오에 포함된다.
+- 비상 정지(Emergency Stop)는 `docs/화면 설계서.md` SCR-03 ⑥ 및 시연 시나리오에 포함된다.
 - DAS와 프론트엔드(FE)는 **MQTT**로 연결된다. 백엔드(BE)는 REST API, WebSocket, DB(MySQL)를 담당한다.
 - DAS·FE·BE 기능 구현 논의에서, 시뮬레이션 특성상 **운행 상태는 DB 데이터로 관리**하고, DAS 좌표 중단은 **FE가 MQTT로 고지**하는 흐름으로 합의하였다.
 - 기존 `POST /api/v1/amrs/{amrId}/commands` 및 `AMR_COMMAND` 테이블(`DB/init.sql`)은 존재하나, BE↔DAS 경계와 `accepted` 의미가 문서에 명시되어 있지 않았다.
@@ -33,7 +34,7 @@ related_files:
      - FE → BE: `POST /api/v1/amrs/{amrId}/commands` (`emergencyStop` 등)
      - BE: 단일 트랜잭션으로 DB 갱신
        - `AMR_COMMAND` INSERT (`command_type`, `accepted`, `status`, `requested_at` 등)
-       - `AMR_STATUS_LOG` 운행 상태 반영(기존 행 UPDATE 또는 신규 INSERT, 팀 합의 status 값 사용)
+       - `AMR_STATUS_LOG` 운행 상태 반영(기존 행 UPDATE 또는 신규 INSERT). `emergencyStop` 시 `status = 'EMERGENCY_STOP'`, `emergency_resolved_at = NULL`
        - (정책에 따라) 진행 중 `AMR_TASK` 상태 정리
      - BE → FE: DB **commit 성공 후** HTTP 200, `accepted: true`, `commandId`, `amrId`
      - FE → DAS: **MQTT**로 해당 AMR 정지 고지 → 좌표 갱신·작업 시뮬 중단
@@ -71,14 +72,14 @@ related_files:
 
 - 리스크: FE가 `accepted` 수신 전에 DAS에 MQTT를내면, 짧은 시간 DB와 DAS가 어긋난다.
   - 대응: API 명세에 순서 명시. FE는 `accepted === true` 이후에만 MQTT publish.
-- 리스크: `AMR_STATUS_LOG.status` 정지 코드값(예: `STOPPED`, `ERROR`) 미합의 시 DAS·FE 표시 불일치.
-  - 대응: 미해결 이슈 체크리스트로 추적, 합의 후 API·시드·DAS에 동시 반영.
+- 리스크: `ERROR`와 `EMERGENCY_STOP`을 혼동하면 대시보드·지도 표시가 어긋난다.
+  - 대응: `emergencyStop`은 `EMERGENCY_STOP`만 사용. 자체 고장은 `ERROR` + `fault_code` (`docs/API 정의.md` §3).
 - 리스크: MQTT 토픽·payload 미정의.
   - 대응: FE·DAS 담당 이슈에서 명세 작성. ADR은 경계만 고정.
 
 ## 미해결 이슈
 
-- [ ] `emergencyStop` 시 `AMR_STATUS_LOG.status`에 기록할 **코드값** 확정 (예: `STOPPED` vs `ERROR`)
+- [x] `emergencyStop` 시 `AMR_STATUS_LOG.status`: `EMERGENCY_STOP` (고장 `ERROR`와 구분)
 - [ ] `AMR_COMMAND.status` 초기값·전이 규칙 (예: INSERT 시 `EXECUTED`, `accepted=true`)
 - [ ] FE → DAS **MQTT 토픽·payload** 명세 (FE·DAS 영역 문서)
 - [ ] `goTo`, `pause` 등 비상 정지 외 command의 DB 반영 범위 (시연 범위에 포함 여부)
@@ -88,3 +89,4 @@ related_files:
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 | --- | --- | --- | --- |
 | v0.1 | 2026-05-18 | 최초 작성 (DAS·FE·BE 합의 반영) | @dapin1490 |
+| v0.2 | 2026-05-18 | `EMERGENCY_STOP`·대시보드 에러/미해결 집계·화면 설계서 연계 | @dapin1490 |

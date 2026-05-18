@@ -77,6 +77,17 @@
 
 설명: 메인 대시보드 KPI 요약 조회
 
+- `amrOperating` / `amrWaiting` / `amrCharging` / `amrError` / `amrErrorUnresolved`: AMR별 **최신** `AMR_STATUS_LOG` 기준 집계(저장 컬럼 아님).
+- `amrWaiting`: `status = IDLE`.
+- `amrError`: `status IN ('ERROR', 'EMERGENCY_STOP')`.
+- `amrErrorUnresolved`: 미복구 `ERROR` + 비상 정지 조치가 필요한 `EMERGENCY_STOP` (아래 집계 규칙).
+- 가동률(`utilizationRate`)은 본 API 범위에서 제외한다. 필요 시 `§7 Analytics`에서 제공한다.
+
+**`amrErrorUnresolved` 집계 규칙**
+
+- 미복구 ERROR: `status = 'ERROR'` AND `fault_recovered_at IS NULL`
+- 비상 정지 조치 필요: `status = 'EMERGENCY_STOP'` AND `emergency_resolved_at IS NULL`
+
 응답 예시:
 
 ```json
@@ -84,9 +95,10 @@
     "productionCount": 156,
     "activeAlarms": 3,
     "amrOperating": 9,
-    "amrCharging": 11,
     "amrWaiting": 2,
-    "avgBatteryPercent": 67,
+    "amrCharging": 11,
+    "amrError": 3,
+    "amrErrorUnresolved": 2,
     "averageTaskTimeMin": 9.3
 }
 ```
@@ -134,7 +146,8 @@
         {
             "id": "amr-01",
             "name": "AMR-01",
-            "status": "charging",
+            "status": "CHARGING",
+            "faultCode": null,
             "batteryPercent": 86,
             "position": { "zone": "Zone A", "x": 123.4, "y": 56.7 },
             "destination": { "zone": "Zone B", "x": 140.1, "y": 70.5 },
@@ -151,6 +164,36 @@
 ### GET /amrs/{amrId}
 
 설명: AMR 상세 조회
+
+응답 예시:
+
+```json
+{
+    "id": "amr-01",
+    "name": "AMR-01",
+    "status": "ERROR",
+    "faultCode": "SENSOR_FAULT",
+    "faultMessage": "LiDAR data invalid",
+    "batteryPercent": 72,
+    "position": { "zone": "Zone A", "x": 123.4, "y": 56.7 },
+    "loadWeightKg": 48,
+    "sohPercent": 96,
+    "totalMileageKm": 1205.3,
+    "lastSeenAt": "2026-05-13T08:23:12Z"
+}
+```
+
+### AMR `status` 및 `faultCode`
+
+| status | 설명 |
+| --- | --- |
+| `OPERATING`, `IDLE`, `CHARGING` | 정상 운행 분류 |
+| `ERROR` | AMR 자체 진단 고장. `faultCode` 필수 |
+| `EMERGENCY_STOP` | `emergencyStop` 명령 DB 반영. `faultCode`는 null |
+
+`faultCode` (`ERROR` 시, AMR 온보드 진단 가능 범위): `SENSOR_FAULT`, `COMM_LOST`, `COLLISION`, `OVERLOAD`, `LOAD_IMBALANCE`, `DRIVE_FAULT`, `NAVIGATION_FAULT`.
+
+환경·공장 사고(먼지 초과 등)는 구역 `ENV_SENSOR` 및 `ALARM_LOG`로 처리하며 AMR `faultCode`가 아니다.
 
 ### GET /amrs/{amrId}/status-history
 
@@ -184,7 +227,7 @@
 처리 순서 (`emergencyStop` 포함):
 
 1. 인증 및 `amrId` 유효성 검증
-2. DB 트랜잭션: `AMR_COMMAND` INSERT, `AMR_STATUS_LOG`(및 정책에 따른 `AMR_TASK`) 갱신
+2. DB 트랜잭션: `AMR_COMMAND` INSERT, `AMR_STATUS_LOG`(및 정책에 따른 `AMR_TASK`) 갱신. `emergencyStop` 시 `AMR_STATUS_LOG.status = 'EMERGENCY_STOP'`, `fault_code`는 null, `emergency_resolved_at`는 null
 3. commit 성공 시 HTTP 200 및 `accepted: true` 반환
 4. commit 실패 시 4xx/5xx (본문에 `accepted: true`를 내리지 않음)
 5. FE는 `accepted: true` 수신 **이후** DAS에 MQTT 정지 고지
@@ -420,10 +463,13 @@
     "timestamp": "2026-05-13T08:23:12Z",
     "data": {
         "amrId": "amr-01",
-        "status": "charging"
+        "status": "EMERGENCY_STOP",
+        "faultCode": null
     }
 }
 ```
+
+`dashboard.summary.updated` 이벤트 payload에는 `amrError`, `amrErrorUnresolved` 등 `GET /dashboard/summary`와 동일 키를 포함할 수 있다.
 
 ## 9. 공통 응답 코드
 
@@ -444,4 +490,4 @@
 - 화면 데이터는 페이지 단위로 분리된 REST API에서 가져온다.
 - 실시간 화면은 WebSocket 이벤트와 REST 조회를 혼합한다.
 - 명령 API: HTTP 응답의 `accepted`는 **DB 반영 완료**를 의미한다. DAS 시뮬 반영은 FE→MQTT 경로이며, 그 결과는 WebSocket 이벤트 또는 이후 REST 조회로 확인한다.
-- 비상 정지 전체 흐름은 `docs/프로젝트 정의서.md`, `docs/ADR/20260518-1252-AMR-emergency-logic.md`를 따른다.
+- 비상 정지 전체 흐름은 `docs/화면 설계서.md`(SCR-03), `docs/ADR/20260518-1252-AMR-emergency-logic.md`를 따른다.
