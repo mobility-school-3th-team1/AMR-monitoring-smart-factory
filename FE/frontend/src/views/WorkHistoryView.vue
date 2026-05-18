@@ -74,27 +74,25 @@ const workRows = [
 ]
 </script>
 
+
 <style scoped>
 .view-stack {
-  display: grid;
-  gap: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
 }
 
 .view-stack__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
+  flex: 0 0 auto;
 }
 
-.analysis-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.analysis-card {
-  padding: 18px;
-}
+.analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.analysis-card { padding: 12px; }
 
 .analysis-card__label {
   margin: 0 0 14px;
@@ -103,10 +101,10 @@ const workRows = [
 }
 
 .chart-placeholder {
-  min-height: 260px;
+  min-height: 200px;
   display: grid;
   place-items: center;
-  border-radius: 18px;
+  border-radius: 12px;
   background:
     radial-gradient(circle at center, rgba(37, 99, 235, 0.12), transparent 55%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(243, 248, 255, 0.96));
@@ -122,11 +120,16 @@ const workRows = [
 
 .simple-table th,
 .simple-table td {
-  padding: 14px 12px;
+  padding: 10px 10px;
   border-bottom: 1px solid rgba(217, 228, 240, 0.95);
   text-align: left;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
 }
+
+/* ensure the details panel can scroll without page scroll */
+.view-stack > .section-panel { min-height: 0; }
+.view-stack > .section-panel:last-of-type { flex: 1 1 auto; min-height: 0; }
+.view-stack > .section-panel:last-of-type .section-panel__body { overflow: auto; }
 
 .simple-table th {
   color: var(--color-text-muted);
