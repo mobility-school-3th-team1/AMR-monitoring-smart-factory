@@ -31,7 +31,7 @@
     <!-- 에러 메시지 -->
     <div v-if="error" class="error-banner">
       <span>✕ {{ error }}</span>
-      <button class="error-retry" @click="fetchDashboardData">다시 시도</button>
+      <button class="error-retry" @click="fetchDashboardData(true)">다시 시도</button>
     </div>
 
     <!-- 메인 대시보드 그리드 -->
@@ -143,9 +143,10 @@ const recentAlarms = ref([])
 const recentLogs = ref([])
 
 // API 호출
-const fetchDashboardData = async () => {
+// showLoading: 최초 로드 시에만 true — 폴링 갱신 시에는 스피너 없이 인플레이스 업데이트
+const fetchDashboardData = async (showLoading = false) => {
   try {
-    isLoading.value = true
+    if (showLoading) isLoading.value = true
     error.value = null
 
     const [summaryRes, alarmsRes, logsRes, amrsRes] = await Promise.all([
@@ -155,7 +156,7 @@ const fetchDashboardData = async () => {
       api.get('/amrs?page=1&limit=20')
     ])
 
-    dashboardData.value = summaryRes.data
+    dashboardData.value = { ...dashboardData.value, ...summaryRes.data }
     recentAlarms.value = alarmsRes.data.data || []
     recentLogs.value = logsRes.data.data || []
     amrList.value = amrsRes.data.data || []
@@ -163,7 +164,7 @@ const fetchDashboardData = async () => {
     error.value = err.response?.data?.message || '데이터 로드 실패'
     console.error('Dashboard error:', err)
   } finally {
-    isLoading.value = false
+    if (showLoading) isLoading.value = false
   }
 }
 
@@ -178,8 +179,8 @@ const formatTime = (isoString) => {
 let refreshTimer = null
 
 onMounted(() => {
-  fetchDashboardData()
-  refreshTimer = setInterval(fetchDashboardData, 10000)
+  fetchDashboardData(true)
+  refreshTimer = setInterval(() => fetchDashboardData(false), 10000)
 })
 
 onUnmounted(() => {
