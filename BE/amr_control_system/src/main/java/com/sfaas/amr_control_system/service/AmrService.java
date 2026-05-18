@@ -9,12 +9,16 @@ import com.sfaas.amr_control_system.dto.AmrStatusDto;
 import com.sfaas.amr_control_system.dto.AmrStatusHistoryDto;
 import com.sfaas.amr_control_system.dto.PathPointDto;
 import com.sfaas.amr_control_system.dto.PositionDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sfaas.amr_control_system.entity.Amr;
+import com.sfaas.amr_control_system.entity.AmrCommand;
 import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.entity.AmrTask;
 import com.sfaas.amr_control_system.entity.Area;
 import com.sfaas.amr_control_system.exception.AmrNotFoundException;
 import com.sfaas.amr_control_system.exception.InvalidAmrCommandException;
+import com.sfaas.amr_control_system.repository.AmrCommandRepository;
 import com.sfaas.amr_control_system.repository.AmrRepository;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.repository.AmrTaskRepository;
@@ -44,10 +48,17 @@ public class AmrService {
     private static final Set<String> SUPPORTED_COMMANDS = Set.of(
             "goto", "pause", "resume", "canceltask", "emergencystop"
     );
+    /** 시연 시 DB에 반영하는 명령. goTo/pause/resume/cancelTask는 API만 허용, 실행은 400. */
+    private static final String DEMO_EXECUTABLE_COMMAND = "emergencystop";
+    private static final String COMMAND_STATUS_EXECUTED = "EXECUTED";
+    private static final String TASK_STATUS_CANCELLED = "CANCELLED";
+    private static final String EMPTY_JSON_PARAMS = "{}";
 
     private final AmrRepository amrRepository;
     private final AmrStatusLogRepository amrStatusLogRepository;
     private final AmrTaskRepository amrTaskRepository;
+    private final AmrCommandRepository amrCommandRepository;
+    private final ObjectMapper objectMapper;
 
     public AmrListResponseDto listAmrs(
             Integer page,
@@ -130,13 +141,94 @@ public class AmrService {
     @Transactional
     public AmrCommandResponseDto sendCommand(String amrId, AmrCommandRequestDto request) {
         Amr amr = findAmrOrThrow(amrId);
-        validateCommand(request);
+        String commandType = resolveCommandType(request);
+        if (!DEMO_EXECUTABLE_COMMAND.equals(commandType)) {
+            throw new InvalidAmrCommandException(
+                    "Command is not enabled in demo simulation. Executable: emergencyStop.");
+        }
+
+        String commandId = "cmd-" + UUID.randomUUID().toString().substring(0, 8);
+        LocalDateTime requestedAt = LocalDateTime.now();
+
+        applyEmergencyStopStatus(amr, requestedAt);
+        cancelActiveTasksForEmergencyStop(amr, requestedAt);
+        persistAmrCommand(amr, commandId, commandType, request, requestedAt);
 
         AmrCommandResponseDto response = new AmrCommandResponseDto();
         response.setAccepted(true);
-        response.setCommandId("cmd-" + UUID.randomUUID().toString().substring(0, 8));
+        response.setCommandId(commandId);
         response.setAmrId(AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
         return response;
+    }
+
+    private void applyEmergencyStopStatus(Amr amr, LocalDateTime updatedAt) {
+        AmrStatusLog statusLog = amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
+                .orElseGet(() -> {
+                    AmrStatusLog newLog = new AmrStatusLog();
+                    newLog.setAmr(amr);
+                    return newLog;
+                });
+
+        statusLog.setStatus(DashboardStatusNormalizer.STATUS_EMERGENCY_STOP);
+        statusLog.setFaultCode(null);
+        statusLog.setFaultMessage(null);
+        statusLog.setFaultRecoveredAt(null);
+        statusLog.setEmergencyResolvedAt(null);
+        statusLog.setUpdatedAt(updatedAt);
+        amrStatusLogRepository.save(statusLog);
+    }
+
+    private void cancelActiveTasksForEmergencyStop(Amr amr, LocalDateTime cancelledAt) {
+        amrTaskRepository.findFirstByAmr_AmrIdAndDropTimeIsNullOrderByPickTimeDesc(amr.getAmrId())
+                .ifPresent(activeTask -> {
+                    activeTask.setStatus(TASK_STATUS_CANCELLED);
+                    activeTask.setDropTime(cancelledAt);
+                    amrTaskRepository.save(activeTask);
+                });
+    }
+
+    private void persistAmrCommand(
+            Amr amr,
+            String commandId,
+            String commandType,
+            AmrCommandRequestDto request,
+            LocalDateTime requestedAt
+    ) {
+        AmrCommand command = new AmrCommand();
+        command.setCommandId(commandId);
+        command.setAmr(amr);
+        command.setCommandType(toApiCommandName(commandType));
+        command.setParams(serializeCommandParams(request));
+        command.setAccepted(true);
+        command.setStatus(COMMAND_STATUS_EXECUTED);
+        command.setRequestedAt(requestedAt);
+        command.setExecutedAt(requestedAt);
+        amrCommandRepository.save(command);
+    }
+
+    private String toApiCommandName(String normalizedCommandType) {
+        return switch (normalizedCommandType) {
+            case "emergencystop" -> "emergencyStop";
+            case "canceltask" -> "cancelTask";
+            case "goto" -> "goTo";
+            default -> normalizedCommandType;
+        };
+    }
+
+    private String serializeCommandParams(AmrCommandRequestDto request) {
+        if (request.getParams() == null || request.getParams().isEmpty()) {
+            return EMPTY_JSON_PARAMS;
+        }
+        try {
+            return objectMapper.writeValueAsString(request.getParams());
+        } catch (JsonProcessingException exception) {
+            throw new InvalidAmrCommandException("params must be valid JSON object.");
+        }
+    }
+
+    private String resolveCommandType(AmrCommandRequestDto request) {
+        validateCommand(request);
+        return request.getCommand().trim().toLowerCase(Locale.ROOT);
     }
 
     private Amr findAmrOrThrow(String amrId) {

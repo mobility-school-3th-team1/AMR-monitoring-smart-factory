@@ -19,7 +19,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | 영역 | 설계 (`docs/API 정의.md` 등) | 현재 BE | 우선순위 |
 |------|------------------------------|---------|----------|
 | `GET /dashboard/summary` | `amrError`, `amrErrorUnresolved` | **12-B 완료** (Docker 스모크 대기) | — |
-| `POST /amrs/{id}/commands` | DB 반영 후 `accepted: true` | DB 미갱신, 즉시 `accepted: true` | **A-필수** |
+| `POST /amrs/{id}/commands` | DB 반영 후 `accepted: true` | **12-C 완료** (emergencyStop, Docker 스모크 대기) | — |
 | AMR `status` | `OPERATING`/`IDLE`/`CHARGING`/`ERROR`/`EMERGENCY_STOP` | **12-A 완료** (대문자 enum·normalizer) | — |
 | `AmrStatusLog` | `fault_code`, `fault_recovered_at`, `emergency_resolved_at` | **12-A 완료** (엔티티·시드) | — |
 | 운행 자동 복구 | ~60초 후 IDLE 등, FE `resume` 없음 | 스케줄러 없음 | **A-필수** |
@@ -27,7 +27,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | `GET /environment/areas/current` | SCR-01 ③ | 컨트롤러·서비스 없음 | **A-선택** |
 | `GET /analytics/kpis` | `errorCount`, `scheduleComplianceRate` | 필드 없음 | **B (시연 후)** |
 | `WS /api/v1/stream` | 5종 이벤트, JWT | 미구현 | **B (REST 후)** |
-| `AMR_COMMAND` | 명령 이력 | DDL만 존재, JPA·저장 없음 | **A-권장** (시연용 INSERT) |
+| `AMR_COMMAND` | 명령 이력 | **12-C 완료** (emergencyStop INSERT) | — |
 
 > FE·DAS(MQTT 토픽·payload)는 BE 범위 밖. BE는 DB·REST·(선택) WebSocket만 담당.
 
@@ -46,7 +46,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | (대기) | **10-B MySQL** | DB compose merge 후 | 시연 필수 아님 |
 | (후순) | Analytics KPI 확장, 테스트·CSV | `errorCount` 등 | 시연 후 |
 
-**현재 BE 1순위:** **12-C** 비상 정지 DB → **12-D** 자동 복구 (12-B 코드 완료, Docker 스모크 권장).
+**현재 BE 1순위:** **12-D** 자동 복구 (~60초) (12-C 코드 완료, Docker 스모크 권장).
 
 ---
 
@@ -72,18 +72,18 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] `avgBatteryPercent` 유지.
 - [ ] Docker 스모크: summary JSON에 신규 필드 포함 확인 (H2 시드 기준 amr-04 1대 → `amrError`·`amrErrorUnresolved` ≥ 1).
 
-### 12-C. AMR 제어·비상 정지 (`POST /amrs/{amrId}/commands`) — 다음
+### 12-C. AMR 제어·비상 정지 (`POST /amrs/{amrId}/commands`) — 완료 (2026-05-18)
 
-- [ ] `AmrCommand` 엔티티·`AmrCommandRepository` (`AMR_COMMAND` 테이블).
-- [ ] `AmrService.sendCommand` 트랜잭션 구현
+- [x] `AmrCommand` 엔티티·`AmrCommandRepository` (`AMR_COMMAND` 테이블).
+- [x] `AmrService.sendCommand` 트랜잭션 구현
   - `emergencyStop`: 최신 `AMR_STATUS_LOG` UPDATE(또는 INSERT), `status = 'EMERGENCY_STOP'`, `fault_code = null`, `emergency_resolved_at = null`
-  - `AMR_COMMAND` INSERT, `accepted = true`, `command_type`, `requested_at` 등
-  - (선택) 진행 중 `AMR_TASK` 상태 정리
+  - `AMR_COMMAND` INSERT, `accepted = true`, `status = EXECUTED`, `requested_at`/`executed_at`
+  - 진행 중 `AMR_TASK` → `CANCELLED` + `drop_time`
   - **commit 성공 후에만** HTTP 200 + `accepted: true`
-- [ ] `goTo`/`pause`/`resume`/`cancelTask`: 시연 범위 밖이면 400 또는 no-op 정책을 코드·주석으로 고정.
+- [x] `goTo`/`pause`/`resume`/`cancelTask`: 문법은 허용, 실행 시 400 (`emergencyStop`만 DB 반영).
 - [ ] Docker 스모크: 정지 전후 `GET /dashboard/summary`, `GET /amrs/{id}` 상태 변경 확인.
 
-### 12-D. 운행 자동 복구 (시연)
+### 12-D. 운행 자동 복구 (시연) — 다음
 
 - [ ] `application.yaml` (또는 `app.demo.recovery-seconds`, 기본 60) 설정값.
 - [ ] `@Scheduled` (또는 `TaskScheduler`): 미해결 `ERROR`/`EMERGENCY_STOP` 대상
@@ -198,6 +198,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 - `DashboardSummaryDto.amrError`, `amrErrorUnresolved` 및 `DashboardService` 집계 (`isUnresolvedAmrError`).
 
+### [완료] 12-C AMR 비상 정지 (2026-05-18)
+
+- `AmrCommand` 영속, `sendCommand` 트랜잭션(`emergencyStop` → `AMR_STATUS_LOG` + `AMR_COMMAND` + 활성 task 취소).
+
 ---
 
 ## 개발 계획 (레거시 섹션·참고)
@@ -216,20 +220,18 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 | `ENV_SENSOR_LOG` | 엔티티 있음 | **로그 시드·API는 Phase A-12-F** |
 | `AMR_COMMAND` | DDL만 | **Phase A-12-C** |
 
-### 11. AMR 비상 정지 — Phase A-12-C로 이관
+### 11. AMR 비상 정지 — 12-C 완료, 12-D·Phase B 잔여
 
-설계 문서는 dev에 반영됨. BE 구현은 **섹션 12-C, 12-D** 체크리스트를 따른다.
-
-- [ ] `AmrCommand` 엔티티·Repository
-- [ ] `sendCommand` DB 트랜잭션 (`EMERGENCY_STOP`, not `STOPPED`)
-- [ ] commit 후 `accepted: true`
+- [x] `AmrCommand` 엔티티·Repository
+- [x] `sendCommand` DB 트랜잭션 (`EMERGENCY_STOP`)
+- [x] commit 후 `accepted: true`
 - [ ] (Phase B) WebSocket `amrs.status.updated` 발행
 
 ---
 
 ## 작업 우선순위 (BE 담당자용)
 
-1. **Phase A-12-C ~ 12-D** — commands·auto-recovery (**시연 블로커**, 12-A·12-B 완료)
+1. **Phase A-12-D** — auto-recovery (**시연 블로커**, 12-A·12-B·12-C 완료)
 2. **Phase A-12-E** — amrs 필터·정렬 (에러 카드 클릭 시나리오)
 3. **Phase A-12-F** — environment API (시간 있을 때)
 4. **Phase B-6** — WebSocket 최소
