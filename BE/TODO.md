@@ -18,10 +18,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 | 영역 | 설계 (`docs/API 정의.md` 등) | 현재 BE | 우선순위 |
 |------|------------------------------|---------|----------|
-| `GET /dashboard/summary` | `amrError`, `amrErrorUnresolved` | 미구현 (`avgBatteryPercent`만 추가 필드) | **A-필수** |
+| `GET /dashboard/summary` | `amrError`, `amrErrorUnresolved` | **12-B 완료** (Docker 스모크 대기) | — |
 | `POST /amrs/{id}/commands` | DB 반영 후 `accepted: true` | DB 미갱신, 즉시 `accepted: true` | **A-필수** |
-| AMR `status` | `OPERATING`/`IDLE`/`CHARGING`/`ERROR`/`EMERGENCY_STOP` | 소문자 정규화, `EMERGENCY_STOP` 미매핑(대기로 오분류) | **A-필수** |
-| `AmrStatusLog` | `fault_code`, `fault_recovered_at`, `emergency_resolved_at` | 엔티티 컬럼 없음 | **A-필수** |
+| AMR `status` | `OPERATING`/`IDLE`/`CHARGING`/`ERROR`/`EMERGENCY_STOP` | **12-A 완료** (대문자 enum·normalizer) | — |
+| `AmrStatusLog` | `fault_code`, `fault_recovered_at`, `emergency_resolved_at` | **12-A 완료** (엔티티·시드) | — |
 | 운행 자동 복구 | ~60초 후 IDLE 등, FE `resume` 없음 | 스케줄러 없음 | **A-필수** |
 | `GET /amrs` | `status` 콤마, `sort=unresolvedFirst`, `faultCode` | 단일 status·소문자 비교, sort 없음 | **A-권장** |
 | `GET /environment/areas/current` | SCR-01 ③ | 컨트롤러·서비스 없음 | **A-선택** |
@@ -46,7 +46,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | (대기) | **10-B MySQL** | DB compose merge 후 | 시연 필수 아님 |
 | (후순) | Analytics KPI 확장, 테스트·CSV | `errorCount` 등 | 시연 후 |
 
-**현재 BE 1순위:** 섹션 **12 Phase A** (WebSocket보다 REST 시연 경로를 먼저 맞춘다).
+**현재 BE 1순위:** **12-C** 비상 정지 DB → **12-D** 자동 복구 (12-B 코드 완료, Docker 스모크 권장).
 
 ---
 
@@ -54,25 +54,25 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 목표: 로그인 → 대시보드 **에러/미해결 카드** → AMR 비상 정지 → 수치 유지 → **~60초 후 감소** (FE는 REST 폴링으로 반영 가능).
 
-### 12-A. 엔티티·상태 정규화
+### 12-A. 엔티티·상태 정규화 — 완료 (2026-05-18)
 
-- [ ] `AmrStatusLog`에 `faultCode`, `faultMessage`, `faultRecoveredAt`, `emergencyResolvedAt` 매핑 (`DB/init.sql`·`docs/데이터 스키마 설계.md`와 동일).
-- [ ] `DashboardStatusNormalizer` 보강
+- [x] `AmrStatusLog`에 `faultCode`, `faultMessage`, `faultRecoveredAt`, `emergencyResolvedAt` 매핑 (`DB/init.sql`·`docs/데이터 스키마 설계.md`와 동일).
+- [x] `DashboardStatusNormalizer` 보강
   - DB/API 응답: 설계 enum **`OPERATING`, `IDLE`, `CHARGING`, `ERROR`, `EMERGENCY_STOP`** (대문자) 기준.
-  - `IDLE`, `EMERGENCY_STOP` 명시 매핑 (현재 `EMERGENCY_STOP` → `waiting` 오분류 버그 수정).
+  - `IDLE`, `EMERGENCY_STOP` 명시 매핑 (`EMERGENCY_STOP` → `waiting` 오분류 수정).
   - 기존 시드·로그의 한글/소문자 혼용은 normalizer에서 흡수.
-- [ ] `AmrDto`·상세 응답: `faultCode`, `faultMessage` (및 문서 필드 `loadWeightKg`, `sohPercent` 등은 시간 있을 때).
+- [x] `AmrDto`·상세 응답: `faultCode`, `faultMessage`, `loadWeightKg`, `sohPercent`, `totalMileageKm`.
 
-### 12-B. 대시보드 KPI (`GET /dashboard/summary`)
+### 12-B. 대시보드 KPI (`GET /dashboard/summary`) — 완료 (2026-05-18)
 
-- [ ] `DashboardSummaryDto`에 `amrError`, `amrErrorUnresolved` 추가.
-- [ ] `DashboardService.getSummary()`: AMR별 최신 `AMR_STATUS_LOG` 기준 집계
+- [x] `DashboardSummaryDto`에 `amrError`, `amrErrorUnresolved` 추가.
+- [x] `DashboardService.getSummary()`: AMR별 최신 `AMR_STATUS_LOG` 기준 집계
   - `amrError`: `status IN ('ERROR', 'EMERGENCY_STOP')`
   - `amrErrorUnresolved`: (`ERROR` AND `fault_recovered_at IS NULL`) OR (`EMERGENCY_STOP` AND `emergency_resolved_at IS NULL`)
-- [ ] `avgBatteryPercent`는 FE가 사용 중이므로 **유지** (문서 예시와 다름 → API 정의에 선택 필드로 추후 1줄 보강 가능).
-- [ ] Docker 스모크: summary JSON에 신규 필드 포함 확인.
+- [x] `avgBatteryPercent` 유지.
+- [ ] Docker 스모크: summary JSON에 신규 필드 포함 확인 (H2 시드 기준 amr-04 1대 → `amrError`·`amrErrorUnresolved` ≥ 1).
 
-### 12-C. AMR 제어·비상 정지 (`POST /amrs/{amrId}/commands`)
+### 12-C. AMR 제어·비상 정지 (`POST /amrs/{amrId}/commands`) — 다음
 
 - [ ] `AmrCommand` 엔티티·`AmrCommandRepository` (`AMR_COMMAND` 테이블).
 - [ ] `AmrService.sendCommand` 트랜잭션 구현
@@ -189,6 +189,15 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 **10-A에서 하지 않은 것 (의도적):** MySQL, `AMR_COMMAND` 영속, `fault_*`/`emergency_*` 컬럼, API 필드 상세 정합 → **Phase A**에서 처리.
 
+### [완료] 12-A 엔티티·상태 정규화 (2026-05-18)
+
+- `AmrStatusLog` fault/emergency 컬럼, `DashboardStatusNormalizer` 대문자 enum, `AmrDto` 확장.
+- H2 시드: amr-04 `ERROR` + `SENSOR_FAULT`. Docker 재기동 시 `docker compose down -v` 권장.
+
+### [완료] 12-B 대시보드 에러 KPI (2026-05-18)
+
+- `DashboardSummaryDto.amrError`, `amrErrorUnresolved` 및 `DashboardService` 집계 (`isUnresolvedAmrError`).
+
 ---
 
 ## 개발 계획 (레거시 섹션·참고)
@@ -220,7 +229,7 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 
 ## 작업 우선순위 (BE 담당자용)
 
-1. **Phase A-12-A ~ 12-D** — 엔티티·normalizer·dashboard·commands·auto-recovery (**시연 블로커**)
+1. **Phase A-12-C ~ 12-D** — commands·auto-recovery (**시연 블로커**, 12-A·12-B 완료)
 2. **Phase A-12-E** — amrs 필터·정렬 (에러 카드 클릭 시나리오)
 3. **Phase A-12-F** — environment API (시간 있을 때)
 4. **Phase B-6** — WebSocket 최소

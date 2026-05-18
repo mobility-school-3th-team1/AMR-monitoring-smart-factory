@@ -48,6 +48,8 @@ public class DashboardService {
         int amrOperating = 0;
         int amrCharging = 0;
         int amrWaiting = 0;
+        int amrError = 0;
+        int amrErrorUnresolved = 0;
         int batterySum = 0;
         int batteryCount = 0;
 
@@ -58,8 +60,16 @@ public class DashboardService {
                 case DashboardStatusNormalizer.STATUS_CHARGING -> amrCharging++;
                 case DashboardStatusNormalizer.STATUS_IDLE -> amrWaiting++;
                 default -> {
-                    // ERROR, EMERGENCY_STOP 등은 amrError 집계(12-B)에서 처리
                 }
+            }
+            if (DashboardStatusNormalizer.isErrorStatus(normalizedStatus)) {
+                amrError++;
+            }
+            if (DashboardStatusNormalizer.isUnresolvedAmrError(
+                    normalizedStatus,
+                    statusLog.getFaultRecoveredAt(),
+                    statusLog.getEmergencyResolvedAt())) {
+                amrErrorUnresolved++;
             }
             if (statusLog.getBatteryPct() != null) {
                 batterySum += statusLog.getBatteryPct();
@@ -73,6 +83,8 @@ public class DashboardService {
         summary.setAmrOperating(amrOperating);
         summary.setAmrCharging(amrCharging);
         summary.setAmrWaiting(amrWaiting);
+        summary.setAmrError(amrError);
+        summary.setAmrErrorUnresolved(amrErrorUnresolved);
         summary.setAvgBatteryPercent(batteryCount == 0 ? 0 : Math.round((float) batterySum / batteryCount));
         summary.setAverageTaskTimeMin(calculateAverageTaskTimeMinutes());
         return summary;

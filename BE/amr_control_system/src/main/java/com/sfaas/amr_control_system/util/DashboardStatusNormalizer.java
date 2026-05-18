@@ -1,5 +1,6 @@
 package com.sfaas.amr_control_system.util;
 
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 public final class DashboardStatusNormalizer {
@@ -64,6 +65,22 @@ public final class DashboardStatusNormalizer {
 
     public static boolean isErrorStatus(String normalizedStatus) {
         return STATUS_ERROR.equals(normalizedStatus) || STATUS_EMERGENCY_STOP.equals(normalizedStatus);
+    }
+
+    /**
+     * {@code docs/API 정의.md} §2 amrErrorUnresolved 집계 규칙.
+     */
+    public static boolean isUnresolvedAmrError(
+            String normalizedStatus,
+            LocalDateTime faultRecoveredAt,
+            LocalDateTime emergencyResolvedAt) {
+        if (STATUS_ERROR.equals(normalizedStatus)) {
+            return faultRecoveredAt == null;
+        }
+        if (STATUS_EMERGENCY_STOP.equals(normalizedStatus)) {
+            return emergencyResolvedAt == null;
+        }
+        return false;
     }
 
     public static boolean isCongestedStation(String stationStatus) {
