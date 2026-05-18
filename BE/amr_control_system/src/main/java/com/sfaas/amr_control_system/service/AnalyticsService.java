@@ -71,9 +71,9 @@ public class AnalyticsService {
             for (AmrStatusLog statusLog : latestPerAmr) {
                 String normalizedStatus = DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus());
                 switch (normalizedStatus) {
-                    case "operating" -> amrOperating++;
-                    case "charging" -> amrCharging++;
-                    case "waiting" -> amrWaiting++;
+                    case DashboardStatusNormalizer.STATUS_OPERATING -> amrOperating++;
+                    case DashboardStatusNormalizer.STATUS_CHARGING -> amrCharging++;
+                    case DashboardStatusNormalizer.STATUS_IDLE -> amrWaiting++;
                     default -> {
                     }
                 }

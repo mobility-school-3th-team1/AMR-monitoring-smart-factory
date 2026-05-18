@@ -54,11 +54,11 @@ public class DashboardService {
         for (AmrStatusLog statusLog : latestStatusPerAmr) {
             String normalizedStatus = DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus());
             switch (normalizedStatus) {
-                case "operating" -> amrOperating++;
-                case "charging" -> amrCharging++;
-                case "waiting" -> amrWaiting++;
+                case DashboardStatusNormalizer.STATUS_OPERATING -> amrOperating++;
+                case DashboardStatusNormalizer.STATUS_CHARGING -> amrCharging++;
+                case DashboardStatusNormalizer.STATUS_IDLE -> amrWaiting++;
                 default -> {
-                    // error 등은 알람으로만 반영
+                    // ERROR, EMERGENCY_STOP 등은 amrError 집계(12-B)에서 처리
                 }
             }
             if (statusLog.getBatteryPct() != null) {
@@ -178,9 +178,10 @@ public class DashboardService {
 
     private String mapLogLevel(String amrStatus) {
         return switch (DashboardStatusNormalizer.normalizeAmrStatus(amrStatus)) {
-            case "error" -> "error";
-            case "charging" -> "info";
-            case "operating" -> "info";
+            case DashboardStatusNormalizer.STATUS_ERROR,
+                 DashboardStatusNormalizer.STATUS_EMERGENCY_STOP -> "error";
+            case DashboardStatusNormalizer.STATUS_CHARGING,
+                 DashboardStatusNormalizer.STATUS_OPERATING -> "info";
             default -> "info";
         };
     }

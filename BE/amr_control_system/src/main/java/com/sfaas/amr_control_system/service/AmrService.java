@@ -154,8 +154,17 @@ public class AmrService {
         AmrDto dto = new AmrDto();
         dto.setId(AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
         dto.setName(amr.getAmrName());
-        dto.setStatus(latestLog == null ? "waiting" : DashboardStatusNormalizer.normalizeAmrStatus(latestLog.getStatus()));
+        dto.setStatus(latestLog == null
+                ? DashboardStatusNormalizer.STATUS_IDLE
+                : DashboardStatusNormalizer.normalizeAmrStatus(latestLog.getStatus()));
+        if (latestLog != null) {
+            dto.setFaultCode(latestLog.getFaultCode());
+            dto.setFaultMessage(latestLog.getFaultMessage());
+            dto.setLoadWeightKg(latestLog.getLoadWeight());
+            dto.setSohPercent(latestLog.getSohPct());
+        }
         dto.setBatteryPercent(latestLog != null ? latestLog.getBatteryPct() : null);
+        dto.setTotalMileageKm(amr.getTotalMileage());
         dto.setPosition(latestLog == null ? null : toPositionDto(latestLog.getArea(), latestLog.getPosX(), latestLog.getPosY()));
         dto.setDestination(activeTask == null ? null : toPositionDto(activeTask.getToArea(), null, null));
         dto.setCurrentTask(resolveCurrentTaskLabel(activeTask));
