@@ -88,6 +88,11 @@
 - 미복구 ERROR: `status = 'ERROR'` AND `fault_recovered_at IS NULL`
 - 비상 정지 조치 필요: `status = 'EMERGENCY_STOP'` AND `emergency_resolved_at IS NULL`
 
+**에러 수량 변화 (시연)**
+
+- `emergencyStop` 직후: `status = 'EMERGENCY_STOP'` → `amrError`·`amrErrorUnresolved` **유지·증가**
+- **자동 복구**(아래 §3) 완료 후: `status`가 `IDLE` 또는 `OPERATING` 등으로 바뀌면 `amrError`·`amrErrorUnresolved` **감소** (복구 시각 필드가 채워지고 위험 상태에서 벗어남)
+
 응답 예시:
 
 ```json
@@ -183,7 +188,10 @@
 
 설명: AMR 목록 조회
 
-쿼리 파라미터: page, limit, status, batteryMin, batteryMax, search
+쿼리 파라미터: page, limit, status, batteryMin, batteryMax, search, sort
+
+- `status`: 단일 또는 콤마 구분. 에러 목록(SCR-01 ④ 클릭) 예: `status=ERROR,EMERGENCY_STOP`
+- `sort=unresolvedFirst` (시연·SCR-01 ④): **미해결**(`fault_recovered_at`·`emergency_resolved_at` NULL) 우선, 동일 시 `EMERGENCY_STOP` 우선, 그다음 `ERROR`
 
 응답 예시:
 
@@ -270,6 +278,17 @@
 설명: AMR 제어 명령 전송. **시뮬레이션 환경**에서 운행 상태는 DB에 반영되며, DAS(좌표·작업 시뮬) 제어는 FE가 MQTT로 수행한다. **BE는 DAS에 명령을 전달하지 않는다.** (아키텍처: `docs/ADR/20260518-1252-AMR-emergency-logic.md`)
 
 지원 명령: goTo, pause, resume, cancelTask, emergencyStop
+
+**시연 범위: 운행 자동 복구 (`resume` FE 트리거 없음)**
+
+- 현장에서는 작업자가 AMR을 직접 복구한 뒤 AMR이 정상 운행 신호를 다시 내는 것으로 이해한다. **시연에서는 FE가 `resume` 명령을 보내지 않는다.**
+- BE(또는 시뮬레이션 동기화)는 `ERROR`·`EMERGENCY_STOP` 진입 후 **일정 시간이 지나면 자동 복구**한다. 실제 정비 완료 여부는 검증하지 않으며, **대시보드 수치 변화**가 목적이다.
+- 자동 복구 시(인간 작업자 복구 완료를 전제한 시뮬레이션):
+  - `EMERGENCY_STOP` → `status = 'IDLE'`(또는 `OPERATING`), `emergency_resolved_at = now`
+  - `ERROR` → `status = 'IDLE'`(또는 `OPERATING`), `fault_recovered_at = now`, `fault_code`는 null
+  - (WebSocket 구현 시) `amrs.status.updated`, `dashboard.summary.updated` 발행
+- 자동 복구 대기 시간(예: 60초)은 BE 설정값으로 두며, 시연 시나리오에 맞게 조정한다.
+- `resume` HTTP 명령은 API에 유지할 수 있으나 **시연 필수 경로는 아니다.**
 
 처리 순서 (`emergencyStop` 포함):
 

@@ -41,6 +41,7 @@ related_files:
      - BE → FE (WebSocket 구현 시): `amrs.status.updated` 등으로 UI 실시간 반영
   3. **BE는 DAS/MQTT에 직접 접속하지 않는다.** DAS로의 정지 전달은 FE 책임이다.
   4. **`accepted: true` 의미**: 명령이 큐에만 들어갔음이 아니라, **DB에 명령·운행 상태가 반영되었음**을 뜻한다. DAS 시뮬 중단 완료는 보장하지 않는다.
+  5. **시연: 운행 자동 복구** — FE는 `resume` 명령을 보내지 않는다. `EMERGENCY_STOP`·`ERROR` 진입 후 BE가 **일정 시간 경과 시** `emergency_resolved_at`·`fault_recovered_at`를 채우고 `status`를 `IDLE`(또는 `OPERATING`)로 바꾼다. 작업자 현장 복구를 전제한 시뮬레이션이며, 복구 후 대시보드 `amrError`·`amrErrorUnresolved`가 감소한다. 비상 정지 직후에는 두 수치를 유지한다.
 - 버전/규칙
   - API: `docs/API 정의.md` §3 AMR, §8 WebSocket
   - 스키마: `docs/데이터 스키마 설계.md`, 물리 DDL `DB/init.sql`
@@ -80,6 +81,8 @@ related_files:
 ## 미해결 이슈
 
 - [x] `emergencyStop` 시 `AMR_STATUS_LOG.status`: `EMERGENCY_STOP` (고장 `ERROR`와 구분)
+- [x] 시연 복구: FE `resume` 없음, BE 자동 복구·수치 감소 (`docs/API 정의.md` §3)
+- [ ] 자동 복구 대기 시간(초) BE 설정값 확정
 - [ ] `AMR_COMMAND.status` 초기값·전이 규칙 (예: INSERT 시 `EXECUTED`, `accepted=true`)
 - [ ] FE → DAS **MQTT 토픽·payload** 명세 (FE·DAS 영역 문서)
 - [ ] `goTo`, `pause` 등 비상 정지 외 command의 DB 반영 범위 (시연 범위에 포함 여부)
@@ -90,3 +93,4 @@ related_files:
 | --- | --- | --- | --- |
 | v0.1 | 2026-05-18 | 최초 작성 (DAS·FE·BE 합의 반영) | @dapin1490 |
 | v0.2 | 2026-05-18 | `EMERGENCY_STOP`·대시보드 에러/미해결 집계·화면 설계서 연계 | @dapin1490 |
+| v0.3 | 2026-05-18 | 시연 자동 복구(FE resume 없음)·에러 목록 정렬 | @dapin1490 |
