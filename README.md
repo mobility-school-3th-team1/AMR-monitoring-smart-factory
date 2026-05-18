@@ -54,20 +54,11 @@ PR 작성 시 [.github/pull_request_template.md](.github/pull_request_template.m
 
 ## 외부 도구와 문서 역할
 
-프로젝트 정의서에는 Jira, Confluence가 협업 스택으로 언급되어 있습니다. 팀에서 아래를 정한 뒤, 이 섹션을 본문으로 채우고 주석을 제거합니다.
-
-<!--
-[작성할 내용] Jira 프로젝트 또는 보드 URL (워크스페이스 외부 정보이므로 저장소만으로는 확인 불가)
-
-[작성할 내용] Confluence 스페이스 또는 문서 루트 URL
-
-[작성할 내용] 다음 중 무엇을 “최신 원본”으로 둘지 합의한 문장
-  예) API 경로와 요청·응답 필드는 GitHub의 docs/API 정의.md를 원본으로 하고, Jira 이슈에는 링크만 둔다.
-  예) 초기 기획 초안은 Confluence, 확정 후 반영분은 GitHub docs에만 둔다.
--->
-
 - [Jira](https://dapin1490-1778398763176.atlassian.net/jira/software/projects/SCADAPRJ/summary): Jira 요약 대시보드 URL. WBS를 기반으로 프로젝트 진행 상황 및 일정 관리.
 - [Confluence](https://dapin1490-1778398763176.atlassian.net/wiki/spaces/S): Confluence 문서 루트 URL. 프로젝트 문서 및 공유 문서 관리. 회의록, 참고자료, 설계 및 개발 로그 등을 포함함.
+- Gemini, ChatGPT: 자료 조사, 코드 이외의 자료 생성
+- GitHub Copilot: 코드 생성(AGENTS.md 반영), PR 코드 리뷰
+- Cursor: 코드 생성(AGENTS.md 반영)
 
 - 최신 원본
   - API 경로와 요청·응답 필드는 GitHub의 docs/API 정의.md를 원본으로 하고, 컨플루언스에 작성된 문서는 GitHub 문서화 수동으로 동기화되는 복사본이다.

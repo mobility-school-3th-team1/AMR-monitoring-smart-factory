@@ -18,7 +18,7 @@ AMR(자율 이동 로봇) 기반 스마트 팩토리 통합 모니터링 시스�
 
 ```
 AMR-monitoring-smart-factory/
-├── FE/frontend/          # Vue 앱 (진입: npm run dev)
+├── FE/          # FE 루트 (세부 앱 경로는 추가 예정)
 ├── BE/
 │   ├── amr_control_system/   # Spring Boot 소스
 │   ├── docker-compose.yml    # BE 단독 Docker 실행
@@ -132,9 +132,9 @@ npm run dev
 ```
 
 - 개발 서버: http://localhost:3001 (포트 고정, `strictPort: true`)
-- API 호출 기본 경로: `/api/v1` (`FE/frontend/src/plugins/axios.js`)
+- API 호출 기본 경로: `/api/v1` (axios 설정 파일 경로는 현재 저장소 기준 미확정이므로, 실제 파일이 추가되면 해당 경로로 문서를 갱신하세요)
 
-프론트는 **3001**, 백엔드는 **8080**에서 동작하므로, 로컬에서 API를 쓰려면 Vite 프록시 설정이 필요합니다. `FE/frontend/vite.config.js`의 `server` 블록에 예시를 추가합니다.
+프론트는 **3001**, 백엔드는 **8080**에서 동작하므로, 로컬에서 API를 쓰려면 Vite 프록시 설정이 필요합니다. 아래 설정은 **예시**이며, 실제 `vite.config.*` 파일이 추가된 뒤 저장소 구조에 맞는 경로로 문서를 수정하세요.
 
 ```javascript
 server: {
