@@ -71,7 +71,7 @@ related_files:
 
 ### 리스크 및 대응
 
-- 리스크: FE가 `accepted` 수신 전에 DAS에 MQTT를내면, 짧은 시간 DB와 DAS가 어긋난다.
+- 리스크: FE가 `accepted` 수신 전에 DAS에 MQTT를 내면, 짧은 시간 DB와 DAS가 어긋난다.
   - 대응: API 명세에 순서 명시. FE는 `accepted === true` 이후에만 MQTT publish.
 - 리스크: `ERROR`와 `EMERGENCY_STOP`을 혼동하면 대시보드·지도 표시가 어긋난다.
   - 대응: `emergencyStop`은 `EMERGENCY_STOP`만 사용. 자체 고장은 `ERROR` + `fault_code` (`docs/API 정의.md` §3).
