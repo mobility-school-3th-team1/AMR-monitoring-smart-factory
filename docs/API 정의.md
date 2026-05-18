@@ -77,6 +77,22 @@
 
 설명: 메인 대시보드 KPI 요약 조회
 
+- `amrOperating` / `amrWaiting` / `amrCharging` / `amrError` / `amrErrorUnresolved`: AMR별 **최신** `AMR_STATUS_LOG` 기준 집계(저장 컬럼 아님).
+- `amrWaiting`: `status = IDLE`.
+- `amrError`: `status IN ('ERROR', 'EMERGENCY_STOP')`.
+- `amrErrorUnresolved`: 미복구 `ERROR` + 비상 정지 조치가 필요한 `EMERGENCY_STOP` (아래 집계 규칙).
+- 가동률(`utilizationRate`)은 본 API 범위에서 제외한다. 필요 시 `§7 Analytics`에서 제공한다.
+
+**`amrErrorUnresolved` 집계 규칙**
+
+- 미복구 ERROR: `status = 'ERROR'` AND `fault_recovered_at IS NULL`
+- 비상 정지 조치 필요: `status = 'EMERGENCY_STOP'` AND `emergency_resolved_at IS NULL`
+
+**에러 수량 변화 (시연)**
+
+- `emergencyStop` 직후: `status = 'EMERGENCY_STOP'` → `amrError`·`amrErrorUnresolved` **유지·증가**
+- **자동 복구**(아래 §3) 완료 후: `status`가 `IDLE` 또는 `OPERATING` 등으로 바뀌면 `amrError`·`amrErrorUnresolved` **감소** (복구 시각 필드가 채워지고 위험 상태에서 벗어남)
+
 응답 예시:
 
 ```json
@@ -84,9 +100,10 @@
     "productionCount": 156,
     "activeAlarms": 3,
     "amrOperating": 9,
-    "amrCharging": 11,
     "amrWaiting": 2,
-    "avgBatteryPercent": 67,
+    "amrCharging": 11,
+    "amrError": 3,
+    "amrErrorUnresolved": 2,
     "averageTaskTimeMin": 9.3
 }
 ```
@@ -118,13 +135,63 @@
 
 쿼리 파라미터: page, limit
 
+### GET /environment/areas/current
+
+설명: 구역별 최신 환경 센서값 조회 (메인 대시보드 SCR-01 ③)
+
+쿼리 파라미터: areaId (선택, 미지정 시 전체 구역)
+
+데이터 출처: `ENV_SENSOR`, `ENV_SENSOR_LOG`(센서별 최신 `measured_at` 1건). BE는 DB 집계만 수행한다.
+
+응답 예시:
+
+```json
+{
+    "data": [
+        {
+            "areaId": "AREA_ASSEMBLE_01",
+            "areaName": "조립 구역 1",
+            "readings": [
+                {
+                    "sensorType": "TEMP",
+                    "sensorName": "온도 센서 2호",
+                    "value": 24.5,
+                    "unit": "°C",
+                    "status": "normal",
+                    "measuredAt": "2026-05-13T08:20:00Z"
+                },
+                {
+                    "sensorType": "HUMIDITY",
+                    "sensorName": "습도 센서 2호",
+                    "value": 48.0,
+                    "unit": "%",
+                    "status": "normal",
+                    "measuredAt": "2026-05-13T08:20:00Z"
+                },
+                {
+                    "sensorType": "PARTICLE",
+                    "sensorName": "파티클 센서 2호",
+                    "value": 42.0,
+                    "unit": "ug/m3",
+                    "status": "normal",
+                    "measuredAt": "2026-05-13T08:20:00Z"
+                }
+            ]
+        }
+    ]
+}
+```
+
 ## 3. AMR(AMR Fleet)
 
 ### GET /amrs
 
 설명: AMR 목록 조회
 
-쿼리 파라미터: page, limit, status, batteryMin, batteryMax, search
+쿼리 파라미터: page, limit, status, batteryMin, batteryMax, search, sort
+
+- `status`: 단일 또는 콤마 구분. 에러 목록(SCR-01 ④ 클릭) 예: `status=ERROR,EMERGENCY_STOP`
+- `sort=unresolvedFirst` (시연·SCR-01 ④): **미해결**(`fault_recovered_at`·`emergency_resolved_at` NULL) 우선, 동일 시 `EMERGENCY_STOP` 우선, 그다음 `ERROR`
 
 응답 예시:
 
@@ -134,7 +201,8 @@
         {
             "id": "amr-01",
             "name": "AMR-01",
-            "status": "charging",
+            "status": "CHARGING",
+            "faultCode": null,
             "batteryPercent": 86,
             "position": { "zone": "Zone A", "x": 123.4, "y": 56.7 },
             "destination": { "zone": "Zone B", "x": 140.1, "y": 70.5 },
@@ -151,6 +219,36 @@
 ### GET /amrs/{amrId}
 
 설명: AMR 상세 조회
+
+응답 예시:
+
+```json
+{
+    "id": "amr-01",
+    "name": "AMR-01",
+    "status": "ERROR",
+    "faultCode": "SENSOR_FAULT",
+    "faultMessage": "LiDAR data invalid",
+    "batteryPercent": 72,
+    "position": { "zone": "Zone A", "x": 123.4, "y": 56.7 },
+    "loadWeightKg": 48,
+    "sohPercent": 96,
+    "totalMileageKm": 1205.3,
+    "lastSeenAt": "2026-05-13T08:23:12Z"
+}
+```
+
+### AMR `status` 및 `faultCode`
+
+| status | 설명 |
+| --- | --- |
+| `OPERATING`, `IDLE`, `CHARGING` | 정상 운행 분류 |
+| `ERROR` | AMR 자체 진단 고장. `faultCode` 필수 |
+| `EMERGENCY_STOP` | `emergencyStop` 명령 DB 반영. `faultCode`는 null |
+
+`faultCode` (`ERROR` 시, AMR 온보드 진단 가능 범위): `SENSOR_FAULT`, `COMM_LOST`, `COLLISION`, `OVERLOAD`, `LOAD_IMBALANCE`, `DRIVE_FAULT`, `NAVIGATION_FAULT`.
+
+환경·공장 사고(먼지 초과 등)는 구역 `ENV_SENSOR` 및 `ALARM_LOG`로 처리하며 AMR `faultCode`가 아니다.
 
 ### GET /amrs/{amrId}/status-history
 
@@ -181,10 +279,21 @@
 
 지원 명령: goTo, pause, resume, cancelTask, emergencyStop
 
+**시연 범위: 운행 자동 복구 (`resume` FE 트리거 없음)**
+
+- 현장에서는 작업자가 AMR을 직접 복구한 뒤 AMR이 정상 운행 신호를 다시 내는 것으로 이해한다. **시연에서는 FE가 `resume` 명령을 보내지 않는다.**
+- BE(또는 시뮬레이션 동기화)는 `ERROR`·`EMERGENCY_STOP` 진입 후 **일정 시간이 지나면 자동 복구**한다. 실제 정비 완료 여부는 검증하지 않으며, **대시보드 수치 변화**가 목적이다.
+- 자동 복구 시(인간 작업자 복구 완료를 전제한 시뮬레이션):
+  - `EMERGENCY_STOP` → `status = 'IDLE'`(또는 `OPERATING`), `emergency_resolved_at = now`
+  - `ERROR` → `status = 'IDLE'`(또는 `OPERATING`), `fault_recovered_at = now`, `fault_code`는 null
+  - (WebSocket 구현 시) `amrs.status.updated`, `dashboard.summary.updated` 발행
+- 자동 복구 대기 시간(예: 60초)은 BE 설정값으로 두며, 시연 시나리오에 맞게 조정한다.
+- `resume` HTTP 명령은 API에 유지할 수 있으나 **시연 필수 경로는 아니다.**
+
 처리 순서 (`emergencyStop` 포함):
 
 1. 인증 및 `amrId` 유효성 검증
-2. DB 트랜잭션: `AMR_COMMAND` INSERT, `AMR_STATUS_LOG`(및 정책에 따른 `AMR_TASK`) 갱신
+2. DB 트랜잭션: `AMR_COMMAND` INSERT, `AMR_STATUS_LOG`(및 정책에 따른 `AMR_TASK`) 갱신. `emergencyStop` 시 `AMR_STATUS_LOG.status = 'EMERGENCY_STOP'`, `fault_code`는 null, `emergency_resolved_at`는 null
 3. commit 성공 시 HTTP 200 및 `accepted: true` 반환
 4. commit 실패 시 4xx/5xx (본문에 `accepted: true`를 내리지 않음)
 5. FE는 `accepted: true` 수신 **이후** DAS에 MQTT 정지 고지
@@ -377,9 +486,47 @@
 
 ### GET /analytics/kpis
 
-설명: 기간별 KPI 집계
+설명: 기간별 KPI 집계. SCR-02 ③④(일별 오류·시간 준수율), SCR-03 ⑦(시간 준수율) 차트에 사용한다.
 
-쿼리 파라미터: from, to, groupBy=hour|day
+쿼리 파라미터: from, to, groupBy=hour|day (`groupBy=day` 권장: 일별 오류·준수율 차트)
+
+버킷별 추가 필드:
+
+- `errorCount`: 해당 기간에 `AMR_STATUS_LOG.status = 'ERROR'`로 기록된 건수(일별·시간별 버킷). `EMERGENCY_STOP`은 포함하지 않는다.
+- `scheduleComplianceRate`: 해당 기간에 **완료**된 `AMR_TASK`(`pick_time`, `drop_time` 존재) 중, 실제 소요(분) ≤ 연결 `PR_ROUTING.standard_lead_time`(분)인 비율(0~100). `AMR_TASK`·`WIP_LOT`·`PR_ROUTING` 조인으로 산출한다.
+
+응답 예시 (`groupBy=day`):
+
+```json
+{
+    "data": [
+        {
+            "timestamp": "2026-05-12T00:00:00Z",
+            "productionCount": 150,
+            "activeAlarms": 2,
+            "amrOperating": 8,
+            "amrWaiting": 2,
+            "amrCharging": 10,
+            "avgBatteryPercent": 65,
+            "averageTaskTimeMin": 9.1,
+            "errorCount": 3,
+            "scheduleComplianceRate": 88.5
+        },
+        {
+            "timestamp": "2026-05-13T00:00:00Z",
+            "productionCount": 156,
+            "activeAlarms": 3,
+            "amrOperating": 9,
+            "amrWaiting": 2,
+            "amrCharging": 11,
+            "avgBatteryPercent": 67,
+            "averageTaskTimeMin": 9.3,
+            "errorCount": 1,
+            "scheduleComplianceRate": 91.0
+        }
+    ]
+}
+```
 
 ### GET /analytics/battery
 
@@ -389,9 +536,25 @@
 
 ### GET /analytics/workload
 
-설명: 작업 건수 및 비중 통계 조회
+설명: 작업 건수 및 비중 통계 조회 (SCR-05 ②③)
 
 쿼리 파라미터: from, to, groupBy=amr|taskType|hour
+
+- `groupBy=hour`: 시간대별 작업 건수(SCR-05 ②)
+- `groupBy=amr`: AMR별 작업 건수·비중(SCR-05 ③)
+
+데이터 출처: `AMR_TASK`(`pick_time` 기준 집계).
+
+응답 예시 (`groupBy=hour`):
+
+```json
+{
+    "data": [
+        { "timestamp": "2026-05-13T08:00:00Z", "taskCount": 5 },
+        { "timestamp": "2026-05-13T09:00:00Z", "taskCount": 8 }
+    ]
+}
+```
 
 ## 8. 실시간 스트리밍(WebSocket)
 
@@ -420,10 +583,13 @@
     "timestamp": "2026-05-13T08:23:12Z",
     "data": {
         "amrId": "amr-01",
-        "status": "charging"
+        "status": "EMERGENCY_STOP",
+        "faultCode": null
     }
 }
 ```
+
+`dashboard.summary.updated` 이벤트 payload에는 `amrError`, `amrErrorUnresolved` 등 `GET /dashboard/summary`와 동일 키를 포함할 수 있다.
 
 ## 9. 공통 응답 코드
 
@@ -444,4 +610,4 @@
 - 화면 데이터는 페이지 단위로 분리된 REST API에서 가져온다.
 - 실시간 화면은 WebSocket 이벤트와 REST 조회를 혼합한다.
 - 명령 API: HTTP 응답의 `accepted`는 **DB 반영 완료**를 의미한다. DAS 시뮬 반영은 FE→MQTT 경로이며, 그 결과는 WebSocket 이벤트 또는 이후 REST 조회로 확인한다.
-- 비상 정지 전체 흐름은 `docs/프로젝트 정의서.md`, `docs/ADR/20260518-1252-AMR-emergency-logic.md`를 따른다.
+- 비상 정지 전체 흐름은 `docs/화면 설계서.md`(SCR-03), `docs/ADR/20260518-1252-AMR-emergency-logic.md`를 따른다.
