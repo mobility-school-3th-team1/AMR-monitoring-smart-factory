@@ -1,373 +1,391 @@
 <template>
   <div class="dashboard-view">
-    <section class="dashboard-view__stats">
-      <BaseStatCard
-        v-for="card in statCards"
-        :key="card.label"
-        v-bind="card"
-      />
+    <!-- KPI 요약 카드 -->
+    <section class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-label">생산 건수</div>
+        <div class="kpi-value">{{ dashboardData.productionCount }}<span class="kpi-unit">건</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">활성 알람</div>
+        <div class="kpi-value">{{ dashboardData.activeAlarms }}<span class="kpi-unit">건</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">운영 중 AMR</div>
+        <div class="kpi-value">{{ dashboardData.amrOperating }}<span class="kpi-unit">대</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">충전 중 AMR</div>
+        <div class="kpi-value">{{ dashboardData.amrCharging }}<span class="kpi-unit">대</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">대기 중 AMR</div>
+        <div class="kpi-value">{{ dashboardData.amrWaiting }}<span class="kpi-unit">대</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">평균 배터리</div>
+        <div class="kpi-value">{{ dashboardData.avgBatteryPercent }}<span class="kpi-unit">%</span></div>
+      </div>
     </section>
 
-    <div class="dashboard-view__grid">
-      <SectionPanel
-        class="dashboard-view__map"
-        eyebrow="메인 대시보드"
-        title="공장 평면도와 AMR 상태"
-        subtitle="mockup/dashboard.html 기준으로 구성한 통합 관제 스켈레톤입니다."
-      >
-        <div class="floor-map">
-          <div
-            v-for="zone in floorZones"
-            :key="zone.name"
-            class="floor-map__zone"
-            :class="zone.variant"
-            :style="zone.style"
-          >
-            <strong>{{ zone.name }}</strong>
-            <span>{{ zone.detail }}</span>
-          </div>
+    <!-- 에러 메시지 -->
+    <div v-if="error" class="error-banner">
+      <span>✕ {{ error }}</span>
+      <button class="error-retry" @click="fetchDashboardData">다시 시도</button>
+    </div>
 
-          <div
-            v-for="robot in robots"
-            :key="robot.id"
-            class="floor-map__robot"
-            :class="robot.statusClass"
-            :style="robot.style"
-          >
-            {{ robot.id }}
-            <small>{{ robot.battery }}</small>
+    <!-- 메인 대시보드 그리드 -->
+    <div v-if="!isLoading" class="dashboard-grid">
+      <!-- 공장 평면도 -->
+      <section class="dashboard-panel floor-map-panel">
+        <div class="floor-map">
+          <div style="position: absolute; top: 8px; right: 10px; font-size: 0.7rem; font-weight: 700; color: #64748b; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; z-index: 10;">AMR 위치 현황도</div>
+          <div v-for="amr in amrList.slice(0, 8)" :key="amr.id" class="floor-map__robot" :style="{ left: `${10 + (amrList.indexOf(amr) % 4) * 20}%`, top: `${20 + Math.floor(amrList.indexOf(amr) / 4) * 30}%` }">
+            {{ amr.name }}<small>{{ amr.batteryPercent }}%</small>
           </div>
         </div>
-      </SectionPanel>
+      </section>
 
-      <div class="dashboard-view__side">
-        <SectionPanel
-          eyebrow="환경 현황"
-          title="구역별 온도 · 습도 · 먼지"
-          subtitle="실측 데이터가 연결되면 차트로 교체합니다."
-        >
-          <ul class="mini-list">
-            <li v-for="item in environmentRows" :key="item.zone">
-              <span>{{ item.zone }}</span>
-              <strong>{{ item.value }}</strong>
-            </li>
-          </ul>
-        </SectionPanel>
+      <!-- 실시간 알람 -->
+      <section class="dashboard-panel">
+        <h3 class="panel-title">실시간 중요 알람</h3>
+        <div v-if="recentAlarms.length === 0" class="empty-state"><p>활성 알람이 없습니다.</p></div>
+        <ul v-else class="alert-list">
+          <li v-for="alarm in recentAlarms" :key="alarm.id">
+            <span class="alert-level" :class="`alert-${alarm.level}`">{{ alarm.level }}</span>
+            <div><p>{{ alarm.message }}</p><span class="alert-time">{{ formatTime(alarm.occurredAt) }}</span></div>
+          </li>
+        </ul>
+      </section>
 
-        <SectionPanel
-          eyebrow="알람"
-          title="실시간 중요 알람"
-          subtitle="충돌, 고장, 경로 이탈 같은 이벤트를 표시합니다."
-        >
-          <ul class="alert-list">
-            <li v-for="alert in alerts" :key="alert.message">
-              <BaseBadge :tone="alert.tone" :label="alert.type" />
-              <div>
-                <p>{{ alert.message }}</p>
-                <span>{{ alert.time }}</span>
-              </div>
-            </li>
-          </ul>
-        </SectionPanel>
-      </div>
-
-      <SectionPanel
-        class="dashboard-view__log"
-        eyebrow="로그"
-        title="실시간 작업 로그"
-        subtitle="작업 시작, 이동, 충전 이벤트가 흐르는 영역입니다."
-      >
-        <table class="simple-table">
-          <thead>
-            <tr>
-              <th>시간</th>
-              <th>장비</th>
-              <th>이벤트</th>
-              <th>상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="entry in logRows" :key="entry.time + entry.robot">
-              <td>{{ entry.time }}</td>
-              <td>{{ entry.robot }}</td>
-              <td>{{ entry.event }}</td>
-              <td>{{ entry.status }}</td>
-            </tr>
-          </tbody>
+      <!-- 실시간 작업 로그 -->
+      <section class="dashboard-panel" style="grid-column: 1 / -1;">
+        <h3 class="panel-title">실시간 작업 로그</h3>
+        <div v-if="recentLogs.length === 0" class="empty-state"><p>최근 작업 로그가 없습니다.</p></div>
+        <table v-else class="simple-table">
+          <thead><tr><th>시간</th><th>장비</th><th>이벤트</th><th>상태</th></tr></thead>
+          <tbody><tr v-for="(log, i) in recentLogs" :key="i"><td>{{ formatTime(log.timestamp) }}</td><td>{{ log.amrId }}</td><td>{{ log.event }}</td><td>{{ log.status }}</td></tr></tbody>
         </table>
-      </SectionPanel>
+      </section>
     </div>
+
+    <!-- 로딩 상태 -->
+    <div v-else class="loading-state"><div class="spinner"></div><p>데이터 로드 중...</p></div>
   </div>
 </template>
 
 <script setup>
-import BaseBadge from '../components/atoms/BaseBadge.vue'
-import BaseStatCard from '../components/atoms/BaseStatCard.vue'
-import SectionPanel from '../components/molecules/SectionPanel.vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import api from '@/plugins/axios'
 
-const statCards = [
-  {
-    label: '운영 중 장비',
-    value: '18대',
-    description: '현재 관제 가능한 AMR 수입니다.',
-    tone: 'blue'
-  },
-  {
-    label: '대기 장비',
-    value: '4대',
-    description: '작업 대기 또는 충전 준비 상태입니다.',
-    tone: 'orange'
-  },
-  {
-    label: '주의 알람',
-    value: '3건',
-    description: '경로 이상 또는 환경 이상 이벤트입니다.',
-    tone: 'red'
-  },
-  {
-    label: '가동률',
-    value: '96.4%',
-    description: '샘플 수치 기반의 초기 대시보드 값입니다.',
-    tone: 'green'
+// 상태
+const isLoading = ref(true)
+const error = ref(null)
+const dashboardData = ref({
+  productionCount: 0,
+  activeAlarms: 0,
+  amrOperating: 0,
+  amrCharging: 0,
+  amrWaiting: 0,
+  avgBatteryPercent: 0,
+  averageTaskTimeMin: 0
+})
+const amrList = ref([])
+const recentAlarms = ref([])
+const recentLogs = ref([])
+
+// API 호출
+const fetchDashboardData = async () => {
+  try {
+    isLoading.value = true
+    error.value = null
+
+    const [summaryRes, alarmsRes, logsRes, amrsRes] = await Promise.all([
+      api.get('/dashboard/summary'),
+      api.get('/dashboard/recent-alarms?limit=5'),
+      api.get('/dashboard/recent-logs?page=1&limit=10'),
+      api.get('/amrs?page=1&limit=20')
+    ])
+
+    dashboardData.value = summaryRes.data
+    recentAlarms.value = alarmsRes.data.data || []
+    recentLogs.value = logsRes.data.data || []
+    amrList.value = amrsRes.data.data || []
+  } catch (err) {
+    error.value = err.response?.data?.message || '데이터 로드 실패'
+    console.error('Dashboard error:', err)
+  } finally {
+    isLoading.value = false
   }
-]
+}
 
-const floorZones = [
-  {
-    name: '입고 구역',
-    detail: '검수·이송',
-    variant: 'zone--soft',
-    style: { left: '6%', top: '12%', width: '24%', height: '28%' }
-  },
-  {
-    name: '조립 라인',
-    detail: '주요 운송',
-    variant: 'zone--primary',
-    style: { left: '34%', top: '10%', width: '28%', height: '36%' }
-  },
-  {
-    name: '검사 구역',
-    detail: '품질 확인',
-    variant: 'zone--accent',
-    style: { left: '67%', top: '14%', width: '25%', height: '24%' }
-  },
-  {
-    name: '충전 스테이션',
-    detail: '대기열 관리',
-    variant: 'zone--warning',
-    style: { left: '18%', top: '58%', width: '26%', height: '22%' }
-  },
-  {
-    name: '폐기/출하',
-    detail: '마감 처리',
-    variant: 'zone--muted',
-    style: { left: '58%', top: '56%', width: '30%', height: '24%' }
-  }
-]
+// 시간 포맷
+const formatTime = (isoString) => {
+  if (!isoString) return '-'
+  const date = new Date(isoString)
+  return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+}
 
-const robots = [
-  { id: 'AMR-01', battery: '92%', statusClass: 'robot--safe', style: { left: '18%', top: '28%' } },
-  { id: 'AMR-04', battery: '68%', statusClass: 'robot--working', style: { left: '49%', top: '26%' } },
-  { id: 'AMR-07', battery: '41%', statusClass: 'robot--warning', style: { left: '73%', top: '32%' } },
-  { id: 'AMR-11', battery: '88%', statusClass: 'robot--safe', style: { left: '30%', top: '72%' } }
-]
+// 새로고침 타이머
+let refreshTimer = null
 
-const environmentRows = [
-  { zone: '입고 구역', value: '26.4°C / 48% / 0.12mg' },
-  { zone: '조립 라인', value: '27.1°C / 46% / 0.18mg' },
-  { zone: '검사 구역', value: '25.9°C / 44% / 0.09mg' },
-  { zone: '충전 스테이션', value: '28.2°C / 51% / 0.15mg' }
-]
+onMounted(() => {
+  fetchDashboardData()
+  refreshTimer = setInterval(fetchDashboardData, 10000)
+})
 
-const alerts = [
-  { type: '경로 이탈', message: 'AMR-07이 우회 경로를 벗어났습니다.', time: '방금 전', tone: 'danger' },
-  { type: '온도 상승', message: '충전 구역 온도가 기준치를 넘었습니다.', time: '2분 전', tone: 'warning' },
-  { type: '정상', message: 'AMR-04 작업 완료 후 복귀했습니다.', time: '5분 전', tone: 'success' }
-]
-
-const logRows = [
-  { time: '09:40:12', robot: 'AMR-01', event: '작업 시작', status: '정상' },
-  { time: '09:41:03', robot: 'AMR-04', event: '이동 경로 진입', status: '정상' },
-  { time: '09:42:18', robot: 'AMR-07', event: '경로 보정', status: '주의' },
-  { time: '09:43:55', robot: 'AMR-11', event: '충전 대기열 합류', status: '정상' }
-]
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 </script>
 
 <style scoped>
 .dashboard-view {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-}
-
-.dashboard-view__stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+  height: 100%;
 }
 
-.dashboard-view__grid {
+.kpi-cards {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.9fr);
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-.dashboard-view__side {
+.kpi-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #3b82f6;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.kpi-unit {
+  font-size: 0.85rem;
+  margin-left: 4px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+.error-retry {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-grid {
   display: grid;
-  gap: 18px;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
 }
 
-.dashboard-view__log {
-  grid-column: 1 / -1;
+.dashboard-panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.floor-map-panel {
+  grid-row: 1 / 3;
+}
+
+.panel-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0 0 12px;
+  padding: 0;
 }
 
 .floor-map {
   position: relative;
-  min-height: 540px;
-  overflow: hidden;
-  border-radius: 24px;
-  border: 1px solid rgba(217, 228, 240, 0.9);
-  background:
-    linear-gradient(90deg, rgba(37, 99, 235, 0.035) 1px, transparent 1px),
-    linear-gradient(rgba(37, 99, 235, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, #fbfdff 0%, #f5f9ff 100%);
-  background-size: 44px 44px, 44px 44px, auto;
+  flex: 1;
+  min-height: 400px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f7fafc 100%);
+  border: 1px solid #e5edf7;
+  border-radius: 8px;
 }
-
-.floor-map__zone {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-}
-
-.floor-map__zone strong {
-  font-size: 0.9rem;
-}
-
-.floor-map__zone span {
-  font-size: 0.76rem;
-  color: var(--color-text-muted);
-}
-
-.zone--soft { background: rgba(16, 185, 129, 0.08); }
-.zone--primary { background: rgba(37, 99, 235, 0.08); }
-.zone--accent { background: rgba(6, 182, 212, 0.1); }
-.zone--warning { background: rgba(245, 158, 11, 0.12); }
-.zone--muted { background: rgba(15, 23, 42, 0.04); }
 
 .floor-map__robot {
   position: absolute;
-  min-width: 88px;
-  padding: 9px 12px;
-  border-radius: 14px;
-  color: #ffffff;
-  font-size: 0.76rem;
-  font-weight: 800;
+  width: 50px;
+  padding: 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
   text-align: center;
   transform: translate(-50%, -50%);
-  box-shadow: 0 14px 26px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 5;
 }
 
 .floor-map__robot small {
   display: block;
-  margin-top: 4px;
-  font-size: 0.68rem;
+  margin-top: 2px;
+  font-size: 0.5rem;
   opacity: 0.9;
 }
 
-.robot--safe { background: linear-gradient(180deg, #10b981, #0f766e); }
-.robot--working { background: linear-gradient(180deg, #2563eb, #1d4ed8); }
-.robot--warning { background: linear-gradient(180deg, #f59e0b, #d97706); }
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
 
-.mini-list,
+.empty-state p {
+  margin: 0;
+}
+
 .alert-list {
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.mini-list {
-  display: grid;
-  gap: 12px;
-}
-
-.mini-list li {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--color-surface-soft);
-  border: 1px solid rgba(217, 228, 240, 0.92);
-}
-
-.mini-list span,
-.mini-list strong {
-  font-size: 0.84rem;
-}
-
-.alert-list {
-  display: grid;
-  gap: 14px;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .alert-list li {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 14px;
-  background: var(--color-surface-soft);
-  border: 1px solid rgba(217, 228, 240, 0.92);
+  gap: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 3px solid #3b82f6;
+  background: #eff6ff;
+  font-size: 0.8rem;
 }
 
-.alert-list p,
-.alert-list span {
-  margin: 0;
-  font-size: 0.84rem;
+.alert-list p {
+  margin: 0 0 2px;
+  font-weight: 600;
+  color: #1f2937;
 }
 
-.alert-list span {
+.alert-list div span {
+  display: block;
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.alert-critical { border-left-color: #ef4444; background: #fef2f2; }
+.alert-warning { border-left-color: #f59e0b; background: #fffbf0; }
+.alert-info { border-left-color: #3b82f6; background: #eff6ff; }
+
+.alert-level {
+  flex-shrink: 0;
   display: inline-block;
-  margin-top: 6px;
-  color: var(--color-text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: white;
 }
+
+.alert-critical .alert-level,
+.alert-level.alert-critical { background: #ef4444; }
+.alert-warning .alert-level,
+.alert-level.alert-warning { background: #f59e0b; }
+.alert-info .alert-level,
+.alert-level.alert-info { background: #3b82f6; }
 
 .simple-table {
   width: 100%;
   border-collapse: collapse;
-}
-
-.simple-table th,
-.simple-table td {
-  padding: 14px 12px;
-  border-bottom: 1px solid rgba(217, 228, 240, 0.95);
-  text-align: left;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
 }
 
 .simple-table th {
-  color: var(--color-text-muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
 }
 
-@media (max-width: 1440px) {
-  .dashboard-view__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.simple-table td {
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1f2937;
+}
+
+.loading-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1400px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
   }
 
-  .dashboard-view__grid {
-    grid-template-columns: 1fr;
+  .floor-map-panel {
+    grid-row: auto;
   }
 }
 </style>
