@@ -1,3 +1,8 @@
+-- UTF-8 인코딩 설정
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+SET COLLATION_CONNECTION = utf8mb4_unicode_ci;
+
 -- [1] 기존 테이블 삭제 (자식 테이블부터 역순 삭제)
 DROP TABLE IF EXISTS AMR_STATUS_LOG;
 DROP TABLE IF EXISTS AMR_COMMAND;
