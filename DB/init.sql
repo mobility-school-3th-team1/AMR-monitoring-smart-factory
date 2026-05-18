@@ -33,10 +33,14 @@ CREATE TABLE AREA (
     site_id VARCHAR(50),
     area_name VARCHAR(100),
     area_type VARCHAR(50),
-    temp_min DECIMAL(10, 2),
-    temp_max DECIMAL(10, 2),
-    humidity_min DECIMAL(10, 2),
-    humidity_max DECIMAL(10, 2),
+    temp_min DECIMAL(10, 1),
+    temp_max DECIMAL(10, 1),
+    humidity_min INT,
+    humidity_max INT,
+    particle_min INT,
+    particle_max INT,
+    co_gas_min INT,
+    co_gas_max INT,
     CONSTRAINT FK_AREA_SITE FOREIGN KEY (site_id) REFERENCES SITE(site_id)
 );
 
@@ -49,7 +53,7 @@ CREATE TABLE ENV_SENSOR (
     unit VARCHAR(20),
     min_val DECIMAL(10, 2),
     max_val DECIMAL(10, 2),
-    install_at DATETIME,
+    install_at DATE,
     CONSTRAINT FK_SENSOR_AREA FOREIGN KEY (area_id) REFERENCES AREA(area_id)
 );
 
@@ -93,8 +97,8 @@ CREATE TABLE WORK_ORDER (
     work_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     product_id VARCHAR(50),
     planned_qty INT,
-    planned_start_date DATETIME,
-    planned_end_date DATETIME,
+    planned_start_date DATE,
+    planned_end_date DATE,
     status VARCHAR(50),
     CONSTRAINT FK_WO_PRODUCT FOREIGN KEY (product_id) REFERENCES PRODUCT(product_id)
 );
@@ -116,7 +120,7 @@ CREATE TABLE AMR_MASTER (
     total_mileage DOUBLE PRECISION,
     load_max INT,
     battery_capacity INT,
-    inspection_dt DATETIME
+    inspection_dt DATE
 );
 
 -- 11. AMR_CHARGE_STATION
@@ -182,7 +186,7 @@ CREATE TABLE USER_ACCOUNT (
     password_hash VARCHAR(255),
     display_name VARCHAR(100),
     role VARCHAR(50),
-    created_at DATETIME
+    created_at DATE
 );
 
 -- 16. REFRESH_TOKEN
@@ -220,67 +224,114 @@ CREATE TABLE AMR_COMMAND (
     CONSTRAINT FK_COMMAND_AMR FOREIGN KEY (amr_id) REFERENCES AMR_MASTER(amr_id)
 );
 
-
 -- [3] 임시 데이터 삽입
 
 -- 기초 정보
 INSERT INTO SITE VALUES ('SITE_BSA_01', 'BSA 제조 공장');
-INSERT INTO AREA VALUES ('AREA_INBOUND', 'SITE_BSA_01', '입고 구역', 'STORAGE', 15.00, 25.00, 30.00, 60.00);
-INSERT INTO AREA VALUES ('AREA_PRODUCTION', 'SITE_BSA_01', '생산 라인', 'PRODUCTION', 20.00, 24.00, 40.00, 50.00);
-INSERT INTO AREA VALUES ('AREA_OUTBOUND', 'SITE_BSA_01', '출고 구역', 'STORAGE', 15.00, 25.00, 30.00, 60.00);
-INSERT INTO AREA VALUES ('AREA_QC', 'SITE_BSA_01', '품질 검사 구역', 'QUALITY', 18.00, 22.00, 35.00, 45.00);
 
--- 센서 정보
-INSERT INTO ENV_SENSOR VALUES ('SNSR_TEMP_001', 'AREA_PRODUCTION', '온도 센서 1호', 'TEMP', '°C', 10.00, 40.00, '2026-01-01 09:00:00');
-INSERT INTO ENV_SENSOR VALUES ('SNSR_HUMID_001', 'AREA_PRODUCTION', '습도 센서 1호', 'HUMIDITY', '%', 20.00, 80.00, '2026-01-01 09:00:00');
-INSERT INTO ENV_SENSOR_LOG (env_sensor_id, sensor_value, sensor_status, measured_at) 
-VALUES ('SNSR_TEMP_001', 22.5, 'NORMAL', '2026-05-15 11:00:00');
-INSERT INTO ENV_SENSOR_LOG (env_sensor_id, sensor_value, sensor_status, measured_at) 
-VALUES ('SNSR_HUMID_001', 45.0, 'NORMAL', '2026-05-15 11:00:00');
+-- AREA
+INSERT INTO AREA VALUES ('AREA_LOAD_LC', 'SITE_BSA_01', 'Lower Case 로딩 구역', 'STORAGE', 18.00, 25.00, 30.00, 60.00, 50, 150, 0, 20);
+INSERT INTO AREA VALUES ('AREA_ASSEMBLE_01', 'SITE_BSA_01', '조립 구역 1', 'PRODUCTION', 18.00, 25.00, 30.00, 40.00, 10, 30, 0, 10);
+INSERT INTO AREA VALUES ('AREA_ASSEMBLE_02', 'SITE_BSA_01', '조립 구역 2', 'PRODUCTION', 18.00, 22.00, 30.00, 50.00, 10, 30, 0, 10);
+INSERT INTO AREA VALUES ('AREA_OUT_BSA', 'SITE_BSA_01', 'BSA 출고 구역', 'STORAGE', 18.00, 22.00, 30.00, 50.00, 50, 150, 0, 10);
 
--- 공정 정보
-INSERT INTO PRODUCT VALUES ('PROD_BSA_001', 'BSA 스마트 모듈');
-INSERT INTO PRODUCT VALUES ('PROD_BSA_002', 'BSA 센서 유닛');
-INSERT INTO PR_PROCESS VALUES ('PROC_ASSEMBLY', '조립 공정', 'AREA_PRODUCTION');
-INSERT INTO PR_PROCESS VALUES ('PROC_QC', '품질 검사 공정', 'AREA_QC');
-INSERT INTO PR_ROUTING VALUES ('RT_BSA_001_01', 'PROD_BSA_001', 'PROC_ASSEMBLY', 1, 20);
-INSERT INTO PR_ROUTING VALUES ('RT_BSA_001_02', 'PROD_BSA_001', 'PROC_QC', 2, 10);
-INSERT INTO PR_ROUTING VALUES ('RT_BSA_002_01', 'PROD_BSA_002', 'PROC_ASSEMBLY', 1, 15);
+-- ENV_SENSOR
+INSERT INTO ENV_SENSOR VALUES ('SNSR_TEMP_001', 'AREA_LOAD_LC', '온도 센서 1호', 'TEMP', '°C', -20.0, 120.0, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_HUMID_001', 'AREA_LOAD_LC', '습도 센서 1호', 'HUMIDITY', '%', 0, 100, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_PC_001', 'AREA_LOAD_LC', '파티클 센서 1호', 'PARTICLE', 'ug/m3', 0, 500, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_GAS_CO_001', 'AREA_LOAD_LC', 'CO 가스 센서 1호', 'GAS', 'ppm', 0, 1000, '2026-01-05');
 
--- 작업 지시 및 재공
+INSERT INTO ENV_SENSOR VALUES ('SNSR_TEMP_002', 'AREA_ASSEMBLE_01', '온도 센서 2호', 'TEMP', '°C', -20.0, 120.0, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_HUMID_002', 'AREA_ASSEMBLE_01', '습도 센서 2호', 'HUMIDITY', '%', 0, 100, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_PC_002', 'AREA_ASSEMBLE_01', '파티클 센서 2호', 'PARTICLE', 'ug/m3', 0, 500, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_GAS_CO_002', 'AREA_ASSEMBLE_01', 'CO 가스 센서 2호', 'GAS', 'ppm', 0, 1000, '2026-01-05');
+
+INSERT INTO ENV_SENSOR VALUES ('SNSR_TEMP_003', 'AREA_ASSEMBLE_02', '온도 센서 3호', 'TEMP', '°C', -20.0, 120.0, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_HUMID_003', 'AREA_ASSEMBLE_02', '습도 센서 3호', 'HUMIDITY', '%', 0, 100, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_PC_003', 'AREA_ASSEMBLE_02', '파티클 센서 3호', 'PARTICLE', 'ug/m3', 0, 500, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_GAS_CO_003', 'AREA_ASSEMBLE_02', 'CO 가스 센서 3호', 'GAS', 'ppm', 0, 1000, '2026-01-05');
+
+INSERT INTO ENV_SENSOR VALUES ('SNSR_TEMP_004', 'AREA_OUT_BSA', '온도 센서 4호', 'TEMP', '°C', -20.0, 120.0, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_HUMID_004', 'AREA_OUT_BSA', '습도 센서 4호', 'HUMIDITY', '%', 0, 100, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_PC_004', 'AREA_OUT_BSA', '파티클 센서 4호', 'PARTICLE', 'ug/m3', 0, 500, '2026-01-01');
+INSERT INTO ENV_SENSOR VALUES ('SNSR_GAS_CO_004', 'AREA_OUT_BSA', 'CO 가스 센서 4호', 'GAS', 'ppm', 0, 1000, '2026-01-05');
+
+-- PRODUCT
+INSERT INTO PRODUCT VALUES ('BSA_HEV_01', 'BSA for HEV 1');
+INSERT INTO PRODUCT VALUES ('BSA_BEV_01', 'BSA for BEV 1');
+INSERT INTO PRODUCT VALUES ('BMA_001', 'BMA 1');
+INSERT INTO PRODUCT VALUES ('BMS_001', 'BMS 1');
+INSERT INTO PRODUCT VALUES ('LC_001', 'Lower Case 1');
+INSERT INTO PRODUCT VALUES ('UC_001', 'Upper Case 1');
+
+-- PR_PROCESS
+INSERT INTO PR_PROCESS VALUES ('PROC_LOAD_LC', 'Lower Case 로딩', 'AREA_LOAD_LC');
+INSERT INTO PR_PROCESS VALUES ('PROC_AS_BMA', 'BMA 조립', 'AREA_ASSEMBLE_01');
+INSERT INTO PR_PROCESS VALUES ('PROC_AS_BMS', 'BMS 조립', 'AREA_ASSEMBLE_02');
+INSERT INTO PR_PROCESS VALUES ('PROC_AS_UC', 'Upper Case 조립', 'AREA_ASSEMBLE_02');
+INSERT INTO PR_PROCESS VALUES ('PROC_QC', '품질 검사', 'AREA_ASSEMBLE_02');
+INSERT INTO PR_PROCESS VALUES ('PROC_OUT_BSA', 'BSA 출고', 'AREA_OUT_BSA');
+
+-- PR_ROUTING
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_HEV_01_01', 'BSA_HEV_01', 'PROC_LOAD_LC', 1, 10);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_HEV_01_02', 'BSA_HEV_01', 'PROC_AS_BMA', 2, 30);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_HEV_01_03', 'BSA_HEV_01', 'PROC_AS_BMS', 3, 20);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_HEV_01_04', 'BSA_HEV_01', 'PROC_AS_UC', 4, 10);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_HEV_01_05', 'BSA_HEV_01', 'PROC_QC', 5, 10);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_HEV_01_06', 'BSA_HEV_01', 'PROC_OUT_BSA', 6, 10);
+
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_BEV_01_01', 'BSA_BEV_01', 'PROC_LOAD_LC', 1, 10);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_BEV_01_02', 'BSA_BEV_01', 'PROC_AS_BMA', 2, 50);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_BEV_01_03', 'BSA_BEV_01', 'PROC_AS_BMS', 3, 30);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_BEV_01_04', 'BSA_BEV_01', 'PROC_AS_UC', 4, 10);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_BEV_01_05', 'BSA_BEV_01', 'PROC_QC', 5, 10);
+INSERT INTO PR_ROUTING VALUES ('RT_BSA_BEV_01_06', 'BSA_BEV_01', 'PROC_OUT_BSA', 6, 10);
+
+-- WORK_ORDER
 INSERT INTO WORK_ORDER (product_id, planned_qty, planned_start_date, planned_end_date, status)
-VALUES ('PROD_BSA_001', 200, '2026-05-15 08:00:00', '2026-05-16 18:00:00', 'RUNNING');
+VALUES ('BSA_HEV_01', 200, '2026-05-15', '2026-05-16', 'RUNNING');
 INSERT INTO WORK_ORDER (product_id, planned_qty, planned_start_date, planned_end_date, status)
-VALUES ('PROD_BSA_002', 150, '2026-05-15 09:00:00', '2026-05-16 17:00:00', 'PLANNED');
-INSERT INTO WIP_LOT (work_id, current_qty, current_routing_id, status)
-VALUES (1, 100, 'RT_BSA_001_01', 'IN_PROGRESS');
-INSERT INTO WIP_LOT (work_id, current_qty, current_routing_id, status)
-VALUES (2, 75, 'RT_BSA_002_01', 'WAITING');
+VALUES ('BSA_BEV_01', 150, '2026-05-15', '2026-05-16', 'PLANNED');
 
--- AMR 정보
-INSERT INTO AMR_MASTER VALUES (1, 'AMR-BSA-01', 250.0, 600, 120, '2026-05-01 10:00:00');
-INSERT INTO AMR_MASTER VALUES (2, 'AMR-BSA-02', 180.5, 500, 100, '2026-05-02 10:00:00');
-INSERT INTO AMR_CHARGE_STATION VALUES (1, 'AREA_INBOUND', '충전소-입고', 'AVAILABLE');
-INSERT INTO AMR_CHARGE_STATION VALUES (2, 'AREA_PRODUCTION', '충전소-생산', 'OCCUPIED');
+-- WIP_LOT
+INSERT INTO WIP_LOT (work_id, current_qty, current_routing_id, status) VALUES (1, 100, 'RT_BSA_HEV_01_02', 'IN_PROGRESS');
+INSERT INTO WIP_LOT (work_id, current_qty, current_routing_id, status) VALUES (1, 100, 'RT_BSA_HEV_01_01', 'WAITING');
+INSERT INTO WIP_LOT (work_id, current_qty, current_routing_id, status) VALUES (2, 75, 'RT_BSA_BEV_01_04', 'IN_PROGRESS');
+INSERT INTO WIP_LOT (work_id, current_qty, current_routing_id, status) VALUES (2, 75, 'RT_BSA_BEV_01_03', 'IN_PROGRESS');
 
--- AMR 로그 및 작업
+-- AMR_MASTER
+INSERT INTO AMR_MASTER VALUES (1, 'AMR_BSA_01', 1736.2, 600, 100, '2026-05-01');
+INSERT INTO AMR_MASTER VALUES (2, 'AMR_BSA_02', 1538.1, 600, 100, '2026-05-01');
+INSERT INTO AMR_MASTER VALUES (3, 'AMR_BSA_03', 1645.8, 600, 100, '2026-05-01');
+INSERT INTO AMR_MASTER VALUES (4, 'AMR_BSA_04', 1592.4, 600, 100, '2026-05-01');
+INSERT INTO AMR_MASTER VALUES (5, 'AMR_BSA_05', 1721.7, 600, 100, '2026-05-01');
+
+-- AMR_CHARGE_STATION
+INSERT INTO AMR_CHARGE_STATION VALUES (1, 'AREA_LOAD_LC', '충전소_입고', 'AVAILABLE');
+INSERT INTO AMR_CHARGE_STATION VALUES (2, 'AREA_LOAD_LC', '충전소_입고', 'OCCUPIED');
+INSERT INTO AMR_CHARGE_STATION VALUES (3, 'AREA_LOAD_LC', '충전소_입고', 'OCCUPIED');
+
+-- AMR 작업
 INSERT INTO AMR_TASK (amr_id, task_type, lot_id, from_area_id, to_area_id, status, pick_time, drop_time)
-VALUES (1, 'TRANSPORT', 1, 'AREA_INBOUND', 'AREA_PRODUCTION', 'COMPLETED', '2026-05-15 10:00:00', '2026-05-15 10:30:00');
-INSERT INTO AMR_TASK (amr_id, task_type, lot_id, from_area_id, to_area_id, status, pick_time)
-VALUES (2, 'TRANSPORT', 2, 'AREA_PRODUCTION', 'AREA_QC', 'IN_TRANSIT', '2026-05-15 11:00:00');
+VALUES (1, 'TRANSPORT', 1, 'AREA_LOAD_LC', 'AREA_ASSEMBLE_01', 'COMPLETED', '2026-05-15 10:00:00', '2026-05-15 10:30:00');
+INSERT INTO AMR_TASK (amr_id, task_type, lot_id, from_area_id, to_area_id, status, pick_time, drop_time)
+VALUES (2, 'TRANSPORT', 3, 'AREA_ASSEMBLE_01', 'AREA_ASSEMBLE_02', 'COMPLETED', '2026-05-15 11:00:00', '2026-05-15 10:30:00');
 
+-- AMR 상태 로그
 INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_weight, battery_pct, SOH_pct, battery_temp, updated_at)
-VALUES (1, 'AREA_PRODUCTION', 'OPERATING', 120, 450, 90, 50, 85, 98, 35.5, '2026-05-15 11:25:00');
+VALUES (1, 'AREA_ASSEMBLE_01', 'OPERATING', 120, 450, 90, 50, 85, 98, 35.5, '2026-05-15 11:25:00');
 INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_weight, battery_pct, SOH_pct, battery_temp, updated_at)
-VALUES (1, 'AREA_INBOUND', 'IDLE', 50, 200, 0, 0, 95, 99, 30.0, '2026-05-15 09:00:00');
+VALUES (2, 'AREA_ASSEMBLE_02', 'IDLE', 50, 200, 0, 0, 95, 99, 30.0, '2026-05-15 09:00:00');
 INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_weight, battery_pct, SOH_pct, battery_temp, updated_at)
-VALUES (2, 'AREA_QC', 'CHARGING', 300, 150, 180, 0, 20, 95, 28.5, '2026-05-15 10:45:00');
+VALUES (3, 'AREA_LOAD_LC', 'CHARGING', 300, 150, 180, 0, 20, 95, 28.5, '2026-05-15 10:45:00');
 
--- 인증 및 알람 샘플 데이터
+-- 사용자 인증
 INSERT INTO USER_ACCOUNT (user_id, username, password_hash, display_name, role, created_at)
-VALUES ('user-001', 'admin', '$2a$10$examplehashforadminpassword', '관리자', 'admin', '2026-05-01 08:00:00');
+VALUES ('user-001', 'admin', '$2a$10$examplehashforadminpassword', '관리자', 'admin', '2026-05-01');
 INSERT INTO REFRESH_TOKEN (token, user_id, expires_at, revoked, created_at)
 VALUES ('refresh-token-example', 'user-001', '2026-05-16 08:00:00', FALSE, '2026-05-15 08:00:00');
+
+-- 알람 및 AMR 명령
 INSERT INTO ALARM_LOG (source_type, source_id, level, message, occurred_at, acknowledged, acknowledged_at)
 VALUES ('CHARGE_STATION', '1', 'warning', '충전 스테이션 1 혼잡 상태', '2026-05-13 14:29:00', FALSE, NULL);
 INSERT INTO AMR_COMMAND (command_id, amr_id, command_type, params, accepted, status, requested_at)
