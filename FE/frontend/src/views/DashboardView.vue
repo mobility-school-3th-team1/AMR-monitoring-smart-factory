@@ -36,37 +36,85 @@
 
     <!-- 메인 대시보드 그리드 -->
     <div v-if="!isLoading" class="dashboard-grid">
-      <!-- 공장 평면도 -->
-      <section class="dashboard-panel floor-map-panel">
+      <!-- 플로어맵 (좌측) -->
+      <section class="dashboard-panel compact-map-panel">
         <div class="floor-map">
-          <div style="position: absolute; top: 8px; right: 10px; font-size: 0.7rem; font-weight: 700; color: #64748b; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; z-index: 10;">AMR 위치 현황도</div>
-          <div v-for="amr in amrList.slice(0, 8)" :key="amr.id" class="floor-map__robot" :style="{ left: `${10 + (amrList.indexOf(amr) % 4) * 20}%`, top: `${20 + Math.floor(amrList.indexOf(amr) / 4) * 30}%` }">
-            {{ amr.name }}<small>{{ amr.batteryPercent }}%</small>
+          <div class="map-label-chip">AMR 위치 현황도</div>
+          <div class="floor-map__grid">
+            <div v-for="amr in amrList.slice(0, 8)" :key="amr.id" class="amr-mark" :class="`status-${amr.status || 'driving'}`" :data-battery="`${amr.batteryPercent || 0}%`" :style="{ left: `${10 + (amrList.indexOf(amr) % 4) * 20}%`, top: `${20 + Math.floor(amrList.indexOf(amr) / 4) * 30}%` }">{{ amr.name }}</div>
+          </div>
+
+          <div class="status-strip">
+            <div class="strip-item"><div class="k">운행 중 AMR</div><div class="v status-ok">{{ dashboardData.amrOperating }}대</div></div>
+            <div class="strip-item"><div class="k">대기 AMR</div><div class="v status-warn">{{ dashboardData.amrWaiting }}대</div></div>
+            <div class="strip-item"><div class="k">주의 AMR</div><div class="v status-critical">{{ dashboardData.activeAlarms }}건</div></div>
+            <div class="strip-item"><div class="k">가동률</div><div class="v status-ok">{{ Math.round((dashboardData.amrOperating || 0) / Math.max(1, (dashboardData.amrOperating || 0) + (dashboardData.amrWaiting || 0)) * 100) }}%</div></div>
           </div>
         </div>
       </section>
 
-      <!-- 실시간 알람 -->
-      <section class="dashboard-panel">
-        <h3 class="panel-title">실시간 중요 알람</h3>
-        <div v-if="recentAlarms.length === 0" class="empty-state"><p>활성 알람이 없습니다.</p></div>
-        <ul v-else class="alert-list">
-          <li v-for="alarm in recentAlarms" :key="alarm.id">
-            <span class="alert-level" :class="`alert-${alarm.level}`">{{ alarm.level }}</span>
-            <div><p>{{ alarm.message }}</p><span class="alert-time">{{ formatTime(alarm.occurredAt) }}</span></div>
-          </li>
-        </ul>
+      <!-- 공정 구역 환경 현황 (우측 상단) -->
+      <section class="dashboard-panel compact-map-panel">
+        <div class="floor-map">
+          <div class="map-label-chip">공정 구역 환경 현황</div>
+          <div class="floor-map__grid env-grid">
+            <div class="map-zone env-low" style="top:6%; left:5%; width:20%; height:30%;"><span class="zone-title">원자재 창고</span><span class="zone-meta">22.6°C · 습도 43%<br>미세먼지 12</span></div>
+            <div class="map-zone env-low" style="top:6%; left:30%; width:25%; height:24%;"><span class="zone-title">A 라인</span><span class="zone-meta">24.8°C · 습도 56%<br>미세먼지 16</span></div>
+            <div class="map-zone env-mid" style="top:36%; left:30%; width:25%; height:24%;"><span class="zone-title">B 라인</span><span class="zone-meta">21.9°C · 습도 39%<br>미세먼지 18</span></div>
+            <div class="map-zone env-low" style="top:6%; left:60%; width:15%; height:58%;"><span class="zone-title">조립 라인</span><span class="zone-meta">23.1°C · 습도 41%<br>미세먼지 14</span></div>
+            <div class="map-zone env-mid" style="top:6%; left:80%; width:15%; height:58%;"><span class="zone-title">검사 라인</span><span class="zone-meta">25.3°C · 습도 61%<br>미세먼지 19</span></div>
+          </div>
+        </div>
       </section>
 
-      <!-- 실시간 작업 로그 -->
-      <section class="dashboard-panel" style="grid-column: 1 / -1;">
-        <h3 class="panel-title">실시간 작업 로그</h3>
-        <div v-if="recentLogs.length === 0" class="empty-state"><p>최근 작업 로그가 없습니다.</p></div>
-        <table v-else class="simple-table">
-          <thead><tr><th>시간</th><th>장비</th><th>이벤트</th><th>상태</th></tr></thead>
-          <tbody><tr v-for="(log, i) in recentLogs" :key="i"><td>{{ formatTime(log.timestamp) }}</td><td>{{ log.amrId }}</td><td>{{ log.event }}</td><td>{{ log.status }}</td></tr></tbody>
-        </table>
-      </section>
+      <!-- 하단: 중요 알람 + 작업 로그 -->
+      <div class="bottom-grid">
+        <section class="dashboard-panel">
+          <div class="panel-title">실시간 중요 알람</div>
+          <div class="panel-subtitle">AMR 기능 고장 감지, 충돌 감지, 안전 이벤트</div>
+          <div class="list-box">
+            <div class="list-scroll">
+              <template v-if="recentAlarms.length === 0">
+                <div class="empty-state"><p>활성 알람이 없습니다.</p></div>
+              </template>
+              <template v-else>
+                <div v-for="alarm in recentAlarms" :key="alarm.id" class="alert-row">
+                  <span class="alert-severity" :class="alarm.level === 'CRITICAL' ? 'critical' : (alarm.level === 'WARNING' ? 'warn' : '')"></span>
+                  <div class="alert-text">
+                    <div class="alert-title">{{ alarm.title || alarm.message }}</div>
+                    <div class="alert-desc">{{ alarm.message }}</div>
+                  </div>
+                  <span class="alert-chip" :class="alarm.level === 'CRITICAL' ? 'critical' : (alarm.level === 'WARNING' ? 'warn' : '')">{{ alarm.level }} · {{ formatTime(alarm.occurredAt) }}</span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </section>
+
+        <section class="dashboard-panel">
+          <div class="panel-title">실시간 작업 로그</div>
+          <div class="panel-subtitle">AMR 이동 시작, 스테이션 이동 시작, 명령 수신</div>
+          <div class="list-box">
+            <div class="list-scroll">
+              <template v-if="recentLogs.length === 0">
+                <div class="empty-state"><p>최근 작업 로그가 없습니다.</p></div>
+              </template>
+              <template v-else>
+                <div v-for="(log, idx) in recentLogs" :key="idx" class="log-row">
+                  <div class="log-icon">{{ (log.event || '').slice(0,2).toUpperCase() }}</div>
+                  <div>
+                    <div class="log-head">
+                      <div class="log-title">{{ log.title || log.event }}</div>
+                      <div class="time-badge">{{ formatTime(log.timestamp || log.occurredAt) }}</div>
+                    </div>
+                    <div class="log-desc">{{ log.detail || log.message || '' }}</div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
 
     <!-- 로딩 상태 -->
@@ -184,11 +232,48 @@ onUnmounted(() => {
 
 .error-retry { margin-left: auto; padding: 6px 10px; background: #b91c1c; color: #fff; border: none; border-radius: 4px; font-size: 0.75rem; }
 
-.dashboard-grid { display: grid; grid-template-columns: 1.6fr 0.8fr; gap: 10px; flex: 1; min-height: 0; }
+.dashboard-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 1.28fr 0.52fr; gap: 10px; flex: 1; min-height: 0; }
 
 .dashboard-panel { background: white; border: 1px solid #eef6ff; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; min-height: 0; }
 
-.floor-map-panel { grid-row: 1 / 3; }
+.floor-map-panel { /* not used now; kept for compatibility */ }
+
+/* compact map panels for top row */
+.compact-map-panel { padding: 8px; }
+.floor-map__grid { position: relative; flex: 1; min-height: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+.map-label-chip { position: absolute; right: 8px; top: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0; color: #475569; font-size: 0.68rem; font-weight: 700; z-index: 6; }
+
+.status-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.strip-item { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e5edf7; border-radius: 8px; padding: 6px 8px; }
+.strip-item .k { font-size: 0.64rem; color: #64748b; }
+.strip-item .v { margin-top: 2px; font-size: 0.78rem; font-weight: 800; }
+
+/* bottom grid with alerts and logs */
+.bottom-grid { grid-column: 1 / -1; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 10px; min-height: 0; }
+.list-box { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 6px; }
+.list-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding-right: 4px; }
+.alert-row, .log-row { background: #f8fafc; border: 1px solid #e5edf7; border-radius: 8px; padding: 8px; display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.alert-severity { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08); }
+.alert-severity.critical { background: #ef4444; }
+.alert-severity.warn { background: #f59e0b; }
+.alert-text { display: flex; flex-direction: column; gap: 4px; }
+.alert-title { font-size: 0.78rem; font-weight: 800; color: #111827; }
+.alert-desc { font-size: 0.72rem; color: #64748b; line-height: 1.2; }
+.alert-chip { font-size: 0.68rem; font-weight: 800; padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; background: white; white-space: nowrap; }
+.alert-chip.critical { color: #ef4444; }
+.alert-chip.warn { color: #f59e0b; }
+
+.log-row { grid-template-columns: auto 1fr; }
+.log-icon { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; background: rgba(59, 130, 246, 0.12); color: #2563eb; font-weight: 900; font-size: 0.68rem; }
+.log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.log-title { font-size: 0.78rem; font-weight: 800; color: #111827; }
+.time-badge { font-size: 0.68rem; color: #64748b; white-space: nowrap; }
+.log-desc { font-size: 0.72rem; color: #64748b; }
+
+@media (max-width: 1400px) {
+  .dashboard-grid { grid-template-columns: 1fr; grid-template-rows: repeat(4, minmax(0, 1fr)); }
+  .bottom-grid { grid-column: auto; grid-template-columns: 1fr; }
+}
 
 .panel-title { font-size: 0.85rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; }
 
