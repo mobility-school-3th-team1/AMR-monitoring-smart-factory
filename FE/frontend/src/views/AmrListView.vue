@@ -3,13 +3,15 @@
     <aside class="amr-panel">
       <div class="amr-header">AMR 선택 목록</div>
       <div class="amr-scroll">
-        <div class="amr-selection">
-          <a v-for="robot in robots" :key="robot.id" href="#" class="amr-link" @click.prevent="openDetail(robot.id)">
+        <div v-if="loadError" class="error-note">{{ loadError }}</div>
+        <div v-else-if="isLoading" class="loading-note">로딩 중...</div>
+        <div v-else class="amr-selection">
+          <a v-for="robot in robots" :key="robot.rawId" href="#" class="amr-link" @click.prevent="openDetail(robot.rawId)">
             <div class="amr-select-card" :class="robot.class">
               <div class="amr-select-top">
                 <div>
                   <div class="amr-select-id">{{ robot.id }}</div>
-                  <div class="amr-select-meta">배터리 {{ robot.battery }}% · {{ robot.meta }}</div>
+                  <div class="amr-select-meta">{{ robot.meta }}</div>
                 </div>
                 <span class="status-tag" :class="robot.tagClass">{{ robot.tag }}</span>
               </div>
@@ -63,14 +65,14 @@
                 <tr><th>AMR ID</th><th>상태</th><th>배터리</th><th>현재 위치</th><th>목적지</th><th>현재 작업</th><th>이동 속도</th></tr>
               </thead>
               <tbody>
-                <tr v-for="r in robots" :key="r.id">
+                <tr v-for="r in robots" :key="r.rawId">
                   <td>{{ r.id }}</td>
                   <td><span class="badge" :class="r.tagClass">{{ r.tagDisplay }}</span></td>
                   <td>{{ r.battery }}%</td>
                   <td>{{ r.location }}</td>
                   <td>{{ r.destination }}</td>
                   <td>{{ r.task }}</td>
-                  <td>{{ r.speed || '0 m/s' }}</td>
+                  <td>{{ r.speed }}</td>
                 </tr>
               </tbody>
             </table>
@@ -82,28 +84,80 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/plugins/axios'
 
 const router = useRouter()
 
-const stats = {
-  operating: 9,
-  total: 12,
-  running: 6,
-  waiting: 2,
-  error: 1,
-  charging: 2,
-  unhealthy: 0,
-  lastCheck: 'AMR-01'
+// 상태
+const isLoading = ref(true)
+const loadError = ref(null)
+const robots = ref([])
+
+// API 응답을 UI 모델로 변환
+const STATUS_MAP = {
+  running:  { tag: '운행', tagDisplay: '운행 중',  tagClass: 'status-running',  cardClass: 'running'  },
+  charging: { tag: '충전', tagDisplay: '충전 중',  tagClass: 'status-charging', cardClass: 'charging' },
+  waiting:  { tag: '대기', tagDisplay: '대기',     tagClass: 'status-waiting',  cardClass: 'waiting'  },
+  error:    { tag: '오류', tagDisplay: '오류',     tagClass: 'status-error',    cardClass: 'error'    },
+  idle:     { tag: '대기', tagDisplay: '대기',     tagClass: 'status-waiting',  cardClass: 'waiting'  },
 }
 
-const robots = [
-  { id: 'AMR-01', class: 'error', tag: '오류', tagDisplay: '오류', tagClass: 'status-error', battery: 86, meta: '오류 상태 · 최종 점검일 2026.05.12', location: 'Zone A', destination: 'Zone B', task: '진단 대기', speed: '0 m/s' },
-  { id: 'AMR-02', class: 'waiting', tag: '대기', tagDisplay: '대기', tagClass: 'status-waiting', battery: 90, meta: '대기 상태 · 충전 대기 중', location: 'Zone B', destination: 'Zone C', task: '충전 대기', speed: '0 m/s' },
-  { id: 'AMR-04', class: 'running', tag: '운행', tagDisplay: '운행 중', tagClass: 'status-running', battery: 87, meta: '운행 중 · 정상 주행', location: 'Zone C', destination: '충전 스테이션 1', task: '이송', speed: '1.2 m/s' },
-  { id: 'AMR-05', class: 'running', tag: '운행', tagDisplay: '운행 중', tagClass: 'status-running', battery: 72, meta: '운행 중 · 작업 이송 수행', location: 'Zone D', destination: 'Zone E', task: '이송', speed: '1.1 m/s' },
-  { id: 'AMR-08', class: 'charging', tag: '충전', tagDisplay: '충전 중', tagClass: 'status-charging', battery: 58, meta: '충전 중 · 보조 스테이션 연결', location: '충전 스테이션 2', destination: '-', task: '충전', speed: '0 m/s' }
-]
+function mapAmr(raw) {
+  const s = STATUS_MAP[raw.status] || STATUS_MAP.waiting
+  return {
+    id:          raw.name || raw.id,
+    rawId:       raw.id,
+    class:       s.cardClass,
+    tag:         s.tag,
+    tagDisplay:  s.tagDisplay,
+    tagClass:    s.tagClass,
+    battery:     raw.batteryPercent ?? 0,
+    meta:        `${s.tagDisplay} · 배터리 ${raw.batteryPercent ?? 0}%`,
+    location:    raw.position?.zone || '-',
+    destination: raw.destination?.zone || '-',
+    task:        raw.currentTask || '-',
+    speed:       raw.speed != null ? `${raw.speed} m/s` : '0 m/s',
+  }
+}
+
+// KPI 집계 — robots 목록에서 실시간으로 계산
+const stats = computed(() => {
+  const list = robots.value
+  const running  = list.filter(r => r.class === 'running').length
+  const charging = list.filter(r => r.class === 'charging').length
+  const waiting  = list.filter(r => r.class === 'waiting').length
+  const errorAmt = list.filter(r => r.class === 'error').length
+  const total    = list.length
+  const operating = running + waiting + errorAmt
+  return { total, operating, running, charging, waiting, error: errorAmt, unhealthy: errorAmt, lastCheck: list.find(r => r.class === 'error')?.id || '-' }
+})
+
+// API 호출
+async function loadAmrs() {
+  try {
+    const res = await api.get('/amrs?page=1&limit=50')
+    robots.value = (res.data.data || []).map(mapAmr)
+    loadError.value = null
+  } catch (err) {
+    loadError.value = err.response?.data?.message || 'AMR 목록 로드 실패'
+    console.error('AmrListView error:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+let refreshTimer = null
+
+onMounted(() => {
+  loadAmrs()
+  refreshTimer = setInterval(loadAmrs, 15000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 
 function openDetail(amrId) {
   router.push({ path: '/amr-detail', query: { amr: amrId } })
@@ -150,10 +204,13 @@ table { width:100%; border-collapse: collapse; font-size:0.72rem; }
 th { background:#f8fafc; padding:8px; border-bottom:2px solid #e2e8f0; text-align:left; color:#64748b; position: sticky; top:0; }
 td { padding:6px 8px; border-bottom:1px solid #f1f5f9; }
 .badge { padding:2px 5px; border-radius:3px; font-size:0.6rem; font-weight:800; }
-.status-driving { color:#10b981; background:#ecfdf5; }
+.status-running  { color:#10b981; background:#ecfdf5; }
 .status-charging { color:#3b82f6; background:#eff6ff; }
-.status-waiting { color:#f59e0b; background:#fffbeb; }
-.status-error { color:#ef4444; background:#fef2f2; }
+.status-waiting  { color:#f59e0b; background:#fffbeb; }
+.status-error    { color:#ef4444; background:#fef2f2; }
+
+.error-note  { font-size:0.72rem; color:#ef4444; padding:8px; text-align:center; }
+.loading-note { font-size:0.72rem; color:#64748b; padding:8px; text-align:center; }
 
 @media (max-width: 1200px) {
   .amr-panel { width: 280px; }

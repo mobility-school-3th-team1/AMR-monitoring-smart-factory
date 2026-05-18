@@ -41,7 +41,7 @@
         <div class="floor-map">
           <div class="map-label-chip">AMR 위치 현황도</div>
           <div class="floor-map__grid">
-            <div v-for="amr in amrList.slice(0, 8)" :key="amr.id" class="amr-mark" :class="`status-${amr.status || 'driving'}`" :data-battery="`${amr.batteryPercent || 0}%`" :style="{ left: `${10 + (amrList.indexOf(amr) % 4) * 20}%`, top: `${20 + Math.floor(amrList.indexOf(amr) / 4) * 30}%` }">{{ amr.name }}</div>
+            <div v-for="(amr, index) in visibleAmrList" :key="amr.id" class="amr-mark" :class="`status-${amr.status || 'driving'}`" :data-battery="`${amr.batteryPercent || 0}%`" :style="{ left: `${10 + (index % 4) * 20}%`, top: `${20 + Math.floor(index / 4) * 30}%` }">{{ amr.name }}</div>
           </div>
 
           <div class="status-strip">
@@ -144,6 +144,9 @@ const dashboardData = ref({ ...DASHBOARD_DEFAULTS })
 const amrList = ref([])
 const recentAlarms = ref([])
 const recentLogs = ref([])
+
+// 플로어맵에 표시할 AMR 최대 8개 — 매 렌더마다 slice 재계산을 막기 위해 computed 사용
+const visibleAmrList = computed(() => amrList.value.slice(0, 8))
 
 // API 호출
 // showLoading: 최초 로드 시에만 true — 폴링 갱신 시에는 스피너 없이 인플레이스 업데이트

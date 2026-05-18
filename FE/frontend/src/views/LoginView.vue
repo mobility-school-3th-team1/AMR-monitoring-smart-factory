@@ -28,8 +28,11 @@ const handleLogin = async () => {
     return
   }
 
-  // 개발 모드에서는 백엔드 없이 로컬에서 바로 인증 성공 처리 (임시)
-  if (import.meta.env.DEV) {
+  // 개발 편의용 인증 우회 — VITE_AUTH_BYPASS=true 환경변수가 명시적으로 설정된 경우에만 동작.
+  // import.meta.env.DEV 만으로 체크하면 vite preview 빌드나 실수로 배포된 DEV 빌드에서도
+  // 백엔드 없이 로그인이 성공할 수 있으므로, 별도 플래그를 요구한다.
+  if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+    console.warn('[AUTH BYPASS] 인증 우회 모드가 활성화되어 있습니다. 실제 /auth/login 흐름이 실행되지 않습니다.')
     isLoading.value = true
     const fakeUser = { id: 0, name: formData.value.username || 'dev-admin', role: 'admin' }
     authStore.setTokens({ accessToken: 'dev-access-token', refreshToken: 'dev-refresh-token' })
@@ -48,9 +51,9 @@ const handleLogin = async () => {
 
     const { accessToken, refreshToken, user } = response.data
     
-    // 토큰 및 사용자 정보 저장
+    // 토큰 및 사용자 정보 저장 (setUser 액션 사용 — localStorage 동기화 포함)
     authStore.setTokens({ accessToken, refreshToken })
-    authStore.user = user
+    authStore.setUser(user)
     
     // 대시보드로 이동
     router.push({ path: '/dashboard' })
