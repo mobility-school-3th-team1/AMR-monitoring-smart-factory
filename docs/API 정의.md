@@ -177,9 +177,20 @@
 
 ### POST /amrs/{amrId}/commands
 
-설명: AMR 제어 명령 전송
+설명: AMR 제어 명령 전송. **시뮬레이션 환경**에서 운행 상태는 DB에 반영되며, DAS(좌표·작업 시뮬) 제어는 FE가 MQTT로 수행한다. **BE는 DAS에 명령을 전달하지 않는다.** (아키텍처: `docs/ADR/20260518-1252-AMR-emergency-logic.md`)
 
 지원 명령: goTo, pause, resume, cancelTask, emergencyStop
+
+처리 순서 (`emergencyStop` 포함):
+
+1. 인증 및 `amrId` 유효성 검증
+2. DB 트랜잭션: `AMR_COMMAND` INSERT, `AMR_STATUS_LOG`(및 정책에 따른 `AMR_TASK`) 갱신
+3. commit 성공 시 HTTP 200 및 `accepted: true` 반환
+4. commit 실패 시 4xx/5xx (본문에 `accepted: true`를 내리지 않음)
+5. FE는 `accepted: true` 수신 **이후** DAS에 MQTT 정지 고지
+6. (WebSocket 사용 시) BE는 `amrs.status.updated` 이벤트 발행
+
+`accepted` 의미: 명령이 **DB에 반영되었음**을 뜻한다. DAS 시뮬 중단 완료를 보장하지는 않는다.
 
 요청 예시:
 
@@ -190,7 +201,7 @@
 }
 ```
 
-응답 예시:
+성공 응답: 200 OK
 
 ```json
 {
@@ -199,6 +210,8 @@
     "amrId": "amr-01"
 }
 ```
+
+실패 예시: 400 지원하지 않는 command, 404 AMR 없음, 401/403 인증·권한 오류
 
 ## 4. 충전 관리(Charging)
 
@@ -388,6 +401,9 @@
 
 인증: 연결 시 JWT 전달
 
+- AMR 제어 명령(특히 `emergencyStop`)으로 DB 상태가 변경된 경우 `amrs.status.updated`를 발행하여, FE가 REST 재조회 없이 UI를 갱신할 수 있다.
+- DAS 좌표·작업 중단은 FE가 MQTT로 수행하며, WebSocket은 BE→FE 방향이다.
+
 이벤트 예시:
 
 - amrs.position.updated
@@ -427,4 +443,5 @@
 
 - 화면 데이터는 페이지 단위로 분리된 REST API에서 가져온다.
 - 실시간 화면은 WebSocket 이벤트와 REST 조회를 혼합한다.
-- 명령 API는 비동기 처리 후 상태 이벤트로 결과를 반영한다.
+- 명령 API: HTTP 응답의 `accepted`는 **DB 반영 완료**를 의미한다. DAS 시뮬 반영은 FE→MQTT 경로이며, 그 결과는 WebSocket 이벤트 또는 이후 REST 조회로 확인한다.
+- 비상 정지 전체 흐름은 `docs/프로젝트 정의서.md`, `docs/ADR/20260518-1252-AMR-emergency-logic.md`를 따른다.
