@@ -9,6 +9,7 @@ import BatteryView from '../views/BatteryView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import WorkHistoryView from '../views/WorkHistoryView.vue'
+import ChargingStationsView from '../views/ChargingStationsView.vue'
 
 const routes = [
   {
@@ -53,6 +54,15 @@ const routes = [
         meta: {
           title: '배터리/충전 스테이션 현황',
           description: '충전 대기열과 스테이션 점유 상태를 확인합니다.',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'charging',
+        component: ChargingStationsView,
+        meta: {
+          title: '충전 스테이션',
+          description: '충전 스테이션별 점유 현황과 AMR 충전 큐를 확인합니다.',
           requiresAuth: true
         }
       },
