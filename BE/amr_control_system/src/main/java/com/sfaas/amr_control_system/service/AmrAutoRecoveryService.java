@@ -81,8 +81,7 @@ public class AmrAutoRecoveryService {
                 .collect(Collectors.toMap(
                         log -> log.getAmr().getAmrId(),
                         Function.identity(),
-                        (existing, replacement) ->
-                                existing.getUpdatedAt().isAfter(replacement.getUpdatedAt()) ? existing : replacement
+                        (existing, replacement) -> existing
                 ))
                 .values()
                 .stream()
