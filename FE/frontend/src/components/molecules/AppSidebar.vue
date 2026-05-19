@@ -3,7 +3,6 @@
     <div class="app-sidebar__brand">
       <p class="app-sidebar__brand-kicker">AMR Control Center</p>
       <h1 class="app-sidebar__brand-title">Smart Factory</h1>
-      <p class="app-sidebar__brand-description">Vue 기반 통합 관제 스켈레톤</p>
     </div>
 
     <nav class="app-sidebar__nav" aria-label="주요 메뉴">
@@ -26,9 +25,6 @@
       </section>
     </nav>
 
-    <div class="app-sidebar__footer">
-      <p>mockup 폴더의 HTML을 Vue 화면으로 이식하는 단계입니다.</p>
-    </div>
   </aside>
 </template>
 
@@ -66,13 +62,6 @@ import { workspaceNavigation } from '../../config/navigation'
   line-height: 1.2;
   letter-spacing: -0.04em;
   color: #ffffff;
-}
-
-.app-sidebar__brand-description {
-  margin: 10px 0 0;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  color: #94a3b8;
 }
 
 .app-sidebar__nav {
@@ -114,12 +103,4 @@ import { workspaceNavigation } from '../../config/navigation'
   transform: translateX(2px);
 }
 
-.app-sidebar__footer {
-  margin-top: auto;
-  padding-top: 18px;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
-  font-size: 0.74rem;
-  line-height: 1.5;
-  color: #94a3b8;
-}
 </style>

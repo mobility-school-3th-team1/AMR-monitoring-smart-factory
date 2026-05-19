@@ -14,8 +14,8 @@
           <div v-for="st in stations" :key="st.id" :class="['station-card', { busy: st.occupiedCount >= st.capacity }]">
             <div class="station-info">
               <div>
-                <p class="station-name">{{ st.name }} · {{ st.location }}</p>
-                <p class="station-meta">상태: {{ st.statusText }} · 평균 배터리 {{ st.averageBatteryPercent }}%</p>
+                <p class="station-name">{{ st.name }}, {{ st.location || '—' }}</p>
+                <p class="station-meta">상태: {{ st.statusText }}, 평균 배터리 {{ st.averageBatteryPercent }}%</p>
               </div>
               <span class="station-status" :class="statusClass(st)">{{ st.statusLabel }}</span>
             </div>
@@ -23,20 +23,21 @@
             <div class="slot-indicator">
               <span class="slot-label">충전기 {{ st.occupiedCount }}/{{ st.capacity }} 사용</span>
               <div class="slots-container">
-                <div v-for="i in st.capacity" :key="i" :class="['slot', { active: i <= st.occupiedCount }]" />
+                <div v-for="slotIndex in st.capacity" :key="slotIndex" :class="['slot', { active: slotIndex <= st.occupiedCount }]" />
               </div>
             </div>
 
-            <div class="amr-list">
+            <div v-if="st.amrs && st.amrs.length" class="amr-list">
               <div v-for="amr in st.amrs" :key="amr.amrId" class="amr-row">
                 <div class="left"><strong>{{ amr.amrId }}</strong></div>
                 <div class="middle">
                   <div class="progress" :class="progressClass(amr)"><span :style="{ width: amr.batteryPercent + '%' }"></span></div>
-                  <span style="font-size:0.6rem; color:#64748b; margin-left:6px">{{ amr.batteryPercent }}%</span>
+                  <span class="battery-pct">{{ amr.batteryPercent }}%</span>
                 </div>
                 <div class="right">{{ amr.eta }}</div>
               </div>
             </div>
+            <div v-else class="station-amr-placeholder">스테이션별 AMR 목록은 시연 범위에서 생략됩니다.</div>
           </div>
         </div>
       </article>
@@ -49,7 +50,19 @@
           <table>
             <thead><tr><th>AMR ID</th><th>대기시간</th><th>충전소</th><th>상태</th></tr></thead>
             <tbody>
-              <tr v-for="r in queue" :key="r.amrId"><td>{{ r.amrId }}</td><td>{{ r.eta }}</td><td>{{ r.stationName }}</td><td><span class="badge" :style="badgeStyle(r)">{{ r.stateLabel }}</span></td></tr>
+              <template v-if="queue.length === 0">
+                <tr class="empty-queue-row">
+                  <td colspan="4">대기 중인 항목이 없습니다.</td>
+                </tr>
+              </template>
+              <template v-else>
+                <tr v-for="r in queue" :key="r.amrId">
+                  <td>{{ r.amrId }}</td>
+                  <td>{{ r.eta }}</td>
+                  <td>{{ r.stationName }}</td>
+                  <td><span class="badge" :style="badgeStyle(r)">{{ r.stateLabel }}</span></td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -59,20 +72,12 @@
         <div class="widget" style="flex:0.6;">
           <div class="widget-title">충전 완료 예상</div>
           <div class="summary-box">
-            <div class="donut-mini" :style="donutStyle" :data-total="totalAmrs"></div>
-            <div style="font-size:0.65rem; line-height:1.6;">
-              <div><span style="color:#10b981;">●</span> 30분 이내: {{ forecastSummary[0] }}대</div>
-              <div><span style="color:#3b82f6;">●</span> 1시간 이내: {{ forecastSummary[1] }}대</div>
-              <div><span style="color:#f59e0b;">●</span> 1시간 초과: {{ forecastSummary[2] }}대</div>
+            <div class="donut-mini" :style="donutStyle" :data-total="totalChargingAmrs"></div>
+            <div class="forecast-legend">
+              <div><span class="dot dot--g"></span> 30분 이내: {{ forecastSummary[0] }}대</div>
+              <div><span class="dot dot--b"></span> 1시간 이내: {{ forecastSummary[1] }}대</div>
+              <div><span class="dot dot--o"></span> 1시간 초과: {{ forecastSummary[2] }}대</div>
             </div>
-          </div>
-        </div>
-
-        <div class="widget alarm-list">
-          <div class="widget-title" style="margin-bottom:6px;">충전 스테이션 알림</div>
-          <div v-for="a in alarms" :key="a.id" class="alarm-item">
-            <span class="alarm-icon">⚠️</span>
-            <div><strong>{{ a.message }}</strong> <br><span style="color:#94a3b8">{{ a.time }}</span></div>
           </div>
         </div>
       </aside>
@@ -81,15 +86,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/plugins/axios'
+
+const FORECAST_BUCKET_ORDER = ['0-30m', '30-60m', '60m+']
+const POLLING_INTERVAL_MS = 10000
 
 const stations = ref([])
 const queue = ref([])
 const forecast = ref([])
-const alarms = ref([])
 
-const stats = ref({ stations: 0, normal: 0, busy: 0, charging: 0, avgBattery: 0, maxEta: '0m' })
+const stats = ref({ stations: 0, normal: 0, busy: 0, charging: 0, avgBattery: 0, maxEta: '—' })
 
 function statusClass(st) {
   if (st.occupiedCount >= st.capacity) return 'status-busy'
@@ -108,65 +115,80 @@ function badgeStyle(r) {
   return { background: '#e8f8f1', color: '#0e9f6e' }
 }
 
-const forecastSummary = ref([0,0,0])
+const forecastSummary = ref([0, 0, 0])
 
 const donutStyle = { borderTopColor: '#10b981', borderLeftColor: '#f59e0b' }
 
-const totalAmrs = computed(() => stations.value.reduce((acc, s) => acc + (s.amrs ? s.amrs.length : 0), 0))
+const totalChargingAmrs = computed(() =>
+  stations.value.reduce((accumulator, station) => accumulator + (station.occupiedCount || 0), 0)
+)
+
+function mapForecastBuckets(forecastList) {
+  const bucketMap = new Map(forecastList.map((item) => [item.bucket, item.count ?? 0]))
+  return FORECAST_BUCKET_ORDER.map((bucketKey) => bucketMap.get(bucketKey) ?? 0)
+}
+
+function normalizeStationDto(raw) {
+  const statusRaw = raw.status || 'NORMAL'
+  const isBusy = Number(raw.occupiedCount) >= Number(raw.capacity)
+  return {
+    ...raw,
+    statusText: statusRaw,
+    statusLabel: isBusy ? '혼잡' : '정상',
+    averageBatteryPercent: raw.averageBatteryPercent ?? 0,
+    amrs: Array.isArray(raw.amrs) ? raw.amrs : []
+  }
+}
 
 async function loadData() {
   try {
     const stRes = await api.get('/charging/stations')
-    stations.value = (stRes.data.data || stRes.data).map(s => ({ ...s, amrs: [] }))
+    const rawList = stRes.data?.data ?? stRes.data ?? []
+    stations.value = (Array.isArray(rawList) ? rawList : []).map(normalizeStationDto)
   } catch (e) {
-    stations.value = [
-      { id: 'st1', name: '충전 스테이션 1', location: '원자재 창고', statusText: '정상', statusLabel: '정상', capacity: 4, occupiedCount: 3, averageBatteryPercent: 61, amrs: [ { amrId: 'AMR-01', batteryPercent:78, eta: '42분' }, { amrId: 'AMR-02', batteryPercent:45, eta: '1h 12m' }, { amrId: 'AMR-06', batteryPercent:61, eta: '55분' } ] },
-      { id: 'st2', name: '충전 스테이션 2', location: '포장실', statusText: '정상', statusLabel: '정상', capacity: 4, occupiedCount: 2, averageBatteryPercent: 54, amrs: [ { amrId: 'AMR-03', batteryPercent:50, eta: '1h 00m' }, { amrId: 'AMR-09', batteryPercent:58, eta: '58분' } ] },
-      { id: 'st3', name: '충전 스테이션 3', location: '출하장', statusText: '혼잡', statusLabel: '혼잡', capacity: 4, occupiedCount: 4, averageBatteryPercent: 72, amrs: [ { amrId: 'AMR-04', batteryPercent:21, eta: '1h 45m' }, { amrId: 'AMR-05', batteryPercent:40, eta: '1h 00m' }, { amrId: 'AMR-07', batteryPercent:60, eta: '38분' }, { amrId: 'AMR-08', batteryPercent:90, eta: '12분' } ] }
-    ]
+    stations.value = []
+    console.error('BatteryView stations', e)
   }
 
-  try {
-    const qRes = await api.get('/charging/queue')
-    queue.value = qRes.data.data || qRes.data
-  } catch (e) {
-    queue.value = [ { amrId: 'AMR-04', eta: '1h 45m', stationName: 'ST 3', state: 'waiting', stateLabel: '대기' }, { amrId: 'AMR-06', eta: '55m', stationName: 'ST 1', state: 'charging', stateLabel: '충전 중' } ]
-  }
+  queue.value = []
 
   try {
     const fRes = await api.get('/charging/forecast')
-    forecast.value = fRes.data.data || fRes.data
+    const forecastList = fRes.data?.data ?? fRes.data ?? []
+    forecast.value = Array.isArray(forecastList) ? forecastList : []
   } catch (e) {
-    forecast.value = [ { bucket: '0-30m', count: 3 }, { bucket: '30-60m', count: 4 }, { bucket: '60m+', count: 4 } ]
+    forecast.value = []
+    console.error('BatteryView forecast', e)
   }
 
-  try {
-    const aRes = await api.get('/dashboard/recent-alarms')
-    alarms.value = (aRes.data.data || aRes.data).map(x => ({ id: x.id, message: x.message, time: new Date(x.occurredAt).toLocaleString() }))
-  } catch (e) {
-    alarms.value = [ { id: 'alarm1', message: '충전 스테이션 3 혼잡 상태 (사용률 100%)', time: '14:29' }, { id: 'alarm2', message: 'AMR-04 완충까지 1시간 45분 예상', time: '14:28' } ]
-  }
+  forecastSummary.value = mapForecastBuckets(forecast.value)
 
-  // compute stats
-  stats.value.stations = stations.value.length
-  stats.value.normal = stations.value.filter(s => s.occupiedCount < s.capacity).length
-  stats.value.busy = stations.value.filter(s => s.occupiedCount >= s.capacity).length
-  stats.value.charging = stations.value.reduce((acc,s)=> acc + s.occupiedCount,0)
-  stats.value.avgBattery = Math.round(stations.value.reduce((acc,s)=> acc + (s.averageBatteryPercent||0),0) / stations.value.length)
-  stats.value.maxEta = '1h 20m'
-
-  forecastSummary.value = forecast.value.map(f => f.count)
+  const stationCount = stations.value.length
+  stats.value.stations = stationCount
+  stats.value.normal = stations.value.filter((s) => s.occupiedCount < s.capacity).length
+  stats.value.busy = stations.value.filter((s) => s.occupiedCount >= s.capacity).length
+  stats.value.charging = stations.value.reduce((acc, s) => acc + (s.occupiedCount || 0), 0)
+  stats.value.avgBattery = stationCount
+    ? Math.round(
+        stations.value.reduce((acc, s) => acc + (s.averageBatteryPercent || 0), 0) / stationCount
+      )
+    : 0
+  stats.value.maxEta = '—'
 }
+
+let refreshTimer = null
 
 onMounted(() => {
   loadData()
+  refreshTimer = setInterval(loadData, POLLING_INTERVAL_MS)
 })
 
-// totalAmrs computed above
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 </script>
 
 <style scoped>
-/* Use the mockup styles closely */
 * { box-sizing: border-box }
 .battery-root { display:flex; flex-direction:column; gap:10px; height: calc(100vh - 72px); min-height:0; padding:10px; overflow:hidden }
 .summary-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px }
@@ -195,8 +217,11 @@ onMounted(() => {
 .slot.active { background:#10b981; border-color:#059669; box-shadow:0 0 8px rgba(16,185,129,0.3) }
 .slot-label { font-size:0.62rem; color:#64748b; white-space:nowrap }
 
+.station-amr-placeholder { font-size:0.62rem; color:#94a3b8; font-style: italic; }
+
 .amr-list { display:flex; flex-direction:column; gap:5px }
 .amr-row { display:grid; grid-template-columns: 0.7fr 1fr auto; gap:8px; align-items:center; font-size:0.65rem; padding:6px 8px; border-radius:5px; background:#f8fafc; border:1px solid #e2e8f0 }
+.battery-pct { font-size:0.6rem; color:#64748b; margin-left:6px }
 .progress { margin-top:3px; height:4px; background:#e2e8f0; border-radius:999px; overflow:hidden }
 .progress > span { display:block; height:100%; border-radius:999px; background:#10b981 }
 .progress.blue > span { background:#3b82f6 }
@@ -208,15 +233,18 @@ onMounted(() => {
 table { width:100%; border-collapse:collapse; font-size:0.68rem }
 th { background:#f8fafc; padding:8px; border-bottom:2px solid #e2e8f0; text-align:left; color:#64748b; position:sticky; top:0 }
 td { padding:6px 8px; border-bottom:1px solid #f1f5f9 }
+.empty-queue-row td { text-align:center; color:#94a3b8; padding:16px; }
 .badge { padding:2px 5px; border-radius:3px; font-size:0.6rem; font-weight:700 }
 
 .side-widgets { display:flex; flex-direction:column; gap:10px }
 .summary-box { display:flex; align-items:center; justify-content:space-around }
+.forecast-legend { font-size:0.65rem; line-height:1.6; }
+.dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; }
+.dot--g { background:#10b981; }
+.dot--b { background:#3b82f6; }
+.dot--o { background:#f59e0b; }
 .donut-mini { width:70px; height:70px; border-radius:50%; border:10px solid #10b981; border-top-color:#f59e0b; border-left-color:#3b82f6; position:relative }
 .donut-mini::before { content:'총 ' attr(data-total) '대'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.55rem; font-weight:700; width:40px; text-align:center }
-.alarm-list { flex:1; border:1px solid #f1f5f9; border-radius:6px; padding:5px; overflow:auto; max-height: calc(100vh * 0.32); }
-.alarm-item { font-size:0.65rem; padding:5px; border-bottom:1px solid #f1f5f9; display:flex; gap:8px }
-.alarm-icon { color:#ef4444; font-weight:700 }
 
 @media (max-width: 1200px) { .row-bottom { grid-template-columns: 1fr } }
 
