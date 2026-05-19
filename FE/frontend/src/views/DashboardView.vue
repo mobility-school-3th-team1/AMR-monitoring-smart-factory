@@ -38,10 +38,14 @@
     <div v-if="!isLoading" class="dashboard-grid">
       <!-- 플로어맵 (좌측) -->
       <section class="dashboard-panel compact-map-panel">
-        <div class="floor-map">
+        <div class="floor-map-wrap">
           <div class="map-label-chip">AMR 위치 현황도</div>
-          <div class="floor-map__grid">
-            <div v-for="(amr, index) in visibleAmrList" :key="amr.id" class="amr-mark" :class="`status-${amr.status || 'driving'}`" :data-battery="`${amr.batteryPercent || 0}%`" :style="{ left: `${10 + (index % 4) * 20}%`, top: `${20 + Math.floor(index / 4) * 30}%` }">{{ amr.name }}</div>
+          <div class="floor-map">
+            <div class="floor-map-grid">
+              <img class="floor-map-image" src="/factory-layout.png" alt="공장 레이아웃" />
+              <div v-if="visibleAmrList.length === 0" class="map-overlay map-overlay--hint">AMR 좌표가 들어오면 이 위에 표시됩니다.</div>
+              <div v-for="(amr, index) in visibleAmrList" :key="amr.id" class="amr-mark" :class="`status-${amr.status || 'driving'}`" :data-battery="`${amr.batteryPercent || 0}%`" :style="{ left: `${10 + (index % 4) * 20}%`, top: `${20 + Math.floor(index / 4) * 30}%` }">{{ amr.name }}</div>
+            </div>
           </div>
 
           <div class="status-strip">
@@ -55,14 +59,19 @@
 
       <!-- 공정 구역 환경 현황 (우측 상단) -->
       <section class="dashboard-panel compact-map-panel">
-        <div class="floor-map">
+        <div class="floor-map-wrap">
           <div class="map-label-chip">공정 구역 환경 현황</div>
-          <div class="floor-map__grid env-grid">
-            <div class="map-zone env-low" style="top:6%; left:5%; width:20%; height:30%;"><span class="zone-title">원자재 창고</span><span class="zone-meta">22.6°C · 습도 43%<br>미세먼지 12</span></div>
-            <div class="map-zone env-low" style="top:6%; left:30%; width:25%; height:24%;"><span class="zone-title">A 라인</span><span class="zone-meta">24.8°C · 습도 56%<br>미세먼지 16</span></div>
-            <div class="map-zone env-mid" style="top:36%; left:30%; width:25%; height:24%;"><span class="zone-title">B 라인</span><span class="zone-meta">21.9°C · 습도 39%<br>미세먼지 18</span></div>
-            <div class="map-zone env-low" style="top:6%; left:60%; width:15%; height:58%;"><span class="zone-title">조립 라인</span><span class="zone-meta">23.1°C · 습도 41%<br>미세먼지 14</span></div>
-            <div class="map-zone env-mid" style="top:6%; left:80%; width:15%; height:58%;"><span class="zone-title">검사 라인</span><span class="zone-meta">25.3°C · 습도 61%<br>미세먼지 19</span></div>
+          <div class="floor-map">
+            <div class="floor-map-grid env-grid">
+              <img class="floor-map-image" src="/factory-layout.png" alt="공장 레이아웃" />
+              <div class="map-overlay">
+                <div class="map-zone env-low" style="top:6%; left:5%; width:20%; height:30%;"><span class="zone-title">원자재 창고</span><span class="zone-meta">22.6°C · 습도 43%<br>미세먼지 12</span></div>
+                <div class="map-zone env-low" style="top:6%; left:30%; width:25%; height:24%;"><span class="zone-title">A 라인</span><span class="zone-meta">24.8°C · 습도 56%<br>미세먼지 16</span></div>
+                <div class="map-zone env-mid" style="top:36%; left:30%; width:25%; height:24%;"><span class="zone-title">B 라인</span><span class="zone-meta">21.9°C · 습도 39%<br>미세먼지 18</span></div>
+                <div class="map-zone env-low" style="top:6%; left:60%; width:15%; height:58%;"><span class="zone-title">조립 라인</span><span class="zone-meta">23.1°C · 습도 41%<br>미세먼지 14</span></div>
+                <div class="map-zone env-mid" style="top:6%; left:80%; width:15%; height:58%;"><span class="zone-title">검사 라인</span><span class="zone-meta">25.3°C · 습도 61%<br>미세먼지 19</span></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -195,35 +204,39 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+
 .dashboard-view {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  height: 100%;
+  gap: 4px;
+  height: 100vh;
+  min-height: 0;
+  padding: 8px 0 0 0;
 }
 
 .kpi-cards {
   display: grid;
-  grid-template-columns: repeat(6, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(6, minmax(100px, 1fr));
+  gap: 6px;
   align-items: stretch;
+  min-height: 0;
 }
 
 .kpi-card {
   background: white;
   border: 1px solid #e6eef8;
-  border-left: 4px solid #3b82f6;
-  border-radius: 6px;
-  padding: 10px;
+  border-left: 3px solid #3b82f6;
+  border-radius: 5px;
+  padding: 6px 6px 6px 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 60px;
+  gap: 2px;
+  min-height: 38px;
 }
 
-.kpi-label { font-size: 0.68rem; font-weight: 700; color: #64748b; }
-.kpi-value { font-size: 1.05rem; font-weight: 800; color: #0f172a; }
-.kpi-unit { font-size: 0.72rem; margin-left: 6px; color: #94a3b8; }
+.kpi-label { font-size: 0.60rem; font-weight: 700; color: #64748b; }
+.kpi-value { font-size: 0.92rem; font-weight: 800; color: #0f172a; }
+.kpi-unit { font-size: 0.62rem; margin-left: 4px; color: #94a3b8; }
 
 .error-banner {
   display: flex;
@@ -239,58 +252,249 @@ onUnmounted(() => {
 
 .error-retry { margin-left: auto; padding: 6px 10px; background: #b91c1c; color: #fff; border: none; border-radius: 4px; font-size: 0.75rem; }
 
-.dashboard-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 1.28fr 0.52fr; gap: 10px; flex: 1; min-height: 0; }
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  grid-template-rows: 1.1fr 0.7fr;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  height: 44vh;
+}
 
-.dashboard-panel { background: white; border: 1px solid #eef6ff; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; min-height: 0; }
-
-.floor-map-panel { /* not used now; kept for compatibility */ }
+.dashboard-panel {
+  background: #ffffff;
+  border: 1px solid rgba(219, 228, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
 
 /* compact map panels for top row */
-.compact-map-panel { padding: 8px; }
-.floor-map__grid { position: relative; flex: 1; min-height: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+.compact-map-panel { padding: 12px; }
+
+.floor-map-wrap {
+  flex: 1;
+  min-height: 0;
+  background: linear-gradient(180deg, #fbfdff 0%, #f7fafc 100%);
+  border: 1px solid #e5edf7;
+  border-radius: 12px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.floor-map {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.floor-map-grid {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #eef3f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.floor-map-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.94;
+  z-index: 1;
+}
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.map-overlay--hint {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 10px;
+  color: #475569;
+  font-size: 0.62rem;
+  font-weight: 700;
+  pointer-events: none;
+}
 .map-label-chip { position: absolute; right: 8px; top: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0; color: #475569; font-size: 0.68rem; font-weight: 700; z-index: 6; }
 
-.status-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
-.strip-item { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e5edf7; border-radius: 8px; padding: 6px 8px; }
-.strip-item .k { font-size: 0.64rem; color: #64748b; }
-.strip-item .v { margin-top: 2px; font-size: 0.78rem; font-weight: 800; }
+.floor-map-wrap > .map-label-chip {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+}
+
+.amr-mark {
+  position: absolute;
+  width: 44px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.52rem;
+  font-weight: 800;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.amr-mark::after {
+  content: attr(data-battery);
+  font-size: 0.43rem;
+  opacity: 0.9;
+}
+
+.status-driving { background: #10b981; }
+.status-charging { background: #3b82f6; }
+.status-waiting { background: #f59e0b; }
+.status-risk { background: #ef4444; }
+
+.map-zone {
+  position: absolute;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.15;
+  border-radius: 4px;
+  z-index: 3;
+}
+
+.map-zone.env-low { background: rgba(248, 255, 251, 0.86); }
+.map-zone.env-mid { background: rgba(255, 250, 242, 0.86); }
+
+.zone-title {
+  display: block;
+  font-size: 0.62rem;
+  color: #0f172a;
+}
+
+.zone-meta {
+  display: block;
+  font-size: 0.52rem;
+  color: #475569;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 0;
+}
+.strip-item {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e5edf7;
+  border-radius: 7px;
+  padding: 4px 6px;
+}
+.strip-item .k { font-size: 0.58rem; color: #64748b; }
+.strip-item .v { margin-top: 1px; font-size: 0.68rem; font-weight: 800; }
 
 /* bottom grid with alerts and logs */
-.bottom-grid { grid-column: 1 / -1; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 10px; min-height: 0; }
-.list-box { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 6px; }
-.list-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding-right: 4px; }
-.alert-row, .log-row { background: #f8fafc; border: 1px solid #e5edf7; border-radius: 8px; padding: 8px; display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
-.alert-severity { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08); }
+.bottom-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 6px;
+  min-height: 0;
+  height: 30vh;
+}
+.list-box {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.list-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.alert-row, .log-row {
+  background: #f8fafc;
+  border: 1px solid #e5edf7;
+  border-radius: 7px;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 5px;
+  align-items: center;
+}
+.alert-severity { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08); }
 .alert-severity.critical { background: #ef4444; }
 .alert-severity.warn { background: #f59e0b; }
-.alert-text { display: flex; flex-direction: column; gap: 4px; }
-.alert-title { font-size: 0.78rem; font-weight: 800; color: #111827; }
-.alert-desc { font-size: 0.72rem; color: #64748b; line-height: 1.2; }
-.alert-chip { font-size: 0.68rem; font-weight: 800; padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; background: white; white-space: nowrap; }
+.alert-text { display: flex; flex-direction: column; gap: 2px; }
+.alert-title { font-size: 0.68rem; font-weight: 800; color: #111827; }
+.alert-desc { font-size: 0.62rem; color: #64748b; line-height: 1.2; }
+.alert-chip { font-size: 0.58rem; font-weight: 800; padding: 2px 6px; border-radius: 999px; border: 1px solid currentColor; background: white; white-space: nowrap; }
 .alert-chip.critical { color: #ef4444; }
 .alert-chip.warn { color: #f59e0b; }
 
 .log-row { grid-template-columns: auto 1fr; }
-.log-icon { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; background: rgba(59, 130, 246, 0.12); color: #2563eb; font-weight: 900; font-size: 0.68rem; }
-.log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
-.log-title { font-size: 0.78rem; font-weight: 800; color: #111827; }
-.time-badge { font-size: 0.68rem; color: #64748b; white-space: nowrap; }
-.log-desc { font-size: 0.72rem; color: #64748b; }
+.log-icon { width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center; background: rgba(59, 130, 246, 0.12); color: #2563eb; font-weight: 900; font-size: 0.58rem; }
+.log-head { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-bottom: 1px; }
+.log-title { font-size: 0.68rem; font-weight: 800; color: #111827; }
+.time-badge { font-size: 0.58rem; color: #64748b; white-space: nowrap; }
+.log-desc { font-size: 0.62rem; color: #64748b; }
 
 @media (max-width: 1400px) {
-  .dashboard-grid { grid-template-columns: 1fr; grid-template-rows: repeat(4, minmax(0, 1fr)); }
-  .bottom-grid { grid-column: auto; grid-template-columns: 1fr; }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    height: auto;
+  }
+  .bottom-grid {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+    height: auto;
+  }
 }
 
-.panel-title { font-size: 0.85rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; }
+.panel-title { font-size: 0.75rem; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
 
 .floor-map {
   position: relative;
   flex: 1;
-  min-height: 320px;
+  min-height: 120px;
   background: linear-gradient(180deg, #fbfdff 0%, #f7fafc 100%);
-  border: 1px solid #e8f0fb;
-  border-radius: 6px;
+  border: none;
+  border-radius: 0;
 }
 
 .floor-map__robot {
