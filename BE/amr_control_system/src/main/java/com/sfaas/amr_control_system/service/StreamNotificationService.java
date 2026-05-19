@@ -35,11 +35,11 @@ public class StreamNotificationService {
         runBestEffort(action, false);
     }
 
-    private void runBestEffort(Runnable action, boolean committedAfterTransaction) {
+    private void runBestEffort(Runnable action, boolean isAfterTransactionCommit) {
         try {
             action.run();
         } catch (RuntimeException exception) {
-            if (committedAfterTransaction) {
+            if (isAfterTransactionCommit) {
                 log.warn("Stream notification failed after commit, but transaction commit is already finalized.", exception);
                 return;
             }
