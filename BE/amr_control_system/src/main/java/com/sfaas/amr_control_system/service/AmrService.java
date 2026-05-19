@@ -16,6 +16,7 @@ import com.sfaas.amr_control_system.entity.AmrCommand;
 import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.entity.AmrTask;
 import com.sfaas.amr_control_system.entity.Area;
+import com.sfaas.amr_control_system.event.AmrStatusChangedEvent;
 import com.sfaas.amr_control_system.exception.AmrNotFoundException;
 import com.sfaas.amr_control_system.exception.InvalidAmrCommandException;
 import com.sfaas.amr_control_system.repository.AmrCommandRepository;
@@ -24,6 +25,7 @@ import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.repository.AmrTaskRepository;
 import com.sfaas.amr_control_system.util.DashboardStatusNormalizer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,6 +66,7 @@ public class AmrService {
     private final AmrTaskRepository amrTaskRepository;
     private final AmrCommandRepository amrCommandRepository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public AmrListResponseDto listAmrs(
             Integer page,
@@ -167,10 +170,18 @@ public class AmrService {
         cancelActiveTasksForEmergencyStop(amr, requestedAt);
         persistAmrCommand(amr, commandId, commandType, request, requestedAt);
 
+        String formattedAmrId = AmrIdentifierHelper.formatAmrId(amr.getAmrId());
+        applicationEventPublisher.publishEvent(new AmrStatusChangedEvent(
+                this,
+                formattedAmrId,
+                DashboardStatusNormalizer.STATUS_EMERGENCY_STOP,
+                null
+        ));
+
         AmrCommandResponseDto response = new AmrCommandResponseDto();
         response.setAccepted(true);
         response.setCommandId(commandId);
-        response.setAmrId(AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
+        response.setAmrId(formattedAmrId);
         return response;
     }
 

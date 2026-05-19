@@ -11,7 +11,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - BE 전용 Docker 실행 환경 구성 완료 (2026-05-17). 프로파일 `docker` + H2 in-memory (`application-docker.yaml`).
 - **10-A (H2 물리 스키마 정합·API 스모크):** 완료 (2026-05-18).
 - **Phase A (REST 시연 경로):** 완료 (2026-05-18, Docker 스모크 검증).
-- **Phase B (WebSocket):** **진행 중** — B-1 연결·JWT handshake 완료 (2026-05-19). B-2 Publisher·B-3 서비스 연동·Docker WS 스모크 **잔여**.
+- **Phase B (WebSocket):** **진행 중** — B-1 handshake, B-2 Publisher, B-3 서비스 연동 **완료** (2026-05-19). **잔여:** B-4 Docker WS 스모크.
 - **설계 문서(dev):** `docs/API 정의.md`, `docs/데이터 스키마 설계.md`, `docs/화면 설계서.md`, `docs/ADR/20260518-1252-AMR-emergency-logic.md` 반영 완료 (PR #27 merge).
 - **DB 영역 Docker compose:** 미 merge. 당분간 **H2 + BE Docker**로 시연·개발.
 - **DAS·FE·BE 합의:** 비상 정지는 BE가 DB 갱신 후 `accepted` 응답, FE가 DAS(MQTT) 정지 고지. BE↔DAS 직접 연동 없음.
@@ -29,7 +29,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | `GET /amrs` | `status` 콤마, `sort=unresolvedFirst`, 응답 `faultCode` | **12-E 완료** (`faultCode` 쿼리는 `docs/API 정의.md` §3 미정의) | — |
 | `GET /environment/areas/current` | SCR-01 ③ | 컨트롤러·서비스 없음 | **A-선택** |
 | `GET /analytics/kpis` | `errorCount`, `scheduleComplianceRate` | 필드 없음 | **B (시연 후)** |
-| `WS /api/v1/stream` | 5종 이벤트, JWT | **B-1 완료:** 연결·`?token=` JWT·`stream.connected`. **잔여:** Publisher·`amrs.status.updated`·`dashboard.summary.updated` | **B (진행 중)** |
+| `WS /api/v1/stream` | 5종 이벤트, JWT | **B-1~3 완료:** handshake·Publisher·`amrs.status.updated`·`dashboard.summary.updated`(AFTER_COMMIT). **잔여:** B-4 Docker 스모크, 선택 이벤트 3종 | **B (거의 완료)** |
 | `AMR_COMMAND` | 명령 이력 | **12-C 완료** (emergencyStop INSERT) | — |
 
 > FE·DAS(MQTT 토픽·payload)는 BE 범위 밖. BE는 DB·REST·(선택) WebSocket만 담당.
@@ -43,13 +43,13 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | ~~0~~ | ~~10-A 물리 스키마 정합~~ | **완료** (2026-05-18) | — |
 | ~~—~~ | ~~설계 문서 반영~~ | dev에 API·화면·ADR 반영 완료 | — |
 | **1** | **Phase A: REST 시연 경로** | 필수 REST·**12-G Docker 스모크** 완료. 잔여: **12-F** 선택 | **완료** |
-| **2** | **Phase B: WebSocket 최소** | B-1 handshake **완료**. **지금:** B-2 Publisher → B-3 서비스 연동 → B-4 Docker WS 스모크 | **진행 중** |
+| **2** | **Phase B: WebSocket 최소** | B-1~3 **완료**. **지금:** B-4 Docker WS 스모크 | **진행 중** |
 | (병렬) | **FE·BE 통합** | CORS·프록시·runbook (FE/인프라) | BE: Security·헬스 URL 문서화 |
 | 3 | 공통 오류 응답 | API 실패 형식 통일 | 시연 직전·직후 |
 | (대기) | **10-B MySQL** | DB compose merge 후 | 시연 필수 아님 |
 | (후순) | Analytics KPI 확장, 테스트·CSV | `errorCount` 등 | 시연 후 |
 
-**현재 BE 1순위:** **Phase B-2** `StreamEventPublisher` (이후 B-3 `AmrService`·`AmrAutoRecoveryService` 연동). 병렬 가능: **12-F** 환경 API(선택).
+**현재 BE 1순위:** **Phase B-4** Docker WebSocket 스모크. 병렬 가능: **12-F** 환경 API(선택).
 
 ---
 
@@ -131,22 +131,23 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] 연결 확인용 `stream.connected` 이벤트 1회 전송 (API §8 필수 이벤트 아님).
 - [ ] **Docker WS 스모크** (B-4): `docker compose up --build` 후 wscat 등으로 연결·토큰 거부/수락 확인.
 
-### B-2. 이벤트 발행기 — **다음 작업**
+### B-2. 이벤트 발행기 — 완료 (2026-05-19)
 
-- [ ] `StreamEventPublisher` (또는 동등 서비스): 공통 봉투 `{ event, timestamp, data }`, `WebSocketSessionRegistry`로 브로드캐스트.
-- [ ] ISO 8601 UTC `timestamp` (REST와 동일 규칙).
+- [x] `StreamEventDto`, `StreamEventPublisher`: 공통 봉투 `{ event, timestamp, data }`, `WebSocketSessionRegistry` 브로드캐스트.
+- [x] `AmrStatusUpdatedEventDataDto`, `publishAmrStatusUpdated` / `publishDashboardSummaryUpdated`.
+- [x] `StreamWebSocketHandler` → Publisher로 `stream.connected` 통일.
 
-### B-3. 비즈니스 연동
+### B-3. 비즈니스 연동 — 완료 (2026-05-19)
 
-- [ ] **필수 발행 (시연)**
-  - `amrs.status.updated` — `sendCommand`·자동 복구 직후
-  - `dashboard.summary.updated` — 위 이벤트 직후 `DashboardService.getSummary()` 재계산 payload
-- [ ] 트랜잭션 **commit 이후** 발행 (`@TransactionalEventListener(AFTER_COMMIT)` 등).
+- [x] **필수 발행 (시연)**
+  - `amrs.status.updated` — `AmrService.sendCommand`·`AmrAutoRecoveryService` 복구
+  - `dashboard.summary.updated` — `AmrStatusChangedStreamListener`에서 `getSummary()` payload
+- [x] `AmrStatusChangedEvent` + `@TransactionalEventListener(AFTER_COMMIT)`.
 - [ ] **선택 발행**
   - `amrs.position.updated` — `@Scheduled` 3~5초마다 `pos_x`/`pos_y` 소폭 변경 (DAS 없을 때 연출)
   - `alarms.created`, `charging.forecast.updated` — 시연 후
 
-### B-4. Phase B Docker 검증 체크리스트
+### B-4. Phase B Docker 검증 체크리스트 — **다음 작업**
 
 - [ ] `BE/`에서 `docker compose up -d --build`.
 - [ ] `POST /auth/login` → `accessToken`.
@@ -244,7 +245,12 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 - `WebSocketConfig`, `WebSocketJwtHandshakeInterceptor`, `StreamWebSocketHandler`, `WebSocketSessionRegistry`, `SecurityConfig` (`/stream` + query `token`).
 - 외부 URL: `ws://localhost:8080/api/v1/stream?token=<accessToken>`.
-- **미검증:** 호스트 `docker compose` WS 스모크(B-4). **미구현:** `StreamEventPublisher`, 도메인 이벤트 발행.
+
+### [완료] Phase B-2·B-3 StreamEventPublisher 및 서비스 연동 (2026-05-19)
+
+- `StreamEventPublisher`, `StreamEventDto`, `AmrStatusChangedEvent`, `AmrStatusChangedStreamListener`.
+- `emergencyStop`·자동 복구 후 `amrs.status.updated` → `dashboard.summary.updated` (commit 이후).
+- **미검증:** B-4 Docker WS 스모크.
 
 ---
 
@@ -271,15 +277,14 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 - [x] commit 후 `accepted: true`
 - [x] 자동 복구(12-D)
 - [x] (Phase B-1) WebSocket 연결·JWT handshake
-- [ ] (Phase B-2~3) `amrs.status.updated`·`dashboard.summary.updated` 발행
+- [x] (Phase B-2~3) `amrs.status.updated`·`dashboard.summary.updated` 발행
+- [ ] (Phase B-4) Docker WS 스모크
 
 ---
 
 ## 작업 우선순위 (BE 담당자용)
 
-1. **Phase B-2** — `StreamEventPublisher`
-2. **Phase B-3** — `AmrService`·`AmrAutoRecoveryService` AFTER_COMMIT 연동
-3. **Phase B-4** — Docker WebSocket 스모크
+1. **Phase B-4** — Docker WebSocket 스모크
 4. **Phase A-12-F** — environment API (선택)
 5. **Phase C** — analytics KPI, 오류 응답, 테스트 보강, 10-B
 
