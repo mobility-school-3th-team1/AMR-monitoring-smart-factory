@@ -100,9 +100,14 @@ src/main/java/com/{group}/{artifact}/
 ### REST API 구현
 
 - 기본 경로: `/api/v1`
-- **Swagger UI (Docker):** `http://localhost:8080/api/v1/swagger-ui/index.html` — `POST /auth/login` 후 **Authorize**에 Bearer 토큰 입력
-- **OpenAPI JSON:** `http://localhost:8080/api/v1/v3/api-docs`
 - 인증: JWT 기반 (`Authorization: Bearer <token>`)
+- **Swagger UI (Docker):** http://localhost:8080/api/v1/swagger-ui/index.html
+- **OpenAPI JSON:** http://localhost:8080/api/v1/v3/api-docs
+- **Swagger Try it out (데모 계정):** `admin` / `BE/.env`의 `DEMO_USER_PASSWORD`(기본 `demo123`)
+  1. **Authorize 없이** `POST /auth/login` 실행 → `accessToken` 복사
+  2. **Authorize** → 토큰만 입력 (`Bearer ` 접두사 없음)
+  3. 보호 API Try it out (`GET /dashboard/summary` 등)
+- **로컬 회귀 (Docker 기동 후):** `python scripts/smoke-swagger-phase-s.py`, `python scripts/smoke-websocket-phase-b.py` (`pip install websocket-client`)
 - 목록 API 기본값: `page=1`, `limit=20`
 - 날짜/시간: ISO 8601 UTC
 - 리소스명은 복수형을 우선한다 (예: `/amrs`, `/alarms`, `/charging/stations`)

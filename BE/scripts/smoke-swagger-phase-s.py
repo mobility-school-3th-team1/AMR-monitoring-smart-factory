@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase S Swagger smoke (S-2). Run from BE/: python scripts/smoke-swagger-phase-s.py"""
+"""Phase S Swagger smoke (S-2 auth/OpenAPI, S-3 REST regression). Run from BE/: python scripts/smoke-swagger-phase-s.py"""
 
 from __future__ import annotations
 
