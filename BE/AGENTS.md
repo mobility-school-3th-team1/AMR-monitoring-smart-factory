@@ -11,10 +11,12 @@
 
 FE 녹화 시연 기간 BE는 **`../docs/시연_MVP_합의.md` §5.1** REST만 유지·검증한다.
 
+「진행 상황을 확인하고 **BE** 파트를 구현하라」지시 시: **`../docs/시연_에이전트_프롬프트.md` §2** 블록을 따른다. `BE/docker-compose.yml` **신규 작성 금지**.
+
 - **착수 금지(시연):** `GET /environment/areas/current`(12-F), `GET /analytics/kpis` 확장, `amrs.position.updated` 스케줄, FE WebSocket 필수화.
 - **`GET /charging/queue`:** FE는 빈 테이블 더미 — 시드·응답 품질 필수 아님.
 - 환경·AMR 평면도 좌표(%): **DAS MQTT** (`../docs/FE-DAS_MQTT_연동.md`). BE↔DAS 직접 연동 없음.
-- 런타임: Docker + H2 (`../docs/시연_MVP_합의.md` §4).
+- 런타임: **`BE/docker-compose.yml`** (Docker + H2). 호스트 JDK 실행 없음 (`../docs/시연_MVP_합의.md` §4).
 
 ## 설계 문서 참조
 

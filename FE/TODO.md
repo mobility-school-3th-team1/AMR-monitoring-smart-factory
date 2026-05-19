@@ -2,6 +2,7 @@
 
 > **녹화 시연 MVP 갱신:** 2026-05-19  
 > **SSOT:** `docs/시연_MVP_합의.md`, `docs/FE-DAS_MQTT_연동.md`  
+> **기동:** `cd FE` → `docker compose up --build` (호스트 npm 금지)  
 > 충돌 시 위 문서가 본 파일·아래 「제품 백로그」보다 우선한다.
 
 ---
@@ -18,7 +19,7 @@
 | C-P2-02 | SCR-01 환경 = `factory/environment/current` | F2~F3. `GET /environment` **호출 안 함** |
 | C-P2-03 | 맵 AMR = MQTT **x/y %**. DAS 미준비 시 §7.4 fallback | F2~F3 |
 | C-P2-04 | 토픽 = `FE-DAS_MQTT_연동.md`만. `FE/PROGRESS.md` MQTT 서술 **무시** | — |
-| C-P2-05 | `VITE_MQTT_URL=ws://localhost:9001` | F2 |
+| C-P2-05 | `VITE_MQTT_URL` — `FE/.env.example` (G4), compose 기동 | F2 |
 | C-P2-06 | 시연: **mqtt.js만**. `reconnecting-websocket` **미사용** | — |
 | C-P2-07 | `/charging` 라우트 **네비 제외** | F7 |
 | C-P2-08 | REST 폴링 **10초** 권장(화면별 통일) | F3~F8 |
@@ -32,7 +33,7 @@
 | F1 | | 팀 공유 **공장 레이아웃 이미지** → `src/assets/`. `factory-layout-areas.js`에 `AREA_*` 오버레이 % (`FE-DAS` §2.3) | [ ] |
 | F2 | C-P2-05,06 | `main.js`에서 `initMqtt()`. `VITE_MQTT_URL`. `subscribe` 환경·AMR 좌표 | [ ] |
 | F3 | C-P2-02,03,08 | **SCR-01:** KPI §3.1 삭제(생산·활성알람·평균배터리). 평면도 % 마커. 환경 16. `summary`·`recent-logs`·`recent-alarms`(실패 시 더미) | [ ] |
-| F4 | | `vite.config.js` → BE 프록시 (`/api` → Docker BE) | [ ] |
+| F4 | G3 | compose/Dockerfile **없을 때만** 작성 · 있으면 vite 프록시·env만 · `cp .env.example .env` | [ ] |
 | F5 | C-P2-09 | **SCR-02:** `GET /amrs`. status enum. §3.2 보류 차트 **숨김** | [ ] |
 | F6 | C-P2-12 | **SCR-03:** `GET /amrs/{id}`, E-stop `POST`+UI. §3.3 삭제 UI. MQTT `factory/amr/command` | [ ] |
 | F7 | C-P2-07 | **SCR-04:** `stations`·`forecast`. queue **빈 테이블**. 충전 알람 제거 | [ ] |

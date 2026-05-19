@@ -15,6 +15,12 @@
 | --- | --- |
 | `../docs/시연_MVP_합의.md` | §3 UI 삭제·보류, §7 구현 순서, §5 REST 필수 목록 |
 | `../docs/FE-DAS_MQTT_연동.md` | 정적 평면도, 환경 16센서, AMR x/y **백분율**, `initMqtt` |
+| `../docs/시연_에이전트_프롬프트.md` | 「진행 상황을 확인하고 **FE** 파트를 구현하라」→ **§1** |
+| `FE/.env.example` | Docker·Vite `VITE_MQTT_URL` (G4) |
+
+- **실행:** `cd FE` → `docker compose up --build`. 호스트 `npm run dev`는 시연 경로가 아니다.
+- **Docker:** `FE/docker-compose.yml`·`Dockerfile`이 **이미 있으면 사용·수정만**. **없을 때만** F4에서 신규 작성(미병합 브랜치에 있을 수 있음).
+- **F4(G3):** `vite` BE 프록시·compose 정합 — compose 없을 때만 파일 생성.
 
 - 시연 FE: **WebSocket 미사용**, `GET /environment/areas/current` 미사용.
 - 정식 화면 설계서 Annotation **본문 삭제 금지**. MVP와 다른 항목은 MVP만 구현하지 않는다.

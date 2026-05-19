@@ -16,9 +16,12 @@ MySQL 데이터베이스 스키마를 정의/관리하고, Node-RED를 사용하
 | 환경 | 구역당 4슬롯, 화면 합 **16** (`sensor1`~`sensor4` × 구역). payload는 `../docs/시연_MVP_합의.md` §2.2 |
 | AMR | `x`, `y` = 레이아웃 대비 **백분율(0~100)** |
 | DDL | `init.sql` = 스키마 참조. **시연 런타임은 BE H2** |
+| 기동 | **`DB/docker-compose.yml`** — Mosquitto·Node-RED (호스트 Node 직접 실행 금지) |
+| Docker | compose·Dockerfile **있으면 사용·수정만**. **없을 때만** 신규 작성 (미병합 브랜치 주의) |
 
 - `GET /environment/areas/current`용 로그 적재·MySQL compose는 **시연 후**.
 - `../docs/시연_MVP_합의.md` §7 D1~D3 완료 전 FE SCR-01 MQTT는 블로커.
+- 「진행 상황을 확인하고 **DAS·DB** 파트를 구현하라」→ `docs/시연_에이전트_프롬프트.md` **§3**. 작업 목록: `DB/TODO.md`.
 
 ## 설계 문서 참조
 
@@ -30,7 +33,8 @@ MySQL 데이터베이스 스키마를 정의/관리하고, Node-RED를 사용하
 - `../docs/API 정의.md` - RESTful API 명세 (BE가 요구하는 데이터 구조 파악에 필요)
 - `../docs/협업 컨벤션.md` - Git 워크플로우, 커밋, PR, 코드 품질 규칙
 - `../docs/시연_MVP_합의.md` - 시연 범위
-- `../docs/FE-DAS_MQTT_연동.md` - **DAS MQTT 명세(Draft, §6 확정 필요)**
+- `../docs/FE-DAS_MQTT_연동.md` - **DAS MQTT 명세 (Phase 0 확정)**
+- `../docs/시연_에이전트_프롬프트.md` - 파트별 구현 프롬프트
 
 스키마를 변경할 때에는 반드시 `../docs/데이터 스키마 설계.md`를 먼저 수정한 뒤, 변경된 문서에 따라 DDL을 구현한다. **시연 스프린트 중 영구 스키마 변경은 FE 녹화에 필요한 경우만** 한다.
 BE의 API 응답 구조에 영향을 주는 변경이 있으면, `../docs/API 정의.md`도 함께 검토한다.

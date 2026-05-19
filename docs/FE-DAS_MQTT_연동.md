@@ -167,16 +167,19 @@
 
 | 항목 | 값 |
 | --- | --- |
+| 기동 | `cd FE` → `docker compose up --build` (**호스트 npm 금지**) |
 | 플러그인 | `FE/frontend/src/plugins/ws.js` |
-| 환경 변수 | `VITE_MQTT_URL=ws://localhost:9001` |
+| 환경 변수 | `FE/.env.example` → `.env` — `VITE_MQTT_URL=ws://localhost:9001` (G4) |
+| BE REST | **F4(G3):** FE 에이전트가 `vite.config.js` + `FE/docker-compose.yml` 에 프록시·`be` 서비스 연동 |
 | 활성화 | `main.js` 로그인 후 `initMqtt()` |
 
 **미사용:** `reconnecting-websocket`, BE `WS /api/v1/stream`.
 
-### 로컬 브로커 (0-1)
+### 브로커 (0-1, DAS Docker)
 
-- 개발: [Eclipse Mosquitto](https://mosquitto.org/) 등 **WebSocket 리스너 9001** 권장.
-- Docker 사용 시 DAS compose와 포트 충돌 방지 후 문서화.
+- **DAS:** `DB/docker-compose.yml` — Mosquitto WebSocket **9001** 호스트 publish.
+- 호스트 브라우저 MQTT: `ws://localhost:9001`.
+- FE·DAS가 동일 compose 네트워크일 때만 컨테이너 내부에서 `ws://mosquitto:9001` 등 서비스명 사용.
 
 ---
 

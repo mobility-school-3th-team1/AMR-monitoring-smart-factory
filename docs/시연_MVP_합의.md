@@ -155,12 +155,12 @@
 
 | 영역 | 이번 시연 책임 | 하지 않음 |
 | --- | --- | --- |
-| **FE** | 정적 평면도 에셋, MQTT 구독(환경 16·AMR %좌표), REST §5, 화면 §3 축소, vite 프록시 | WS, 12-F REST 환경 |
-| **DAS** | MQTT 브로커·토픽·payload §2, 녹화 시 **지속 발행** | BE 직접 연동 |
-| **BE** | §5 API·H2 시드·`emergencyStop` | 12-F, KPI 확장, position WS 스케줄, queue 시연 데이터 필수 아님 |
-| **DB** | `init.sql` 스키마 참조. **런타임 시드는 BE H2** | MySQL merge(시연 후) |
+| **FE** | compose **없을 때만 F4 작성**, 평면도, MQTT, REST §5, §3, vite(G3) | WS, 12-F, 호스트 npm |
+| **DAS** | compose **없을 때만 작성**, MQTT·Node-RED §2 | BE 직접 연동, 호스트 Node-RED |
+| **BE** | `BE/docker-compose.yml`, §5 API·H2·`emergencyStop` | 12-F, KPI, position WS, queue 필수 아님 |
+| **DB** | `init.sql` 참조, DAS compose | MySQL merge(시연 후) |
 
-**녹화 인프라:** `BE/docker compose up` + **MQTT 브로커(DAS)** + `FE/npm run dev`.
+**녹화 인프라 (Docker Compose):** `BE/docker compose up` → `DB/docker compose up`(MQTT·Node-RED) → `FE/docker compose up`. 호스트 npm·JDK 직접 실행 없음.
 
 ---
 
