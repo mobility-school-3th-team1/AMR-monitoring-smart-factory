@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMR 스마트 팩토리 통합 모니터링 시스템 | 발표자료 초안</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --text: #0f172a;
+      --text-body: #334155;
+      --muted: #64748b;
+      --accent: #0369a1;
+      --accent-2: #15803d;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: "Pretendard", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .deck { height: 100vh; position: relative; }
+    .slide {
+      display: none;
+      height: 100vh;
+      padding: 3rem 4rem 5rem;
+      overflow-y: auto;
+      animation: fadeIn 0.35s ease;
+    }
+    .slide.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .section-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+    h1 { font-size: 2.4rem; line-height: 1.25; margin-bottom: 0.5rem; color: var(--text); }
+    h2 { font-size: 1.75rem; margin-bottom: 1rem; color: var(--accent); }
+    h3 { font-size: 1.15rem; margin: 1.25rem 0 0.6rem; color: var(--text); }
+    p, li { font-size: 1.05rem; line-height: 1.65; color: var(--text-body); }
+    code {
+      background: var(--surface-2);
+      color: #0c4a6e;
+      padding: 0.12em 0.4em;
+      border-radius: 4px;
+      font-size: 0.92em;
+      border: 1px solid var(--border);
+    }
+    ul { margin-left: 1.25rem; margin-bottom: 0.75rem; }
+    li { margin-bottom: 0.35rem; }
+    .subtitle { font-size: 1.2rem; color: var(--muted); margin-bottom: 1.5rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.15rem;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .card h3 { margin-top: 0; font-size: 1rem; color: var(--accent); }
+    .card p, .card li { font-size: 0.95rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.75rem;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.7rem;
+      text-align: left;
+    }
+    th { background: var(--surface-2); color: var(--accent); font-weight: 600; }
+    td { color: var(--text-body); background: var(--surface); }
+    .status-done { color: var(--accent-2); }
+    .status-progress { color: var(--warn); }
+    .status-todo { color: var(--muted); }
+    .mermaid {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 0.75rem 0;
+      overflow-x: auto;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .mermaid svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    .slide:has(.mermaid-stack) { padding: 1.75rem 2rem 5rem; }
+    .slide:has(.mermaid-stack) h2 { font-size: 1.45rem; margin-bottom: 0.35rem; }
+    .slide:has(.mermaid-stack) .stack-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+    }
+    .slide:has(.mermaid-stack) .stack-legend span::before {
+      content: "";
+      display: inline-block;
+      width: 1.1rem;
+      height: 0;
+      border-top: 2px solid var(--accent);
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .slide:has(.mermaid-stack) .stack-legend .legend-dash::before {
+      border-top-style: dashed;
+      color: var(--warn);
+    }
+    .slide:has(.mermaid-stack) table { font-size: 0.78rem; margin-top: 0.45rem; }
+    .note {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-left: 4px solid var(--warn);
+      background: #fffbeb;
+      font-size: 0.95rem;
+      color: #92400e;
+    }
+    .slide.screen-detail { padding: 2.25rem 3rem 5rem; }
+    .slide.screen-detail h2 { font-size: 1.55rem; margin-bottom: 0.65rem; }
+    .slide.screen-detail .screen-id {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+    .slide.screen-detail .value-line {
+      font-size: 1.05rem;
+      line-height: 1.55;
+      color: #166534;
+      border-left: 4px solid var(--accent-2);
+      padding: 0.65rem 1rem;
+      margin-bottom: 1rem;
+      background: #f0fdf4;
+      border-radius: 0 8px 8px 0;
+    }
+    .slide.screen-detail h3 {
+      font-size: 1.02rem;
+      margin: 1rem 0 0.4rem;
+      color: var(--accent);
+    }
+    .slide.screen-detail p,
+    .slide.screen-detail li { font-size: 0.96rem; line-height: 1.62; }
+    .slide.screen-detail ul { margin-bottom: 0.5rem; }
+    .slide.screen-detail .screen-goal {
+      margin-top: 0.85rem;
+      padding: 0.7rem 1rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: var(--text-body);
+    }
+    .slide.screen-detail .screen-goal strong { color: var(--accent); }
+    .slide.screen-detail .impl-note {
+      margin-top: 0.75rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .hero-meta { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 2rem; }
+    .hero-meta span { color: var(--muted); font-size: 0.95rem; }
+    .nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.08);
+      z-index: 100;
+    }
+    .nav button {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.45rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .nav button:hover {
+      border-color: var(--accent);
+      background: #e0f2fe;
+    }
+    .progress { color: var(--muted); font-size: 0.85rem; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc li { margin-bottom: 0.5rem; }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      margin-right: 0.35rem;
+    }
+    .badge-fe { background: #e0f2fe; color: #0369a1; }
+    .badge-be { background: #dcfce7; color: #15803d; }
+    .badge-db { background: #fef3c7; color: #b45309; }
+    .badge-pm { background: #f3e8ff; color: #7c3aed; }
+    @media (max-width: 900px) {
+      .slide { padding: 2rem 1.25rem 4.5rem; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      h1 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 표지 -->
+  <section class="slide active" data-title="표지">
+    <span class="section-tag">AMR Smart Factory</span>
+    <h1>AMR 기반 스마트 팩토리<br>통합 모니터링 시스템</h1>
+    <p class="subtitle">BSA 배터리 팩 조립 라인 물류 관제 웹 애플리케이션</p>
+    <div class="hero-meta">
+      <span>프로젝트 코드: SCADAPRJ</span>
+      <span>기준일: 2026-05-18</span>
+      <span>문서 원본: GitHub <code>docs/</code></span>
+    </div>
+    <p style="margin-top:2rem;color:var(--muted);font-size:0.9rem;">← → 키 또는 하단 버튼으로 슬라이드 이동</p>
+  </section>
+
+  <!-- 목차 -->
+  <section class="slide" data-title="목차">
+    <span class="section-tag">구성</span>
+    <h2>발표 구성</h2>
+    <ul class="toc">
+      <li><strong>1.</strong> 프로젝트 전체 개요 (주제, 내용, 장비, 진행 순서, 기대 효과)</li>
+      <li><strong>2.</strong> 팀 구성 및 역할</li>
+      <li><strong>3.</strong> 수행 절차 및 방법 (WBS)</li>
+      <li><strong>4.</strong> 수행 경과 (배경, 요구사항, 아키텍처, 화면별 기능 SCR-01~05, AI, 트러블슈팅)</li>
+    </ul>
+    <div class="note">
+      <strong>권장 발표 순서 제안:</strong> 개요 → 배경, 문제 정의 → 아키텍처, 화면 → 수행 경과(구현 현황) → AI 프로세스 → 트러블슈팅 → WBS, 팀 → 고도화 비전.<br>
+      청중이 기술 맥락을 먼저 이해한 뒤 일정, 역할을 듣는 흐름이 자연스럽습니다.
+    </div>
+  </section>
+
+  <!-- 1-1 주제 및 배경 -->
+  <section class="slide" data-title="1.1 주제 및 선정 배경">
+    <span class="section-tag">1. 프로젝트 전체 개요</span>
+    <h2>1.1 프로젝트 주제 및 선정 배경</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>주제</h3>
+        <p>고중량 배터리 팩 조립 공장에서 운용되는 <strong>AMR(자율 이동 로봇)</strong>의 위치, 상태, 환경, 충전, 작업 이력을 <strong>실시간 통합 관제</strong>하는 웹 시스템</p>
+      </div>
+      <div class="card">
+        <h3>선정 배경</h3>
+        <ul>
+          <li>로봇 친화(RF) 제조 확산에도 운영 효율은 정체되는 현장</li>
+          <li>AMR 도입 후 MES/WMS 연동 미비로 “스스로 움직이는 카트” 수준에 머무는 사례</li>
+          <li>센서 교란, 경로 이탈, 데드락 등 안전, 소프트웨어 리스크 증가</li>
+          <li>분산 데이터를 통합해 의사결정, 선제 대응이 필요한 관제 수요</li>
+        </ul>
+      </div>
+    </div>
+    <h3>기획 의도</h3>
+    <ul>
+      <li>단순 위치 표시를 넘어 <strong>안전(비상 정지)</strong>, <strong>환경 위험 감시</strong>, <strong>운영 인사이트</strong>를 한 화면에 제공</li>
+      <li>실제 설비 대신 <strong>Node-RED DAS 시뮬레이션</strong>으로 개발, 시연 가능한 구조 확보</li>
+      <li>설계 문서 선행(Design-first)과 AI 보조 개발로 제한된 기간 내 멀티 스택 병행</li>
+    </ul>
+  </section>
+
+  <!-- 1-2 프로젝트 내용 -->
+  <section class="slide" data-title="1.2 프로젝트 내용">
+    <span class="section-tag">1. 프로젝트 전체 개요</span>
+    <h2>1.2 프로젝트 내용 (요약)</h2>
+    <div class="grid-3">
+      <div class="card"><h3>관제</h3><p>공장 2D 평면도 기반 AMR 위치, 경로, 상태 색상 구분, 환경(온습도, 먼지) 통합 대시보드</p></div>
+      <div class="card"><h3>안전</h3><p>비상 정지: FE→BE(DB 반영)→FE→DAS(MQTT). 관리자 즉시 개입 시뮬레이션</p></div>
+      <div class="card"><h3>분석</h3><p>이동 거리, 작업 건수, 충전 대기열, KPI 차트로 운영 효율 시각화</p></div>
+    </div>
+    <table>
+      <tr><th>영역</th><th>구현 범위</th><th>비고</th></tr>
+      <tr><td>FE</td><td>Vue.js 관제 UI, ECharts, MQTT(DAS 연동)</td><td>SCR-01~05 화면</td></tr>
+      <tr><td>BE</td><td>Spring Boot REST, WebSocket, JWT, MySQL/JPA</td><td>시연 REST Phase A 완료</td></tr>
+      <tr><td>DB/DAS</td><td>MySQL 스키마, Node-RED 시뮬 데이터 파이프라인</td><td>H2, Docker로 BE 단독 시연 중</td></tr>
+    </table>
+  </section>
+
+  <!-- 1-3 장비 및 재료 -->
+  <section class="slide" data-title="1.3 활용 장비 및 재료">
+    <span class="section-tag">1. 프로젝트 전체 개요</span>
+    <h2>1.3 활용 장비 및 재료</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>물리, 시뮬레이션 대상</h3>
+        <ul>
+          <li>AMR (자율 이동 로봇, 시뮬레이션)</li>
+          <li>충전 스테이션</li>
+          <li>환경 센서 (온도, 습도, 미세먼지)</li>
+          <li>BSA 배터리 팩 조립 라인 구역(창고, 건조, 조립, 검사 등)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>개발, 협업 인프라</h3>
+        <ul>
+          <li>개발 PC, Docker (BE 로컬 시연)</li>
+          <li>Git/GitHub, Jira(WBS), Confluence(회의, 복사본)</li>
+          <li>AI 도구: Gemini, ChatGPT, GitHub Copilot, Cursor</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">본 과제는 실제 AMR 하드웨어를 직접 제어하지 않고, Node-RED DAS가 좌표, 작업 이벤트를 생성하고 BE가 DB에 운행 상태를 기록하는 <strong>소프트웨어 통합 관제</strong>에 초점을 둡니다.</p>
+  </section>
+
+  <!-- 1-4 진행 순서도 -->
+  <section class="slide" data-title="1.4 프로젝트 진행 순서">
+    <span class="section-tag">1. 프로젝트 전체 개요</span>
+    <h2>1.4 프로젝트 구조: 진행 순서</h2>
+    <div class="mermaid">
+flowchart LR
+  A["착수<br>계획, 역할"] --> B["설계<br>요구, 화면, API, ERD"]
+  B --> C["구현<br>FE, BE, DAS, DB"]
+  C --> D["통합<br>REST, MQTT, 시연"]
+  D --> E["QA, 문서화"]
+  E --> F["최종 보고"]
+    </div>
+    <ul>
+      <li><strong>설계 단계:</strong> 프로젝트 정의서, 화면 설계서(SCR-01~05), API 정의, 데이터 스키마, ADR</li>
+      <li><strong>구현 단계:</strong> BE REST 시연 경로 우선 → WebSocket → FE API 연동 → DAS 파이프라인</li>
+      <li><strong>검증:</strong> Docker 스모크, PR + Copilot Review, 설계 문서 정합성 재검토</li>
+    </ul>
+  </section>
+
+  <!-- 1-5 기대 효과 -->
+  <section class="slide" data-title="1.5 활용 방안 및 기대 효과">
+    <span class="section-tag">1. 프로젝트 전체 개요</span>
+    <h2>1.5 활용 방안 및 기대 효과</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>활용 방안</h3>
+        <ul>
+          <li>공장 운영자용 실시간 관제, 알람 대응 콘솔</li>
+          <li>AMR 비상 정지, 복구 시나리오 시연, 교육</li>
+          <li>환경 이상과 AMR 오류 상관 분석 기반 의사결정</li>
+          <li>향후 MES/WMS, 실제 AMR 연동을 위한 API, 데이터 모델 기반</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>기대 효과</h3>
+        <ul>
+          <li>가동률 방어: 구간 장애 시 AMR 우회 등 유연 생산 지원 개념 반영</li>
+          <li>안전: Emergency Survival Control(시뮬레이션 경로)</li>
+          <li>데이터 기반 운영: SoH, 작업 효율, 충전 혼잡도 인사이트</li>
+          <li>확장: 표준 REST, WebSocket, MQTT 경계로 이기종 통합 준비</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 팀 구성 -->
+  <section class="slide" data-title="2. 팀 구성 및 역할">
+    <span class="section-tag">2. 팀 구성</span>
+    <h2>프로젝트 팀 구성 및 역할</h2>
+    <p class="subtitle">WBS 기준 역할 분담 (인원명은 발표 시 팀 표기로 보완)</p>
+    <table>
+      <tr><th>역할</th><th>주요 책임</th><th>대표 산출물</th></tr>
+      <tr>
+        <td><span class="badge badge-pm">PM</span> PM</td>
+        <td>요구사항 정의, WBS, 일정, 진척 점검, QA, 산출물 정리</td>
+        <td>수행계획서, Jira WBS, 최종 보고</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-fe">FE</span> 프론트엔드</td>
+        <td>화면 설계, 와이어프레임, Vue UI, API, WebSocket, MQTT 연동</td>
+        <td>SCR-01~05, mockup, DashboardView 등</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-be">BE</span> 백엔드</td>
+        <td>Spring Boot API, JWT, DB 연동, WebSocket, 비상 정지, 자동 복구</td>
+        <td>REST API, ADR, Docker 스모크</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-db">DB</span> DAS &amp; DB</td>
+        <td>ERD, 물리 스키마, Node-RED 시뮬, 데이터 수집 파이프라인</td>
+        <td>init.sql, Node-RED 플로우</td>
+      </tr>
+      <tr>
+        <td>ALL</td>
+        <td>설계 리뷰, 통합 테스트, AI 산출물 검증, 재서술</td>
+        <td>docs/, AGENTS.md, PR 리뷰</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 3 WBS -->
+  <section class="slide" data-title="3. WBS">
+    <span class="section-tag">3. 수행 절차</span>
+    <h2>프로젝트 수행 절차 및 방법 (WBS)</h2>
+    <table>
+      <tr><th>단계</th><th>역할</th><th>주요 작업</th><th>상태</th></tr>
+      <tr><td>착수</td><td>ALL</td><td>수행 계획 수립, 역할 분담</td><td class="status-done">완료</td></tr>
+      <tr><td>설계</td><td>ALL/PM/FE/BE/DB</td><td>주제 선정, 기능, 화면, 아키텍처, API, 스키마, 수행계획서</td><td class="status-done">완료</td></tr>
+      <tr><td>구현</td><td>PM</td><td>WBS 확정, 진척 점검, QA</td><td class="status-progress">진행</td></tr>
+      <tr><td>구현</td><td>FE</td><td>인프라, 화면, API 연동, UX</td><td class="status-progress">진행</td></tr>
+      <tr><td>구현</td><td>BE</td><td>환경 설정, API, DB 연동, Swagger</td><td class="status-progress">진행 (REST 시연 완료)</td></tr>
+      <tr><td>구현</td><td>DAS&amp;DB</td><td>물리 모델링, 수집 파이프라인, ETL</td><td class="status-progress">진행</td></tr>
+      <tr><td>통합</td><td>ALL</td><td>통합 테스트, 최종 보고, 산출물</td><td class="status-todo">예정</td></tr>
+    </table>
+    <p style="margin-top:0.75rem;color:var(--muted);font-size:0.9rem;">상세 일정: <code>docs/for_presentation/전체 간트차트 WBS.xlsx</code> ,  Jira SCADAPRJ</p>
+  </section>
+
+  <!-- 3 방법론 -->
+  <section class="slide" data-title="3. 수행 방법">
+    <span class="section-tag">3. 수행 절차</span>
+    <h2>수행 방법론</h2>
+    <div class="mermaid">
+flowchart TB
+  subgraph design ["설계 우선"]
+    D1["도메인 조사 AI 보조"] --> D2["docs 명세 확정"]
+    D2 --> D3["ADR로 경계 고정"]
+  end
+  subgraph dev ["구현"]
+    I1["영역별 TODO 1항목씩"] --> I2["Copilot/Cursor 구현"]
+    I2 --> I3["Docker 스모크"]
+  end
+  subgraph qa ["품질"]
+    Q1["PR + Copilot Review"] --> Q2["팀 approve merge"]
+  end
+  design --> dev --> qa
+    </div>
+    <ul>
+      <li>Git flow: <code>feature/</code> → PR → <strong>merge commit</strong>으로 dev 병합</li>
+      <li>문서 원본: GitHub <code>docs/</code> (API, 스키마), Confluence는 동기화 복사본</li>
+      <li>커밋: <code>태그(영역): 설명 스페이스-키 #이슈</code></li>
+    </ul>
+  </section>
+
+  <!-- 4-1 배경 상세 -->
+  <section class="slide" data-title="4.1 프로젝트 배경">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.1 프로젝트 배경 (상세)</h2>
+    <h3>현장 페인포인트</h3>
+    <ul>
+      <li><strong>연동 미비:</strong> AMR 단독 운용, 상위 시스템(MES/WMS)과 데이터 단절</li>
+      <li><strong>안전, 효율 트레이드오프:</strong> 안전 기준 충족을 위해 속도 제한 → 생산성 저하 → 로봇 운영 포기 사례</li>
+      <li><strong>하드웨어, 소프트웨어 리스크:</strong> 센서 교란, 충돌, 데드락, 잘못된 AI 작업 지시</li>
+    </ul>
+    <h3>관제 수요</h3>
+    <ul>
+      <li>AMR, 설비, 공정 데이터 실시간 통합 가시성</li>
+      <li>알람, 환경 상관 분석을 통한 선제적 이상 감지</li>
+      <li>이동 경로, 병목 분석 기반 레이아웃 최적화 근거</li>
+    </ul>
+  </section>
+
+  <!-- 4-2 개요 -->
+  <section class="slide" data-title="4.2 프로젝트 개요">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.2 프로젝트 개요: 무엇을, 왜</h2>
+    <div class="card" style="margin-bottom:1rem;">
+      <h3>무엇을 하는가</h3>
+      <p>웹 기반 통합 관제 대시보드로 AMR 위치/상태, 환경, 충전, 작업 이력을 실시간 표시하고, 비상 정지, KPI, 알람으로 운영자가 즉시 대응할 수 있게 한다.</p>
+    </div>
+    <div class="card">
+      <h3>어떤 문제를 해결하는가</h3>
+      <ul>
+        <li>분산, 비연동 데이터로 인한 “보이지 않는 물류”</li>
+        <li>사고, 오류 발생 시 개별 로봇에 대한 신속한 통제 부재</li>
+        <li>환경, 설비 이상의 사후 대응 중심 운영</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4-3 요구사항 -->
+  <section class="slide" data-title="4.3 요구사항">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.3 기능적 / 비기능적 요구사항</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>기능적 요구사항</h3>
+        <ul>
+          <li>SCR-01: 통합 대시보드 (평면도, 환경, 알람, 작업 로그, KPI 카드)</li>
+          <li>SCR-02: AMR 전체 관리 (목록, 오류, 준수율 차트)</li>
+          <li>SCR-03: AMR 개별 관제 및 <strong>비상 정지</strong></li>
+          <li>SCR-04: 충전 스테이션, 배터리 현황</li>
+          <li>SCR-05: 작업 이력 및 분석</li>
+          <li>인증: JWT 로그인, 갱신</li>
+          <li>실시간: WebSocket 이벤트 (설계), REST 폴링(시연 대안)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>비기능적 요구사항</h3>
+        <ul>
+          <li><strong>보안:</strong> Spring Security, JWT, 시크릿 원격 미저장</li>
+          <li><strong>확장성:</strong> 표준 REST, 표준화된 데이터 모델, BE↔DAS 비직접 연동</li>
+          <li><strong>UX:</strong> 화면별 스크롤 금지, 한 화면 정보 밀도</li>
+          <li><strong>정합성:</strong> Design-first, API, ERD, 화면, ADR 교차 검증</li>
+          <li><strong>운영:</strong> Docker 로컬 시연, ISO 8601 UTC</li>
+          <li><strong>협업:</strong> PR 리뷰, merge commit, 영역별 AGENTS.md</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4-4 아키텍처 기술스택 -->
+  <section class="slide" data-title="4.4 기술 스택">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.4 기술 스택: 역할 및 연동 관계</h2>
+    <p class="subtitle" style="margin-bottom:0.5rem;font-size:0.95rem;">런타임 스택 우선. 각 박스 = 기술명 + 본 프로젝트에서의 역할</p>
+    <div class="mermaid mermaid-stack">
+flowchart LR
+  subgraph fe ["프론트엔드 FE"]
+    direction TB
+    fe_vue["Vue.js<br>SCR 관제 UI<br>평면도, AMR 표시"]
+    fe_echarts["Apache ECharts<br>KPI, 통계 차트<br>운영 지표 시각화"]
+    fe_mqtt["MQTT Client<br>비상 정지 시<br>DAS에 정지 고지"]
+  end
+
+  subgraph be ["백엔드 BE (Spring Boot)"]
+    direction TB
+    be_auth["Spring Security<br>+ JWT<br>로그인, API 인증"]
+    be_rest["RESTful API<br>대시보드, AMR 조회<br>emergencyStop 명령"]
+    be_ws["WebSocket<br>상태, 요약<br>실시간 푸시"]
+    be_jpa["JPA / Hibernate<br>운행, 명령, 이력<br>DB 반영"]
+  end
+
+  subgraph db ["데이터베이스"]
+    direction TB
+    db_mysql[("MySQL<br>운행 상태, 이력<br>기준 저장소")]
+    db_h2[("H2<br>BE Docker<br>시연용 DB")]
+  end
+
+  subgraph das ["DAS 시뮬레이션"]
+    direction TB
+    das_nr["Node-RED<br>AMR 좌표, 작업<br>시뮬 생성"]
+    das_mq["MQTT Broker<br>FE 정지 수신<br>이동, 작업 중단"]
+  end
+
+  fe_vue -->|"GET/POST<br>/api/v1"| be_rest
+  fe_echarts -->|"KPI, 분석<br>데이터 조회"| be_rest
+  fe_vue -->|"구독<br>/stream"| be_ws
+  fe_mqtt -->|"publish<br>정지 토픽"| das_mq
+  das_mq -->|"트리거"| das_nr
+  be_auth --> be_rest
+  be_rest --> be_jpa
+  be_ws --> be_jpa
+  be_jpa -->|"운행, 명령<br>영속화"| db_mysql
+  be_jpa -->|"시연 스모크"| db_h2
+  be_rest -.->|"직접 연동 없음"| das_nr
+    </div>
+    <div class="stack-legend">
+      <span>실선: 본 프로젝트에서 실제 호출, 데이터 흐름</span>
+      <span class="legend-dash">점선: 설계상 연동하지 않는 경계 (BE, DAS)</span>
+    </div>
+    <table>
+      <tr><th>구분</th><th>기술</th><th>프로젝트 역할</th><th>연동 관계</th></tr>
+      <tr><td rowspan="3">FE</td><td>Vue.js</td><td>SCR-01~05 관제 화면, AMR 클릭, 비상 정지 UI</td><td>→ BE REST, WebSocket</td></tr>
+      <tr><td>Apache ECharts</td><td>오류 건수, 준수율, 충전 예측 등 차트</td><td>→ BE REST (분석 API)</td></tr>
+      <tr><td>MQTT Client</td><td>BE가 DB 반영 후 DAS에 정지 발행</td><td>→ DAS MQTT (BE 경유 안 함)</td></tr>
+      <tr><td rowspan="4">BE</td><td>Spring Security + JWT</td><td>로그인, API 접근 제어</td><td>→ REST, WS 보호</td></tr>
+      <tr><td>RESTful API</td><td>summary, amrs, commands 등 시연 API</td><td>↔ FE, → JPA</td></tr>
+      <tr><td>WebSocket</td><td>status, summary 갱신 알림 (구현 예정)</td><td>↔ FE, → JPA</td></tr>
+      <tr><td>JPA</td><td>AMR_STATUS_LOG, AMR_COMMAND 등 기록</td><td>→ MySQL, H2</td></tr>
+      <tr><td rowspan="2">DAS</td><td>Node-RED</td><td>AMR 이동, 작업 시뮬 엔진</td><td>← MQTT, BE와 비연동</td></tr>
+      <tr><td>MQTT</td><td>FE 정지 신호 수신 후 시뮬 중단</td><td>← FE</td></tr>
+      <tr><td rowspan="2">DB</td><td>MySQL</td><td>운행, 이력 원본 (목표 스택)</td><td>← BE JPA</td></tr>
+      <tr><td>H2</td><td>현재 BE 단독 시연 DB</td><td>← BE JPA</td></tr>
+    </table>
+    <p style="font-size:0.8rem;color:var(--muted);margin-top:0.35rem;">개발 지원: GitHub(코드, PR), Docker(BE 로컬 시연), Jira(WBS), Confluence(문서 복사본). 런타임 관제 흐름과 분리됨.</p>
+  </section>
+
+  <!-- 4-4 시스템 구성 -->
+  <section class="slide" data-title="4.4 시스템 구성도">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.4 시스템 구성도 및 데이터 흐름</h2>
+    <div class="mermaid">
+sequenceDiagram
+  participant U as 운영자
+  participant FE as Frontend
+  participant BE as Backend
+  participant DB as MySQL
+  participant DAS as Node-RED
+  U->>FE: 비상 정지 클릭
+  FE->>BE: POST emergencyStop command
+  BE->>DB: EMERGENCY_STOP 반영 commit
+  BE-->>FE: accepted true
+  FE->>DAS: MQTT 정지
+  Note over BE,DAS: BE와 DAS는 직접 연동하지 않음
+  BE-->>FE: WS status updated
+    </div>
+    <p>조회, 이력: BE가 DB 스냅샷 제공 ,  위치 갱신 시뮬: DAS ,  자동 복구: BE 스케줄(~60초, 시연)</p>
+  </section>
+
+  <!-- 4-4 엔티티 -->
+  <section class="slide" data-title="4.4 도메인 모델">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.4 주요 도메인 엔티티</h2>
+    <div class="mermaid">
+erDiagram
+  AREA ||--o{ ENV_SENSOR : has
+  AMR_MASTER ||--o{ AMR_STATUS_LOG : logs
+  AMR_MASTER ||--o{ AMR_TASK : assigns
+  AMR_MASTER ||--o{ AMR_COMMAND : commands
+  AMR_CHARGE_STATION ||--o{ AMR_CHARGING_LOG : records
+  WORK_ORDER ||--o{ WIP_LOT : produces
+  PRODUCT ||--o{ PR_ROUTING : routes
+    </div>
+    <p>모니터링 요소: 공장 환경, AMR 위치, 상태(IMU, SoH, 적재), 제조, 작업 데이터</p>
+  </section>
+
+  <!-- 4-5 페이지 개요 -->
+  <section class="slide" data-title="4.5 페이지별 기능">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.5 페이지별 기능 (개요)</h2>
+    <p class="subtitle" style="font-size:1rem;margin-bottom:1rem;">운영자(고객)가 각 화면에서 무엇을 얻는지 중심으로 구성. SCR-01~05별 상세는 다음 슬라이드.</p>
+    <table>
+      <tr><th>화면</th><th>고객이 얻는 핵심 이득</th><th>화면의 목표</th><th>구현</th></tr>
+      <tr><td>SCR-01 메인 대시보드</td><td>전장 상황을 한 화면에서 즉시 파악</td><td>10초 내 1차 상황 판단</td><td class="status-progress">FE 뷰, BE summary</td></tr>
+      <tr><td>SCR-02 AMR 전체 관리</td><td>함대 전체의 패턴, 취약점 발견</td><td>선제적 운영 리스크 관리</td><td class="status-progress">뷰, Analytics KPI 일부</td></tr>
+      <tr><td>SCR-03 AMR 개별 관제</td><td>한 대 집중 확인, 비상 정지</td><td>이상 발견 후 최소 단계 대응</td><td class="status-progress">BE emergencyStop 완료</td></tr>
+      <tr><td>SCR-04 충전 현황</td><td>충전 병목, 저전력 사전 감지</td><td>충전 때문에 인한 가동 중단 방지</td><td class="status-progress">뷰, API 부분</td></tr>
+      <tr><td>SCR-05 작업 이력, 분석</td><td>데이터 기반 운영, 개선 근거</td><td>객관적 보고와 의사결정 지원</td><td class="status-progress">뷰, 서비스 부분</td></tr>
+    </table>
+  </section>
+
+  <!-- SCR-01 -->
+  <section class="slide screen-detail" data-title="SCR-01 메인 대시보드">
+    <span class="section-tag">4.5 페이지별 기능</span>
+    <p class="screen-id">SCR-01</p>
+    <h2>메인 대시보드</h2>
+    <p class="value-line">공장 전체를 한눈에 보고, 지금 어디서 무엇이 일어나는지를 즉시 파악할 수 있습니다.</p>
+    <h3>의도와 목적</h3>
+    <p>AMR, 환경, 알람, 작업 로그가 여러 화면과 시스템에 흩어져 있으면 대응이 늦어집니다. 이 화면은 <strong>통합 관제의 시작점</strong>으로, 운영자가 스크롤 없이 한 화면에서 현장 상황의 전체 그림을 얻도록 설계했습니다.</p>
+    <h3>고객이 얻는 것</h3>
+    <ul>
+      <li>공장 평면도 위에서 AMR 위치, 이동, 상태(운행, 대기, 충전, 오류)를 색으로 구분해 <strong>어느 구역에 문제가 있는지</strong> 바로 알 수 있습니다.</li>
+      <li>구역별 온도, 습도, 미세먼지를 함께 보며 <strong>환경 이상과 로봇 이상을 한 맥락에서</strong> 판단할 수 있습니다.</li>
+      <li>운영, 대기, 충전, 에러 대수와 <strong>미해결 건수</strong>를 카드로 확인해, 우선 대응할 대상을 빠르게 고를 수 있습니다.</li>
+      <li>충돌, 경로 이탈, 고장 등 <strong>중요 알람과 작업 로그</strong>를 실시간으로 받아, 사고 확대 전에 조치를 시작할 수 있습니다.</li>
+    </ul>
+    <p class="screen-goal"><strong>목표:</strong> 여러 창을 돌아다니지 않고도, 10초 안에 공장 물류와 안전 상태의 1차 판단을 끝낸다.</p>
+    <p class="impl-note">핵심 기능: 평면도, 환경 현황, 상태 요약 카드, 실시간 알람, 작업 로그 | 구현: FE DashboardView, BE <code>GET /dashboard/summary</code> 등</p>
+  </section>
+
+  <!-- SCR-02 -->
+  <section class="slide screen-detail" data-title="SCR-02 AMR 전체 관리">
+    <span class="section-tag">4.5 페이지별 기능</span>
+    <p class="screen-id">SCR-02</p>
+    <h2>AMR 전체 관리</h2>
+    <p class="value-line">전체 AMR을 목록, 통계, 추이로 묶어 보고, 어느 장비, 어느 시기에 운영이 흔들리는지 패턴을 찾을 수 있습니다.</p>
+    <h3>의도와 목적</h3>
+    <p>대시보드가 지금에 집중한다면, 이 화면은 <strong>전체 함대의 운영 품질</strong>을 다룹니다. 장비별 상태뿐 아니라 오류 빈도, 일정 준수율, 건전성 경고를 함께 보여, 반복되는 운영 리스크를 관리하려는 목적입니다.</p>
+    <h3>고객이 얻는 것</h3>
+    <ul>
+      <li>모든 AMR의 상태, 위치, 배터리, 작업을 표와 목록으로 비교해 <strong>병목, 유휴, 이상 장비</strong>를 한 번에 집계할 수 있습니다.</li>
+      <li>일별 오류 건수, 시간 준수율 차트로 <strong>언제부터 나빠졌는지</strong> 추세를 확인하고, 원인 조사와 회의 자료로 활용할 수 있습니다.</li>
+      <li>건전성 기준 미달, 점검 필요 장비를 따로 보여 <strong>사전 점검, 예방 정비</strong> 일정을 잡기 쉽습니다.</li>
+      <li>특정 장비를 선택하면 개별 관제(SCR-03)로 바로 이어져, <strong>탐색에서 조치까지</strong> 끊기지 않습니다.</li>
+    </ul>
+    <p class="screen-goal"><strong>목표:</strong> 개별 사고 대응을 넘어, 데이터로 운영 이상 구간과 취약 장비를 선제적으로 찾는다.</p>
+    <p class="impl-note">핵심 기능: AMR 목록, 오류/준수율 차트, 건전성 영역, 상태 테이블 | 구현: AmrListView, Analytics KPI API 일부 예정</p>
+  </section>
+
+  <!-- SCR-03 -->
+  <section class="slide screen-detail" data-title="SCR-03 AMR 개별 관제">
+    <span class="section-tag">4.5 페이지별 기능</span>
+    <p class="screen-id">SCR-03</p>
+    <h2>AMR 개별 관제</h2>
+    <p class="value-line">문제가 난 한 대의 AMR에 집중해, 상태, 이력, 비상 조치를 한 화면에서 마칠 수 있습니다.</p>
+    <h3>의도와 목적</h3>
+    <p>통합 화면에서는 깊이 있는 판단과 <strong>즉각적인 통제</strong>가 어렵습니다. 이 화면은 이 로봇 한 대에 지금 무슨 일이 일어나고, 내가 무엇을 할 수 있는가에 답하기 위해 만들었습니다. 특히 <strong>비상 정지</strong>는 현장 안전과 가동 중단 범위를 좁히는 핵심 수단입니다.</p>
+    <h3>고객이 얻는 것</h3>
+    <ul>
+      <li>선택한 AMR의 작업, 배터리, 위치, 적재, SoH 등 운영에 필요한 정보를 모아, 현장 담당자와 같은 수준으로 <strong>상황을 공유</strong>할 수 있습니다.</li>
+      <li>오류, 고장 코드가 있으면 <strong>무엇이 잘못됐는지</strong> 먼저 보이고, 대응 우선순위를 정할 수 있습니다.</li>
+      <li>비상 정지 실행 시 시스템이 명령을 기록하고 시뮬/현장 동작을 멈추도록 하여, <strong>멈췄다는 사실을 조직 전체가 같은 기준으로</strong> 확인할 수 있습니다.</li>
+      <li>누적 주행, 시간 준수율 추이로 <strong>이 장비만의 운영 습관</strong>을 파악할 수 있습니다.</li>
+    </ul>
+    <p class="screen-goal"><strong>목표:</strong> 이상 징후 발견 후, 해당 AMR에 대한 확인, 정지, 보고까지 최소 단계로 완료한다.</p>
+    <p class="impl-note">핵심 기능: 장비 상세, 센서/상태, 비상 정지(E-Stop), 준수율 차트 | 구현: AmrDetailView, BE <code>POST .../commands</code> emergencyStop 완료</p>
+  </section>
+
+  <!-- SCR-04 -->
+  <section class="slide screen-detail" data-title="SCR-04 충전 현황">
+    <span class="section-tag">4.5 페이지별 기능</span>
+    <p class="screen-id">SCR-04</p>
+    <h2>배터리 / 충전 스테이션 현황</h2>
+    <p class="value-line">충전 자원이 부족하거나 배터리가 바닥나기 전에 병목과 위험을 알 수 있습니다.</p>
+    <h3>의도와 목적</h3>
+    <p>AMR 물류는 움직일 수 있는 대수에 좌우됩니다. 충전소 점유, 대기열, 완충 예상 시간을 한곳에 모아, <strong>가동 중단을 충전 문제로 막지 않으려는</strong> 화면입니다.</p>
+    <h3>고객이 얻는 것</h3>
+    <ul>
+      <li>스테이션별 연결, 충전 상태, 혼잡 여부를 보며 <strong>어느 충전소에 AMR을 보낼지, 대기를 어떻게 나눌지</strong> 결정할 수 있습니다.</li>
+      <li>저전력, 충전 지연 알림으로 <strong>갑작스러운 정지, 작업 미이행</strong>을 줄일 수 있습니다.</li>
+      <li>30분, 1시간, 그 이상 완충 예상 분포를 보며 <strong>당일 물류 계획을 현실적으로</strong> 조정할 수 있습니다.</li>
+      <li>대기열에서 장비를 골라 개별 관제로 넘어가 <strong>충전 이슈와 운행 이슈</strong>를 연결해 볼 수 있습니다.</li>
+    </ul>
+    <p class="screen-goal"><strong>목표:</strong> 배터리, 충전 때문에 생산 라인이 멈추기 전에, 충전 운영을 재배치한다.</p>
+    <p class="impl-note">핵심 기능: 충전 요약 카드, 스테이션 상세, 대기열, 완료 예측 차트, 충전 알림 | 구현: ChargingStationsView, BatteryView 등</p>
+  </section>
+
+  <!-- SCR-05 -->
+  <section class="slide screen-detail" data-title="SCR-05 작업 이력 및 분석">
+    <span class="section-tag">4.5 페이지별 기능</span>
+    <p class="screen-id">SCR-05</p>
+    <h2>작업 이력 및 분석</h2>
+    <p class="value-line">지나간 작업과 이동 데이터를 숫자와 추이로 돌아보며, 다음 운영과 개선에 쓸 근거를 얻을 수 있습니다.</p>
+    <h3>의도와 목적</h3>
+    <p>실시간 관제만으로는 우리 물류가 실제로 얼마나 일했고, 어디가 비효율인지 설명하기 어렵습니다. 이 화면은 <strong>이력과 분석</strong>을 통해 보고, 공정 개선, 인력 배치, 레이아웃 검토에 필요한 <strong>운영 인사이트</strong>를 제공하려는 목적입니다.</p>
+    <h3>고객이 얻는 것</h3>
+    <ul>
+      <li>일별 작업 건수, 이동 거리, 작업 시간, 평균 처리 시간으로 <strong>생산성과 부하</strong>를 객관적으로 확인할 수 있습니다.</li>
+      <li>시간대별, AMR별 작업 비중을 보며 <strong>피크 구간, 과부하 장비</strong>를 찾을 수 있습니다.</li>
+      <li>작업 내역 목록(출발, 도착, 상태)으로 <strong>특정 사고, 지연의 전후 맥락</strong>을 추적할 수 있습니다.</li>
+      <li>전일 대비 변화 등 요약으로 <strong>어제보다 나아졌는가</strong>를 짧은 회의에서 공유할 수 있습니다.</li>
+    </ul>
+    <p class="screen-goal"><strong>목표:</strong> 감에 의존하지 않고, 이동과 작업 데이터로 운영 개선과 의사결정을 뒷받침한다.</p>
+    <p class="impl-note">핵심 기능: 작업 요약 카드, 시간대/AMR별 차트, 작업 내역·일별 요약 테이블 | 구현: WorkHistoryView, Analytics/WorkHistory API</p>
+  </section>
+
+  <!-- 4-5 비상정지 -->
+  <section class="slide" data-title="4.5 비상 정지">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>핵심 시연 시나리오: 비상 정지</h2>
+    <ol style="margin-left:1.25rem;line-height:1.8;">
+      <li>FE에서 비상 정지 실행</li>
+      <li>BE: DB에 <code>EMERGENCY_STOP</code> 반영 후 <code>accepted: true</code></li>
+      <li>FE → DAS: MQTT로 해당 AMR 시뮬 중단</li>
+      <li>대시보드 에러, 미해결 수치 유지</li>
+      <li>약 60초 후 BE 자동 복구 → KPI 감소 (FE resume 버튼 없음)</li>
+    </ol>
+    <p class="note">2026-05-18 BE Docker 스모크로 Phase A REST 경로 검증 완료</p>
+  </section>
+
+  <!-- 4-6 AI -->
+  <section class="slide" data-title="4.6 AI 프로세스">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.6 AI 기반 개발 프로세스 적용 산출물</h2>
+    <h3>활용 목적</h3>
+    <ul>
+      <li>도메인 조사, 요구사항 정립 가속 (Gemini, ChatGPT)</li>
+      <li>API, ERD, 화면 설계 초안 및 BE 계층 구조 (ChatGPT, Cursor)</li>
+      <li>Design-first: docs 선행 → TODO 순차 구현 (AGENTS.md)</li>
+      <li>코드 생성, PR Copilot Review로 품질 2차 점검</li>
+    </ul>
+    <table>
+      <tr><th>도구</th><th>역할</th><th>대표 산출물</th></tr>
+      <tr><td>Gemini</td><td>조사, Git 운영 힌트</td><td>프로젝트 정의서 배경, 고도화 비전</td></tr>
+      <tr><td>ChatGPT</td><td>문서, API 초안</td><td>API 정의.md 초안, 발표 초안</td></tr>
+      <tr><td>Copilot</td><td>코드, PR 리뷰</td><td>FE/BE/DB 소스, jwt.secret 이슈 발견</td></tr>
+      <tr><td>Cursor</td><td>BE 구현, 정합성 검토</td><td>BE/TODO.md, ADR, 설계 교차 검토</td></tr>
+    </table>
+  </section>
+
+  <!-- 4-6 AI 워크플로 -->
+  <section class="slide" data-title="4.6 AI 워크플로">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>AI 활용 워크플로우</h2>
+    <div class="mermaid">
+flowchart LR
+  A["조사, 기획"] --> B["설계 초안"]
+  B --> C["팀 확정 docs"]
+  C --> D["정합성 재검토"]
+  D --> E["TODO 순차 구현"]
+  E --> F["PR + Copilot + 팀 리뷰"]
+    </div>
+    <p>교훈: AI 출력은 <strong>초안</strong>이며, 팀 재서술, 로컬 실행, PR 리뷰 없이 병합하지 않음</p>
+  </section>
+
+  <!-- 4-7 트러블슈팅 -->
+  <section class="slide" data-title="4.7 트러블슈팅">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>4.7 트러블슈팅 (시행착오)</h2>
+    <table>
+      <tr><th>이슈</th><th>원인</th><th>조치</th></tr>
+      <tr>
+        <td>jwt.secret 원격 커밋</td>
+        <td>Copilot 생성 Security 설정에 시크릿 포함</td>
+        <td>profile 분리, gitignore, Copilot PR 리뷰로 발견</td>
+      </tr>
+      <tr>
+        <td>Copilot 리뷰 거부 (711 files)</td>
+        <td>node_modules 추적, ignore 누락</td>
+        <td><code>git rm -r --cached node_modules</code>, Gemini 힌트 참고</td>
+      </tr>
+      <tr>
+        <td>DB 스키마 ↔ BE API 불일치</td>
+        <td>초기 스키마와 기능 요구 괴리</td>
+        <td>기능, API 우선으로 스키마, 엔티티 재정합</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 구현 현황 -->
+  <section class="slide" data-title="구현 현황">
+    <span class="section-tag">4. 수행 경과</span>
+    <h2>구현 현황 및 향후 계획</h2>
+    <table>
+      <tr><th>영역</th><th>완료</th><th>진행/예정</th></tr>
+      <tr>
+        <td>BE</td>
+        <td class="status-done">Phase A REST (summary, emergencyStop, auto-recovery, GET /amrs), Docker H2 스모크</td>
+        <td class="status-todo">WebSocket, 환경 API(선택), MySQL 연동, Analytics KPI 확장</td>
+      </tr>
+      <tr>
+        <td>FE</td>
+        <td class="status-done">7개 View 스캐폴드, Dashboard API 연동 기반</td>
+        <td class="status-todo">인증, MQTT, WebSocket, SCR별 API 완전 연동, UX</td>
+      </tr>
+      <tr>
+        <td>DB/DAS</td>
+        <td class="status-done">init.sql, 스키마 설계</td>
+        <td class="status-todo">Node-RED 파이프라인, compose 통합</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 고도화 -->
+  <section class="slide" data-title="고도화 비전">
+    <span class="section-tag">부록</span>
+    <h2>고도화 비전</h2>
+    <ul>
+      <li>이기종 로봇(AGV, AMR) 통합 관제 및 미들웨어 기반 자가 치유</li>
+      <li>AI 기반 레이아웃, 작업 우선순위 최적화</li>
+      <li>예지보전(SoH, 부품 수명) 및 무중단 물류 재설계</li>
+      <li>디지털 트윈 기반 시나리오 검증</li>
+    </ul>
+    <p style="margin-top:1.5rem;color:var(--muted);">상세: docs/for_presentation/고도화 비전.md</p>
+  </section>
+
+  <!-- 마무리 -->
+  <section class="slide" data-title="감사">
+    <span class="section-tag">Fin</span>
+    <h1>감사합니다</h1>
+    <p class="subtitle">질문, 피드백을 환영합니다</p>
+    <ul style="margin-top:2rem;">
+      <li>저장소: AMR-monitoring-smart-factory</li>
+      <li>설계: docs/프로젝트 정의서.md, 화면 설계서.md, API 정의.md</li>
+      <li>AI 산출물: docs/for_presentation/AI 기반 개발 프로세스 적용 산출물.md</li>
+    </ul>
+  </section>
+
+</div>
+
+<nav class="nav">
+  <button type="button" id="prevBtn">이전</button>
+  <span class="progress" id="progress">1 / 1</span>
+  <button type="button" id="nextBtn">다음</button>
+</nav>
+
+<script>
+  (function () {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        background: '#ffffff',
+        primaryColor: '#e0f2fe',
+        primaryTextColor: '#0f172a',
+        primaryBorderColor: '#0369a1',
+        secondaryColor: '#f1f5f9',
+        tertiaryColor: '#ffffff',
+        lineColor: '#0369a1',
+        textColor: '#0f172a',
+        mainBkg: '#e0f2fe',
+        nodeBorder: '#0369a1',
+        clusterBkg: '#f8fafc',
+        titleColor: '#0f172a',
+        edgeLabelBackground: '#ffffff'
+      },
+      securityLevel: 'loose',
+      flowchart: { curve: 'basis', htmlLabels: true },
+      sequence: { useMaxWidth: true }
+    });
+
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    let index = 0;
+
+    async function renderMermaidInSlide(slideEl) {
+      const nodes = slideEl.querySelectorAll('.mermaid:not([data-rendered])');
+      if (!nodes.length) return;
+      try {
+        await mermaid.run({ nodes: Array.from(nodes) });
+        nodes.forEach(function (node) {
+          node.setAttribute('data-rendered', 'true');
+        });
+      } catch (error) {
+        console.error('Mermaid render error:', error);
+      }
+    }
+
+    function showSlide(i) {
+      slides.forEach(function (slide, j) {
+        slide.classList.toggle('active', j === i);
+      });
+      index = i;
+      const title = slides[i].dataset.title || '';
+      document.getElementById('progress').textContent =
+        (i + 1) + ' / ' + slides.length + (title ? ' | ' + title : '');
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          renderMermaidInSlide(slides[i]);
+        });
+      });
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', function () {
+      if (index > 0) showSlide(index - 1);
+    });
+    document.getElementById('nextBtn').addEventListener('click', function () {
+      if (index < slides.length - 1) showSlide(index + 1);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        if (index < slides.length - 1) showSlide(index + 1);
+      }
+      if (e.key === 'ArrowLeft' && index > 0) showSlide(index - 1);
+    });
+
+    showSlide(0);
+  })();
+</script>
+</body>
+</html>
