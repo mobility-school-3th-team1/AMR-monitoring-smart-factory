@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DashboardStatusNormalizerTest {
 
@@ -29,9 +30,11 @@ class DashboardStatusNormalizerTest {
 
     @Test
     void normalizeAmrQueryStatusRejectsUnknownStatuses() {
-        assertThrows(
+        IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> DashboardStatusNormalizer.normalizeAmrQueryStatus("FOO")
         );
+
+        assertTrue(exception.getMessage().contains("'FOO'"));
     }
 }

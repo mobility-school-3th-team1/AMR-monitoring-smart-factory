@@ -340,7 +340,7 @@ public class AmrService {
         Set<String> wantedStatuses = Arrays.stream(statusQuery.split(","))
                 .map(String::trim)
                 .filter(token -> !token.isEmpty())
-                .map(this::parseStatusFilterToken)
+                .map(DashboardStatusNormalizer::normalizeAmrQueryStatus)
                 .collect(Collectors.toSet());
 
         if (wantedStatuses.isEmpty()) {
@@ -348,17 +348,6 @@ public class AmrService {
         }
 
         return wantedStatuses;
-    }
-
-    private String parseStatusFilterToken(String token) {
-        try {
-            return DashboardStatusNormalizer.normalizeAmrQueryStatus(token);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException(
-                    "Unsupported status value: " + token + ". Allowed values: "
-                            + DashboardStatusNormalizer.SUPPORTED_AMR_QUERY_STATUS_VALUES
-            );
-        }
     }
 
     private Comparator<AmrListRow> amrListRowComparator(String sort) {

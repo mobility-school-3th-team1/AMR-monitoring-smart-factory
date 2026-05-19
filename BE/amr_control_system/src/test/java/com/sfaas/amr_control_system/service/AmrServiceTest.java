@@ -34,7 +34,7 @@ class AmrServiceTest {
                 () -> amrService.listAmrs(null, null, "FOO", null, null, null, null)
         );
 
-        assertTrue(exception.getMessage().contains("Unsupported status value: FOO"));
+        assertTrue(exception.getMessage().contains("Unsupported status value: 'FOO'"));
         verifyNoInteractions(amrRepository, amrStatusLogRepository, amrTaskRepository, amrCommandRepository);
     }
 }

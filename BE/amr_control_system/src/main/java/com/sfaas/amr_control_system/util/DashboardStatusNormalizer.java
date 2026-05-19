@@ -20,9 +20,6 @@ public final class DashboardStatusNormalizer {
             STATUS_ERROR,
             STATUS_EMERGENCY_STOP
     );
-    private static final String INVALID_AMR_QUERY_STATUS_MESSAGE =
-            "status value must be one of: " + SUPPORTED_AMR_QUERY_STATUS_VALUES;
-
     private DashboardStatusNormalizer() {
     }
 
@@ -77,7 +74,7 @@ public final class DashboardStatusNormalizer {
 
     public static String normalizeAmrQueryStatus(String status) {
         if (status == null || status.isBlank()) {
-            throw new IllegalArgumentException(INVALID_AMR_QUERY_STATUS_MESSAGE);
+            throw new IllegalArgumentException(buildInvalidAmrQueryStatusMessage(status));
         }
 
         String normalized = status.trim().toUpperCase(Locale.ROOT);
@@ -85,7 +82,33 @@ public final class DashboardStatusNormalizer {
             return normalized;
         }
 
-        throw new IllegalArgumentException(INVALID_AMR_QUERY_STATUS_MESSAGE);
+        throw new IllegalArgumentException(buildInvalidAmrQueryStatusMessage(status));
+    }
+
+    private static String buildInvalidAmrQueryStatusMessage(String status) {
+        return "Unsupported status value: " + summarizeStatusValue(status)
+                + ". Allowed values: " + SUPPORTED_AMR_QUERY_STATUS_VALUES;
+    }
+
+    private static String summarizeStatusValue(String status) {
+        if (status == null || status.isBlank()) {
+            return "<blank>";
+        }
+
+        String trimmed = status.trim();
+        StringBuilder sanitized = new StringBuilder();
+        for (int index = 0; index < trimmed.length(); index++) {
+            char character = trimmed.charAt(index);
+            sanitized.append(Character.isISOControl(character) ? '?' : character);
+            if (sanitized.length() == 32) {
+                if (index < trimmed.length() - 1) {
+                    sanitized.append("...");
+                }
+                break;
+            }
+        }
+
+        return "'" + sanitized + "'";
     }
 
     public static boolean isErrorStatus(String normalizedStatus) {
