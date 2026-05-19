@@ -56,6 +56,8 @@ public class AmrService {
     private static final String TASK_STATUS_CANCELLED = "CANCELLED";
     private static final String EMPTY_JSON_PARAMS = "{}";
     private static final String SORT_UNRESOLVED_FIRST = "unresolvedfirst";
+    private static final String INVALID_STATUS_QUERY_MESSAGE =
+            "status must include one or more of: OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
 
     private final AmrRepository amrRepository;
     private final AmrStatusLogRepository amrStatusLogRepository;
@@ -342,7 +344,7 @@ public class AmrService {
                 .collect(Collectors.toSet());
 
         if (wantedStatuses.isEmpty()) {
-            DashboardStatusNormalizer.normalizeAmrQueryStatus(statusQuery);
+            throw new IllegalArgumentException(INVALID_STATUS_QUERY_MESSAGE);
         }
 
         return wantedStatuses;

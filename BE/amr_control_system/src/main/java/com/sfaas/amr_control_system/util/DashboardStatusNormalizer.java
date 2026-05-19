@@ -18,8 +18,8 @@ public final class DashboardStatusNormalizer {
             STATUS_ERROR,
             STATUS_EMERGENCY_STOP
     );
-    private static final String SUPPORTED_AMR_QUERY_STATUS_MESSAGE =
-            "status must be a comma-separated list of: OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
+    private static final String INVALID_AMR_QUERY_STATUS_MESSAGE =
+            "status value must be one of: OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
 
     private DashboardStatusNormalizer() {
     }
@@ -75,7 +75,7 @@ public final class DashboardStatusNormalizer {
 
     public static String normalizeAmrQueryStatus(String status) {
         if (status == null || status.isBlank()) {
-            throw new IllegalArgumentException(SUPPORTED_AMR_QUERY_STATUS_MESSAGE);
+            throw new IllegalArgumentException(INVALID_AMR_QUERY_STATUS_MESSAGE);
         }
 
         String normalized = status.trim().toUpperCase(Locale.ROOT);
@@ -83,7 +83,7 @@ public final class DashboardStatusNormalizer {
             return normalized;
         }
 
-        throw new IllegalArgumentException(SUPPORTED_AMR_QUERY_STATUS_MESSAGE);
+        throw new IllegalArgumentException(INVALID_AMR_QUERY_STATUS_MESSAGE);
     }
 
     public static boolean isErrorStatus(String normalizedStatus) {

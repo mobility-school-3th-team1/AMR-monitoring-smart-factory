@@ -8,10 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class DashboardStatusNormalizerTest {
 
     @Test
-    void normalizeAmrQueryStatusAcceptsSupportedStatuses() {
+    void normalizeAmrQueryStatusAcceptsSupportedStatusValues() {
         assertEquals(
                 DashboardStatusNormalizer.STATUS_ERROR,
                 DashboardStatusNormalizer.normalizeAmrQueryStatus(" error ")
+        );
+        assertEquals(
+                DashboardStatusNormalizer.STATUS_EMERGENCY_STOP,
+                DashboardStatusNormalizer.normalizeAmrQueryStatus("EMERGENCY_STOP")
         );
     }
 
