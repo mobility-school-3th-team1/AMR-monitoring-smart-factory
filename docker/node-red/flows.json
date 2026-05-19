@@ -3,7 +3,7 @@
         "id": "56b1ad1a6ae62587",
         "type": "tab",
         "label": "플로우 1",
-        "disabled": false,
+        "disabled": true,
         "info": "",
         "env": []
     },
@@ -456,5 +456,221 @@
         "x": 1020,
         "y": 420,
         "wires": []
+    },
+    {
+        "id": "b701e8a4c3d25f10",
+        "type": "tab",
+        "label": "시연 MVP",
+        "disabled": false,
+        "info": "녹화 시연: factory/environment/current (5s), factory/amrs/positions (2s), factory/amr/command subscribe",
+        "env": []
+    },
+    {
+        "id": "b702e8a4c3d25f11",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "MVP init",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.2,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 80,
+        "wires": [
+            [
+                "b703e8a4c3d25f12"
+            ]
+        ]
+    },
+    {
+        "id": "b703e8a4c3d25f12",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "init_mvp_seed",
+        "func": "const sensor = (temp, humid, particle, cogas) => ({ temp, humid, particle, cogas });\nconst fourSensors = (t, h, p, c) => ({\n    sensor1: sensor(t, h, p, c),\n    sensor2: sensor(t + 1, h, p, c),\n    sensor3: sensor(t, h + 1, p + 1, c),\n    sensor4: sensor(t, h, p, c + 1)\n});\n\nconst envSeed = {\n    AREA_LOAD_LC: fourSensors(25, 33, 22, 5),\n    AREA_ASSEMBLE_01: fourSensors(24, 32, 21, 4),\n    AREA_ASSEMBLE_02: fourSensors(26, 34, 23, 6),\n    AREA_OUT_BSA: fourSensors(25, 33, 22, 5)\n};\n\nglobal.set('envSeed', envSeed);\nglobal.set('amrPositions', [\n    { amrId: 'amr-01', x: 25, y: 50 },\n    { amrId: 'amr-02', x: 40, y: 30 },\n    { amrId: 'amr-03', x: 55, y: 45 },\n    { amrId: 'amr-04', x: 70, y: 60 },\n    { amrId: 'amr-05', x: 15, y: 75 }\n]);\nglobal.set('amrStopped', {});\n\nmsg.payload = 'MVP seed initialized';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b704e8a4c3d25f13",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "env 5s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 180,
+        "wires": [
+            [
+                "b705e8a4c3d25f14"
+            ]
+        ]
+    },
+    {
+        "id": "b705e8a4c3d25f14",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "build_environment",
+        "func": "const areas = global.get('envSeed');\nif (!areas) {\n    node.warn('envSeed not initialized');\n    return null;\n}\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    areas\n});\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 180,
+        "wires": [
+            [
+                "b706e8a4c3d25f15"
+            ]
+        ]
+    },
+    {
+        "id": "b706e8a4c3d25f15",
+        "type": "mqtt out",
+        "z": "b701e8a4c3d25f10",
+        "name": "pub environment",
+        "topic": "factory/environment/current",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 580,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "b707e8a4c3d25f16",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "amr 2s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "2",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1.5",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 280,
+        "wires": [
+            [
+                "b708e8a4c3d25f17"
+            ]
+        ]
+    },
+    {
+        "id": "b708e8a4c3d25f17",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "build_amr_positions",
+        "func": "const base = global.get('amrPositions') || [];\nconst stopped = global.get('amrStopped') || {};\nconst positions = base.map((item) => {\n    if (stopped[item.amrId]) {\n        return { amrId: item.amrId, x: item.x, y: item.y };\n    }\n    return { amrId: item.amrId, x: item.x, y: item.y };\n});\nmsg.payload = JSON.stringify(positions);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 280,
+        "wires": [
+            [
+                "b709e8a4c3d25f18"
+            ]
+        ]
+    },
+    {
+        "id": "b709e8a4c3d25f18",
+        "type": "mqtt out",
+        "z": "b701e8a4c3d25f10",
+        "name": "pub amr positions",
+        "topic": "factory/amrs/positions",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 590,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "b70ae8a4c3d25f19",
+        "type": "mqtt in",
+        "z": "b701e8a4c3d25f10",
+        "name": "sub amr command",
+        "topic": "factory/amr/command",
+        "qos": "1",
+        "datatype": "utf8",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 400,
+        "wires": [
+            [
+                "b70be8a4c3d25f1a"
+            ]
+        ]
+    },
+    {
+        "id": "b70be8a4c3d25f1a",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "handle_emergency_stop",
+        "func": "let command;\ntry {\n    command = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    node.warn('Invalid command payload');\n    return null;\n}\n\nif (command.command !== 'emergencyStop' || !command.amrId) {\n    return null;\n}\n\nconst stopped = global.get('amrStopped') || {};\nstopped[command.amrId] = true;\nglobal.set('amrStopped', stopped);\n\nnode.status({ fill: 'red', shape: 'dot', text: command.amrId + ' stopped' });\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 400,
+        "wires": [
+            []
+        ]
     }
 ]

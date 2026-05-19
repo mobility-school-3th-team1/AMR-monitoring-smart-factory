@@ -21,3 +21,4 @@ coverage/
 docker/node-red/node_modules/
 docker/node-red/lib/
 docker/node-red/.npm/
+**/.npm/

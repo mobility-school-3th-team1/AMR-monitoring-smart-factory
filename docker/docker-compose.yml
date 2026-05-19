@@ -9,6 +9,9 @@ services:
     container_name: MQTT_Broker
     ports:
       - "${MQTT_PORT:-1883}:1883"
+      - "${MQTT_WS_PORT:-9001}:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     networks:
       - scada-network
     environment:
@@ -30,7 +33,10 @@ services:
       TZ: 'Asia/Seoul'
 
   nodered:
-    image: nodered/node-red:latest
+    build:
+      context: ./node-red
+      dockerfile: Dockerfile
+    image: amr-nodered:local
     container_name: Node-RED
     ports:
       - "${NODERED_PORT:-1880}:1880"

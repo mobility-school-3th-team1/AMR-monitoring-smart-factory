@@ -14,7 +14,31 @@
 루트 폴더에서 아래 명령으로 실행하세요:
 
 ```bash
-docker compose --env-file .env -f docker/docker-compose.yml up
+docker compose --env-file .env -f docker/docker-compose.yml up --build
+```
+
+### 포트 (기존 DAS 우선)
+
+| 용도 | 포트 | 환경 변수 |
+| --- | --- | --- |
+| MQTT (Node-RED) | 1883 | `MQTT_PORT` |
+| MQTT WebSocket (FE 브라우저) | 9001 | `MQTT_WS_PORT` |
+| Node-RED UI | 1880 | `NODERED_PORT` |
+| MySQL | 3306 | `DB_PORT` |
+
+### 시연 MVP MQTT (Node-RED 탭 「시연 MVP」)
+
+| 토픽 | 방향 | 주기 |
+| --- | --- | --- |
+| `factory/environment/current` | publish | 5초 |
+| `factory/amrs/positions` | publish | 2초 |
+| `factory/amr/command` | subscribe (`emergencyStop`) | - |
+
+검증 (호스트, Mosquitto 클라이언트 설치 시):
+
+```bash
+mosquitto_sub -h localhost -p 1883 -t "factory/environment/current" -C 1
+mosquitto_sub -h localhost -p 1883 -t "factory/amrs/positions" -C 1
 ```
 
 ## 새 컨테이너 추가 가이드
