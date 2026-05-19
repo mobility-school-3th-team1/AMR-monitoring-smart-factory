@@ -190,7 +190,7 @@
 
 쿼리 파라미터: page, limit, status, batteryMin, batteryMax, search, sort
 
-- `status`: 단일 또는 콤마 구분. 에러 목록(SCR-01 ④ 클릭) 예: `status=ERROR,EMERGENCY_STOP`
+- `status`: 단일 또는 콤마 구분. 허용 값은 `OPERATING`, `IDLE`, `CHARGING`, `ERROR`, `EMERGENCY_STOP`이며, 그 외 값은 `400 Bad Request`. 에러 목록(SCR-01 ④ 클릭) 예: `status=ERROR,EMERGENCY_STOP`
 - `sort=unresolvedFirst` (시연·SCR-01 ④): **미해결**(`fault_recovered_at`·`emergency_resolved_at` NULL) 우선, 동일 시 `EMERGENCY_STOP` 우선, 그다음 `ERROR`
 
 응답 예시:

@@ -2,6 +2,7 @@ package com.sfaas.amr_control_system.util;
 
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Set;
 
 public final class DashboardStatusNormalizer {
 
@@ -10,6 +11,15 @@ public final class DashboardStatusNormalizer {
     public static final String STATUS_CHARGING = "CHARGING";
     public static final String STATUS_ERROR = "ERROR";
     public static final String STATUS_EMERGENCY_STOP = "EMERGENCY_STOP";
+    private static final Set<String> SUPPORTED_AMR_QUERY_STATUSES = Set.of(
+            STATUS_OPERATING,
+            STATUS_IDLE,
+            STATUS_CHARGING,
+            STATUS_ERROR,
+            STATUS_EMERGENCY_STOP
+    );
+    private static final String SUPPORTED_AMR_QUERY_STATUS_MESSAGE =
+            "status must be a comma-separated list of: OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
 
     private DashboardStatusNormalizer() {
     }
@@ -61,6 +71,19 @@ public final class DashboardStatusNormalizer {
         }
 
         return STATUS_IDLE;
+    }
+
+    public static String normalizeAmrQueryStatus(String status) {
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException(SUPPORTED_AMR_QUERY_STATUS_MESSAGE);
+        }
+
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        if (SUPPORTED_AMR_QUERY_STATUSES.contains(normalized)) {
+            return normalized;
+        }
+
+        throw new IllegalArgumentException(SUPPORTED_AMR_QUERY_STATUS_MESSAGE);
     }
 
     public static boolean isErrorStatus(String normalizedStatus) {

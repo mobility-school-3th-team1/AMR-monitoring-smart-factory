@@ -74,6 +74,7 @@ public class AmrService {
     ) {
         int resolvedPage = page == null || page < 1 ? DEFAULT_PAGE : page;
         int resolvedLimit = limit == null || limit < 1 ? DEFAULT_LIMIT : limit;
+        Set<String> wantedStatuses = parseStatusFilterTokens(status);
 
         List<AmrDto> filtered = amrRepository.findAll().stream()
                 .map(amr -> {
@@ -82,7 +83,7 @@ public class AmrService {
                             .orElse(null);
                     return new AmrListRow(buildAmrDto(amr, latestLog), latestLog);
                 })
-                .filter(row -> matchesStatusFilter(row.dto(), status))
+                .filter(row -> matchesStatusFilter(row.dto(), wantedStatuses))
                 .filter(row -> matchesBatteryFilter(row.dto(), batteryMin, batteryMax))
                 .filter(row -> matchesSearchFilter(row.dto(), search))
                 .sorted(amrListRowComparator(sort))
@@ -322,20 +323,29 @@ public class AmrService {
         };
     }
 
-    private boolean matchesStatusFilter(AmrDto dto, String statusQuery) {
-        if (statusQuery == null || statusQuery.isBlank()) {
+    private boolean matchesStatusFilter(AmrDto dto, Set<String> wantedStatuses) {
+        if (wantedStatuses.isEmpty()) {
             return true;
         }
-        Set<String> wantedStatuses = parseStatusFilterTokens(statusQuery);
         return wantedStatuses.contains(dto.getStatus());
     }
 
     private Set<String> parseStatusFilterTokens(String statusQuery) {
-        return Arrays.stream(statusQuery.split(","))
+        if (statusQuery == null || statusQuery.isBlank()) {
+            return Set.of();
+        }
+
+        Set<String> wantedStatuses = Arrays.stream(statusQuery.split(","))
                 .map(String::trim)
                 .filter(token -> !token.isEmpty())
-                .map(token -> DashboardStatusNormalizer.normalizeAmrStatus(token))
+                .map(DashboardStatusNormalizer::normalizeAmrQueryStatus)
                 .collect(Collectors.toSet());
+
+        if (wantedStatuses.isEmpty()) {
+            DashboardStatusNormalizer.normalizeAmrQueryStatus(statusQuery);
+        }
+
+        return wantedStatuses;
     }
 
     private Comparator<AmrListRow> amrListRowComparator(String sort) {
