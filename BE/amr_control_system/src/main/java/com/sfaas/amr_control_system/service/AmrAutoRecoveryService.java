@@ -1,13 +1,11 @@
 package com.sfaas.amr_control_system.service;
 
 import com.sfaas.amr_control_system.config.DemoRecoveryProperties;
-import com.sfaas.amr_control_system.event.AmrStatusChangedEvent;
 import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.util.DashboardStatusNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +26,7 @@ public class AmrAutoRecoveryService {
 
     private final AmrStatusLogRepository amrStatusLogRepository;
     private final DemoRecoveryProperties demoRecoveryProperties;
-    private final ApplicationEventPublisher applicationEventPublisher;
+    private final StreamNotificationService streamNotificationService;
 
     @Scheduled(fixedDelayString = "${app.demo.recovery-check-interval-ms:10000}")
     @Transactional
@@ -75,12 +73,11 @@ public class AmrAutoRecoveryService {
         String amrLabel = statusLog.getAmr() != null
                 ? AmrIdentifierHelper.formatAmrId(statusLog.getAmr().getAmrId())
                 : "unknown";
-        applicationEventPublisher.publishEvent(new AmrStatusChangedEvent(
-                this,
+        streamNotificationService.publishAmrStatusChangeAfterCommit(
                 amrLabel,
                 DashboardStatusNormalizer.STATUS_IDLE,
                 null
-        ));
+        );
         log.info("Auto-recovered AMR {} from {} to IDLE", amrLabel, normalizedStatus);
     }
 
