@@ -5,7 +5,25 @@
 이 폴더는 AMR 스마트 팩토리 통합 모니터링 시스템의 프론트엔드이다.
 공장 내 AMR 위치/상태, 환경 센서, 충전 스테이션, 작업 이력을 실시간으로 관제하고 분석하는 대시보드 웹 애플리케이션을 구현한다.
 
-전체 시스템은 FE(프론트엔드) / BE(백엔드, Spring Boot) / DB(MySQL, Node-RED)로 구성되며, FE는 BE가 제공하는 REST API 및 WebSocket을 통해 데이터를 수신한다.
+전체 시스템은 FE(프론트엔드) / BE(백엔드, Spring Boot) / DB(MySQL, Node-RED)로 구성되며, FE는 BE REST, DAS MQTT, (선택) BE WebSocket을 통해 데이터를 수신한다.
+
+## 녹화 시연 MVP (FE 작업 시 최우선)
+
+시연·마지막 구현은 **`../docs/시연_MVP_합의.md`** 를 **`../docs/화면 설계서.md`보다 우선**한다.
+
+| 문서 | 내용 |
+| --- | --- |
+| `../docs/시연_MVP_합의.md` | §3 UI 삭제·보류, §7 구현 순서, §5 REST 필수 목록 |
+| `../docs/FE-DAS_MQTT_연동.md` | 정적 평면도, 환경 16센서, AMR x/y **백분율**, `initMqtt` |
+| `../docs/시연_에이전트_프롬프트.md` | 「진행 상황을 확인하고 **FE** 파트를 구현하라」→ **§1** |
+| `FE/.env.example` | Docker·Vite `VITE_MQTT_URL` (G4) |
+
+- **실행:** `cd FE` → `docker compose up --build`. 호스트 `npm run dev`는 시연 경로가 아니다.
+- **Docker:** `FE/docker-compose.yml`·`Dockerfile`이 **이미 있으면 사용·수정만**. **없을 때만** F4에서 신규 작성(미병합 브랜치에 있을 수 있음).
+- **F4(G3):** `vite` BE 프록시·compose 정합 — compose 없을 때만 파일 생성.
+
+- 시연 FE: **WebSocket 미사용**, `GET /environment/areas/current` 미사용.
+- 정식 화면 설계서 Annotation **본문 삭제 금지**. MVP와 다른 항목은 MVP만 구현하지 않는다.
 
 ## 설계 문서 참조
 
@@ -16,9 +34,10 @@
 - `../docs/API 정의.md` - RESTful API 명세 (엔드포인트, 요청/응답 형식, WebSocket 이벤트)
 - `../docs/데이터 스키마 설계.md` - ERD 및 테이블 정의 (API 응답 구조 이해에 필요)
 - `../docs/협업 컨벤션.md` - Git 워크플로우, 커밋, PR, 코드 품질 규칙
+- `../docs/시연_MVP_합의.md` - 녹화 시연 SSOT
+- `../docs/FE-DAS_MQTT_연동.md` - MQTT 연동
 
-특히 화면 구현 시 `../docs/프로젝트 정의서.md`의 "화면설계" 섹션에 정의된 객체 번호, 설명을 준수해야 한다.
-API 호출 구현 시 `../docs/API 정의.md`의 엔드포인트, 쿼리 파라미터, 응답 형식을 정확히 따라야 한다.
+화면·API 구현 시 **녹화 시연 작업**이면 `../docs/시연_MVP_합의.md`를 먼저 따른다. 그 외에는 `../docs/화면 설계서.md` 객체 번호·`../docs/API 정의.md` 계약을 따른다.
 
 ## 공통 규칙
 

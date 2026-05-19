@@ -1,11 +1,74 @@
 # 프론트엔드 구현 계획 (TODO)
 
-> 목록 업데이트: 2026-05-18
-> 
-> **기준 문서**
-> - `../docs/프로젝트 정의서.md` - 화면 설계 명세
-> - `../docs/API 정의.md` - RESTful API 명세
-> - `../mockup/*.html` - 목업 화면
+> **녹화 시연 MVP 갱신:** 2026-05-19  
+> **SSOT:** `docs/시연_MVP_합의.md`, `docs/FE-DAS_MQTT_연동.md`  
+> **기동:** `cd FE` → `docker compose up --build` (호스트 npm 금지)  
+> 충돌 시 위 문서가 본 파일·아래 「제품 백로그」보다 우선한다.
+
+---
+
+## 녹화 시연 MVP (현재 1순위)
+
+**성공 기준:** 로그인 + SCR-01~05 **6흐름**이 프론트 화면 녹화에서 보이고 동작한다.
+
+### 모순 해소 (C-P2) — 시연 최소
+
+| ID | 확정 | FE 조치 |
+| --- | --- | --- |
+| C-P2-01 | KPI·상태·알람·로그 = **REST 폴링**. 맵·환경 = **MQTT**. **BE WebSocket 미사용** | 6단계 WS 항목 시연 제외 |
+| C-P2-02 | SCR-01 환경 = `factory/environment/current` | F2~F3. `GET /environment` **호출 안 함** |
+| C-P2-03 | 맵 AMR = MQTT **x/y %**. DAS 미준비 시 §7.4 fallback | F2~F3 |
+| C-P2-04 | 토픽 = `FE-DAS_MQTT_연동.md`만. `FE/PROGRESS.md` MQTT 서술 **무시** | — |
+| C-P2-05 | `VITE_MQTT_URL` — `FE/.env.example` (G4), compose 기동 | F2 |
+| C-P2-06 | 시연: **mqtt.js만**. `reconnecting-websocket` **미사용** | — |
+| C-P2-07 | `/charging` 라우트 **네비 제외** | F7 |
+| C-P2-08 | REST 폴링 **10초** 권장(화면별 통일) | F3~F8 |
+| C-P2-09 | BE status = `OPERATING`/`IDLE`/… | **F5 필수** — `AmrListView` 매핑 수정 |
+| C-P2-12 | E-stop: `POST` → `accepted` → UI → MQTT publish(권장) | F6 |
+
+### 구현 순서 (`시연_MVP_합의.md` §7.2)
+
+| 순 | ID | 작업 | 상태 |
+| --- | --- | --- | --- |
+| F1 | | 팀 공유 **공장 레이아웃 이미지** → `src/assets/`. `factory-layout-areas.js`에 `AREA_*` 오버레이 % (`FE-DAS` §2.3) | [ ] |
+| F2 | C-P2-05,06 | `main.js`에서 `initMqtt()`. `VITE_MQTT_URL`. `subscribe` 환경·AMR 좌표 | [ ] |
+| F3 | C-P2-02,03,08 | **SCR-01:** KPI §3.1 삭제(생산·활성알람·평균배터리). 평면도 % 마커. 환경 16. `summary`·`recent-logs`·`recent-alarms`(실패 시 더미) | [ ] |
+| F4 | G3 | compose/Dockerfile **없을 때만** 작성 · 있으면 vite 프록시·env만 · `cp .env.example .env` | [ ] |
+| F5 | C-P2-09 | **SCR-02:** `GET /amrs`. status enum. §3.2 보류 차트 **숨김** | [ ] |
+| F6 | C-P2-12 | **SCR-03:** `GET /amrs/{id}`, E-stop `POST`+UI. §3.3 삭제 UI. MQTT `factory/amr/command` | [ ] |
+| F7 | C-P2-07 | **SCR-04:** `stations`·`forecast`. queue **빈 테이블**. 충전 알람 제거 | [ ] |
+| F8 | | **SCR-05:** `work-histories`·`workload`. §3.5 카드 2개 삭제 | [ ] |
+| F9 | | **SCR-02** 차트 잔여 정리(플레이스홀더 제거) | [ ] |
+| F10 | | 6흐름 **화면 녹화** | [ ] |
+
+### DAS 병행 (FE 블로커)
+
+| 순 | 작업 | 문서 |
+| --- | --- | --- |
+| D1 | 토픽·payload 확정 | `docs/FE-DAS_MQTT_연동.md` (Phase 0 완료) |
+| D2 | `factory/environment/current`, `factory/amrs/positions` 주기 발행 | 동일 §4~5 |
+| D3 | 녹화용 **고정 시드** (급변 방지) | `시연_MVP` §7.1 |
+
+### 시연에서 하지 않음
+
+- BE WebSocket (`/api/v1/stream`)
+- `GET /environment/areas/current`
+- `GET /analytics/kpis` (SCR-02/03 차트)
+- `GET /charging/queue` 실데이터
+- 네비 `/charging`
+
+### MQTT 완화 (DAS 지연 시, `시연_MVP` §7.4)
+
+- 환경: 마지막 수신값 고정 또는 합의 **정적 16값**
+- AMR 맵: REST `position`을 이미지 %로 **임시 환산** (문서화 후 1회만)
+
+---
+
+## 제품 백로그 (시연 후)
+
+> 아래는 제품 목표 전체 구현 계획이다. **시연 스프린트 중에는 상단 MVP만 진행**한다.
+
+**기준 문서 (제품):** `docs/프로젝트 정의서.md`, `docs/API 정의.md`, `mockup/*.html`
 
 ## 1단계: 인증 및 기본 레이아웃 구현
 
@@ -129,9 +192,9 @@
   - 구간별 분포 (0-30분, 30-60분, 60분 초과)
   - API: `GET /charging/forecast`
 
-- [ ] 충전 스테이션 혼잡 알림
+- [ ] 충전 스테이션 혼잡 알람
   - 혼잡 상태(occupancy > 80%) 표시
-  - 알림 배지 표시
+  - 알람 배지 표시
 
 ---
 
@@ -162,7 +225,7 @@
   - AMR 선택 (멀티 셀렉트)
   - 작업 유형 필터
 
-- [ ] 내보내기 기능
+- [ ]보내기 기능
   - CSV/Excel 다운로드
   - API: `GET /work-histories/export`
 
