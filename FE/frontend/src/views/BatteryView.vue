@@ -37,7 +37,7 @@
                 <div class="right">{{ amr.eta }}</div>
               </div>
             </div>
-            <div v-else class="station-amr-placeholder">스테이션별 AMR 목록은 시연 범위에서 생략됩니다.</div>
+            <div v-else class="station-amr-placeholder">충전 중인 AMR이 없습니다.</div>
           </div>
         </div>
       </article>
@@ -89,12 +89,14 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/plugins/axios'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
-
-const FORECAST_BUCKET_ORDER = ['0-30m', '30-60m', '60m+']
+import {
+  DEMO_PRIMARY_STATION_ID,
+  forecastBucketsFromChargingAmrs,
+  maxEtaFromChargingAmrs
+} from '@/config/demo-simulation'
 
 const stations = ref([])
 const queue = ref([])
-const forecast = ref([])
 
 const stats = ref({ stations: 0, normal: 0, busy: 0, charging: 0, avgBattery: 0, maxEta: '—' })
 
@@ -117,15 +119,38 @@ function badgeStyle(r) {
 
 const forecastSummary = ref([0, 0, 0])
 
-const donutStyle = { borderTopColor: '#10b981', borderLeftColor: '#f59e0b' }
+const donutStyle = computed(() => {
+  const [within30, within60, over60] = forecastSummary.value
+  const total = within30 + within60 + over60
+  if (total === 0) {
+    return { borderTopColor: '#10b981', borderLeftColor: '#f59e0b' }
+  }
+  const ratio30 = (within30 / total) * 100
+  const ratio60 = (within60 / total) * 100
+  return {
+    borderTopColor: '#10b981',
+    borderRightColor: '#10b981',
+    borderBottomColor: '#3b82f6',
+    borderLeftColor: '#f59e0b',
+    background: `conic-gradient(#10b981 0 ${ratio30}%, #3b82f6 ${ratio30}% ${ratio30 + ratio60}%, #f59e0b ${ratio30 + ratio60}% 100%)`
+  }
+})
 
 const totalChargingAmrs = computed(() =>
   stations.value.reduce((accumulator, station) => accumulator + (station.occupiedCount || 0), 0)
 )
 
-function mapForecastBuckets(forecastList) {
-  const bucketMap = new Map(forecastList.map((item) => [item.bucket, item.count ?? 0]))
-  return FORECAST_BUCKET_ORDER.map((bucketKey) => bucketMap.get(bucketKey) ?? 0)
+function collectPrimaryStationChargingAmrs(stationList) {
+  const primaryStation = stationList.find((station) => station.id === DEMO_PRIMARY_STATION_ID)
+  if (!primaryStation || !Array.isArray(primaryStation.amrs)) {
+    return []
+  }
+  return primaryStation.amrs
+}
+
+function applyChargingForecastFromAmrs(chargingAmrs) {
+  forecastSummary.value = forecastBucketsFromChargingAmrs(chargingAmrs)
+  stats.value.maxEta = maxEtaFromChargingAmrs(chargingAmrs)
 }
 
 function normalizeStationDto(raw) {
@@ -150,30 +175,33 @@ async function loadData() {
     console.error('BatteryView stations', e)
   }
 
-  queue.value = []
-
   try {
-    const fRes = await api.get('/charging/forecast')
-    const forecastList = fRes.data?.data ?? fRes.data ?? []
-    forecast.value = Array.isArray(forecastList) ? forecastList : []
-  } catch (e) {
-    forecast.value = []
-    console.error('BatteryView forecast', e)
+    const queueRes = await api.get(`/charging/queue?stationId=${encodeURIComponent(DEMO_PRIMARY_STATION_ID)}`)
+    const queueList = queueRes.data?.data ?? queueRes.data ?? []
+    queue.value = Array.isArray(queueList) ? queueList : []
+  } catch (queueError) {
+    queue.value = []
+    console.error('BatteryView queue', queueError)
   }
 
-  forecastSummary.value = mapForecastBuckets(forecast.value)
+  const chargingAmrs = collectPrimaryStationChargingAmrs(stations.value)
+  applyChargingForecastFromAmrs(chargingAmrs)
 
   const stationCount = stations.value.length
   stats.value.stations = stationCount
   stats.value.normal = stations.value.filter((s) => s.occupiedCount < s.capacity).length
   stats.value.busy = stations.value.filter((s) => s.occupiedCount >= s.capacity).length
-  stats.value.charging = stations.value.reduce((acc, s) => acc + (s.occupiedCount || 0), 0)
+  stats.value.charging = chargingAmrs.length > 0
+    ? chargingAmrs.length
+    : stations.value.reduce((acc, station) => acc + (station.occupiedCount || 0), 0)
   stats.value.avgBattery = stationCount
     ? Math.round(
         stations.value.reduce((acc, s) => acc + (s.averageBatteryPercent || 0), 0) / stationCount
       )
     : 0
-  stats.value.maxEta = '—'
+  if (chargingAmrs.length === 0) {
+    stats.value.maxEta = '—'
+  }
 }
 
 let refreshTimer = null

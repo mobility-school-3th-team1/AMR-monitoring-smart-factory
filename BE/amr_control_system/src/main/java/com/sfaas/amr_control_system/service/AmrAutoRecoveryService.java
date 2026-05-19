@@ -1,6 +1,6 @@
 package com.sfaas.amr_control_system.service;
 
-import com.sfaas.amr_control_system.config.DemoRecoveryProperties;
+import com.sfaas.amr_control_system.config.DemoSimulationProperties;
 import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.util.DashboardStatusNormalizer;
@@ -25,14 +25,14 @@ import java.util.stream.Collectors;
 public class AmrAutoRecoveryService {
 
     private final AmrStatusLogRepository amrStatusLogRepository;
-    private final DemoRecoveryProperties demoRecoveryProperties;
+    private final DemoSimulationProperties demoSimulationProperties;
     private final StreamNotificationService streamNotificationService;
 
     @Scheduled(fixedDelayString = "${app.demo.recovery-check-interval-ms:10000}")
     @Transactional
     public void recoverUnresolvedAmrStatuses() {
         LocalDateTime now = LocalDateTime.now();
-        Duration recoveryDelay = Duration.ofSeconds(demoRecoveryProperties.getRecoverySeconds());
+        Duration recoveryDelay = Duration.ofSeconds(demoSimulationProperties.getRecoverySeconds());
 
         for (AmrStatusLog statusLog : findLatestStatusPerAmr()) {
             if (statusLog.getUpdatedAt() == null) {

@@ -3,6 +3,8 @@ package com.sfaas.amr_control_system.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class ChargingStationDto {
@@ -14,4 +16,5 @@ public class ChargingStationDto {
     private Integer occupiedCount;
     private Integer averageBatteryPercent;
     private LocalDateTime estimatedFullChargeAt;
+    private List<ChargingStationAmrDto> amrs = new ArrayList<>();
 }

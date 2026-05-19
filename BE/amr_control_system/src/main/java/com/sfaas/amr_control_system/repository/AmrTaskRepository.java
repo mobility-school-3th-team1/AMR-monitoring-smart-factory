@@ -14,4 +14,6 @@ public interface AmrTaskRepository extends JpaRepository<AmrTask, Long>, JpaSpec
     List<AmrTask> findByPickTimeIsNotNullAndDropTimeIsNotNull();
 
     Optional<AmrTask> findFirstByAmr_AmrIdAndDropTimeIsNullOrderByPickTimeDesc(Integer amrId);
+
+    List<AmrTask> findByStatusAndDropTimeIsNull(String status);
 }

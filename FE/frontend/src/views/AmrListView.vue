@@ -2,6 +2,17 @@
   <div class="amr-manage-view">
     <aside class="amr-panel">
       <div class="amr-header">AMR 선택 목록</div>
+      <div class="amr-filter-row">
+        <label class="amr-filter-label" for="amr-status-filter">상태 필터</label>
+        <select id="amr-status-filter" v-model="statusFilter" class="amr-filter-select" @change="loadAmrs">
+          <option value="">전체</option>
+          <option value="OPERATING">운행 중</option>
+          <option value="IDLE">대기</option>
+          <option value="CHARGING">충전 중</option>
+          <option value="ERROR">오류</option>
+          <option value="EMERGENCY_STOP">비상 정지</option>
+        </select>
+      </div>
       <div class="amr-scroll">
         <div v-if="loadError" class="error-note">{{ loadError }}</div>
         <div v-else-if="isLoading" class="loading-note">로딩 중...</div>
@@ -75,6 +86,7 @@ const AMR_LIST_LIMIT = 50
 const isLoading = ref(true)
 const loadError = ref(null)
 const robots = ref([])
+const statusFilter = ref('')
 
 // API 응답을 UI 모델로 변환
 const STATUS_MAP = {
@@ -131,7 +143,11 @@ const stats = computed(() => {
 // API 호출
 async function loadAmrs() {
   try {
-    const res = await api.get(`/amrs?page=1&limit=${AMR_LIST_LIMIT}`)
+    const query = new URLSearchParams({ page: '1', limit: String(AMR_LIST_LIMIT) })
+    if (statusFilter.value) {
+      query.set('status', statusFilter.value)
+    }
+    const res = await api.get(`/amrs?${query.toString()}`)
     robots.value = (res.data.data || []).map(mapAmr)
     loadError.value = null
   } catch (err) {
@@ -162,6 +178,9 @@ function openDetail(amrId) {
 .amr-manage-view { display: flex; gap: 12px; height: 100%; min-height: 0; }
 .amr-panel { width: 330px; background: #e6eef8; border-radius: 10px; display:flex; flex-direction:column; flex-shrink:0; }
 .amr-header { padding: 12px; text-align:center; font-weight:800; font-size:0.92rem; background:#dbeaf7; border-radius:10px 10px 0 0; }
+.amr-filter-row { padding: 8px 10px 0; display:flex; flex-direction:column; gap:4px; }
+.amr-filter-label { font-size:0.62rem; color:#64748b; font-weight:700; }
+.amr-filter-select { width:100%; font-size:0.68rem; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; }
 .amr-scroll { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px; }
 .amr-selection { display:flex; flex-direction:column; gap:8px; }
 .amr-link { text-decoration:none; color:inherit; display:block; }

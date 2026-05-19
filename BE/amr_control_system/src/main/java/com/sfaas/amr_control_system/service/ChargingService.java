@@ -1,6 +1,8 @@
 package com.sfaas.amr_control_system.service;
 
+import com.sfaas.amr_control_system.config.DemoSimulationProperties;
 import com.sfaas.amr_control_system.dto.ChargingForecastDto;
+import com.sfaas.amr_control_system.dto.ChargingStationAmrDto;
 import com.sfaas.amr_control_system.dto.ChargingHistoryItemDto;
 import com.sfaas.amr_control_system.dto.ChargingHistoryResponseDto;
 import com.sfaas.amr_control_system.dto.ChargingQueueItemDto;
@@ -29,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,8 +40,7 @@ import java.util.stream.Collectors;
 public class ChargingService {
 
     private static final int DEFAULT_STATION_CAPACITY = 4;
-    private static final int DEFAULT_FULL_CHARGE_MINUTES = 45;
-
+    private final DemoSimulationProperties demoSimulationProperties;
     private final AmrChargeStationRepository amrChargeStationRepository;
     private final AmrChargingSessionRepository amrChargingSessionRepository;
     private final AmrStatusLogRepository amrStatusLogRepository;
@@ -165,6 +167,7 @@ public class ChargingService {
         dto.setOccupiedCount(occupiedCount);
         dto.setAverageBatteryPercent(averageBattery);
         dto.setEstimatedFullChargeAt(estimatedFullChargeAt);
+        dto.setAmrs(buildPrimaryStationChargingAmrs(station.getStationId()));
         return dto;
     }
 
@@ -215,22 +218,76 @@ public class ChargingService {
 
     private LocalDateTime estimateStationFullChargeAt(List<AmrChargingSession> activeSessions) {
         if (activeSessions.isEmpty()) {
-            return LocalDateTime.now().plusMinutes(DEFAULT_FULL_CHARGE_MINUTES);
+            return LocalDateTime.now();
         }
-        int maxMinutes = activeSessions.stream()
-                .mapToInt(this::estimateMinutesToFullCharge)
+        int maxSeconds = activeSessions.stream()
+                .mapToInt(session -> estimateSecondsToFullCharge(resolveBatteryPercent(session.getAmr())))
                 .max()
-                .orElse(DEFAULT_FULL_CHARGE_MINUTES);
-        return LocalDateTime.now().plusMinutes(maxMinutes);
+                .orElse(0);
+        return LocalDateTime.now().plusSeconds(maxSeconds);
     }
 
     private int estimateMinutesToFullCharge(AmrChargingSession session) {
-        Integer batteryPercent = resolveBatteryPercent(session.getAmr());
-        if (batteryPercent == null) {
-            return DEFAULT_FULL_CHARGE_MINUTES;
+        int seconds = estimateSecondsToFullCharge(resolveBatteryPercent(session.getAmr()));
+        return Math.max(1, (int) Math.ceil(seconds / 60.0));
+    }
+
+    private int estimateSecondsToFullCharge(Integer batteryPercent) {
+        int battery = batteryPercent == null ? 0 : batteryPercent;
+        int remaining = Math.max(0, demoSimulationProperties.getBatteryFullPct() - battery);
+        if (remaining == 0) {
+            return 0;
         }
-        int remainingPercent = Math.max(0, 100 - batteryPercent);
-        return Math.max(5, (int) Math.ceil(remainingPercent * 0.45));
+        return (int) Math.ceil((double) remaining / demoSimulationProperties.getChargeRatePctPerSec());
+    }
+
+    private List<ChargingStationAmrDto> buildPrimaryStationChargingAmrs(Integer stationId) {
+        if (stationId == null || stationId != demoSimulationProperties.getPrimaryChargeStationId()) {
+            return List.of();
+        }
+
+        return amrStatusLogRepository.findAllByOrderByUpdatedAtDesc().stream()
+                .filter(log -> log.getAmr() != null)
+                .collect(Collectors.toMap(
+                        log -> log.getAmr().getAmrId(),
+                        Function.identity(),
+                        (existing, replacement) -> existing
+                ))
+                .values()
+                .stream()
+                .filter(log -> DashboardStatusNormalizer.STATUS_CHARGING.equals(
+                        DashboardStatusNormalizer.normalizeAmrStatus(log.getStatus())))
+                .map(this::toStationAmrDto)
+                .sorted(Comparator.comparing(ChargingStationAmrDto::getAmrId))
+                .toList();
+    }
+
+    private ChargingStationAmrDto toStationAmrDto(AmrStatusLog statusLog) {
+        Amr amr = statusLog.getAmr();
+        Integer batteryPercent = statusLog.getBatteryPct();
+        int secondsToFull = estimateSecondsToFullCharge(batteryPercent);
+
+        ChargingStationAmrDto dto = new ChargingStationAmrDto();
+        dto.setAmrId(AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
+        dto.setAmrName(amr.getAmrName());
+        dto.setBatteryPercent(batteryPercent);
+        dto.setEta(formatEtaLabel(secondsToFull));
+        return dto;
+    }
+
+    private String formatEtaLabel(int secondsToFull) {
+        if (secondsToFull <= 0) {
+            return "완충";
+        }
+        if (secondsToFull < 60) {
+            return secondsToFull + "초";
+        }
+        int minutes = secondsToFull / 60;
+        int seconds = secondsToFull % 60;
+        if (seconds == 0) {
+            return minutes + "분";
+        }
+        return minutes + "분 " + seconds + "초";
     }
 
     private String resolveForecastBucket(int minutesToFull) {

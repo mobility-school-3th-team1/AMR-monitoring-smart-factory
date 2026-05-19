@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="dashboard-view">
     <!-- KPI 요약 카드 -->
     <section class="kpi-cards">
@@ -19,6 +19,18 @@
         <div class="kpi-value">{{ dashboardData.activeAlarms }}<span class="kpi-unit">건</span></div>
       </div>
     </section>
+
+    <div class="demo-emergency-bar">
+      <button
+        type="button"
+        class="btn-emergency"
+        :disabled="emergencyBusy"
+        @click="triggerDemoEmergency"
+      >
+        비상 상황 발생 (시연)
+      </button>
+      <span class="demo-emergency-hint">대상 AMR: {{ DEMO_EMERGENCY_AMR_ID }} · 맵 정지·자동 복구 시연</span>
+    </div>
 
     <!-- 에러 메시지 -->
     <div v-if="error" class="error-banner">
@@ -150,7 +162,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
-import { subscribe } from '@/plugins/ws'
+import { subscribe, publish } from '@/plugins/ws'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import { ENV_SENSOR_SLOT_KEYS, FACTORY_LAYOUT_AREAS } from '@/config/factory-layout-areas'
 import factoryLayoutAssetUrl from '@/assets/factory-layout.png'
@@ -166,8 +178,11 @@ const DASHBOARD_DEFAULTS = {
 
 const MQTT_TOPICS = {
   environmentCurrent: 'factory/environment/current',
-  amrPositions: 'factory/amrs/positions'
+  amrPositions: 'factory/amrs/positions',
+  amrCommand: 'factory/amr/command'
 }
+
+const DEMO_EMERGENCY_AMR_ID = 'amr-01'
 
 const DEFAULT_SENSOR_VALUE = {
   temp: '-',
@@ -237,6 +252,7 @@ const amrPositionMap = ref({})
 const environmentAreas = ref({ ...DASHBOARD_DUMMY_ENVIRONMENT })
 const recentAlarms = ref([])
 const recentLogs = ref([])
+const emergencyBusy = ref(false)
 
 // 플로어맵에 표시할 AMR 최대 8개 — 매 렌더마다 slice 재계산을 막기 위해 computed 사용
 const visibleAmrList = computed(() => {
@@ -382,6 +398,43 @@ const handleAmrPositionPayload = (payload) => {
   amrPositionMap.value = nextPositionMap
 }
 
+async function triggerDemoEmergency() {
+  if (emergencyBusy.value) return
+
+  const confirmAction = window.confirm(`비상 상황을 발생시키겠습니까? (${DEMO_EMERGENCY_AMR_ID})`)
+  if (!confirmAction) return
+
+  emergencyBusy.value = true
+  try {
+    const response = await api.post(`/amrs/${encodeURIComponent(DEMO_EMERGENCY_AMR_ID)}/commands`, {
+      command: 'emergencyStop'
+    })
+    const accepted = response?.data?.accepted === true
+
+    if (accepted) {
+      window.alert('비상 정지 명령이 수락되었습니다.')
+      await fetchDashboardData(false)
+      try {
+        publish(MQTT_TOPICS.amrCommand, {
+          amrId: DEMO_EMERGENCY_AMR_ID,
+          command: 'emergencyStop',
+          timestamp: new Date().toISOString()
+        })
+      } catch (publishError) {
+        console.warn('[Dashboard] MQTT publish skipped:', publishError)
+      }
+    } else {
+      window.alert('비상 정지 요청이 전송되었으나 서버에서 수락 응답을 받지 못했습니다.')
+    }
+  } catch (requestError) {
+    console.error('triggerDemoEmergency error', requestError)
+    const message = requestError?.response?.data?.message || '비상 정지 요청 중 오류가 발생했습니다.'
+    window.alert(message)
+  } finally {
+    emergencyBusy.value = false
+  }
+}
+
 // 시간 포맷
 const formatTime = (isoString) => {
   if (!isoString) return '-'
@@ -419,6 +472,43 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+
+.demo-emergency-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+
+.demo-emergency-hint {
+  font-size: 0.72rem;
+  color: #7f1d1d;
+  font-weight: 600;
+}
+
+.btn-emergency {
+  padding: 8px 14px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+}
+
+.btn-emergency:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-emergency:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .dashboard-view {
   display: flex;

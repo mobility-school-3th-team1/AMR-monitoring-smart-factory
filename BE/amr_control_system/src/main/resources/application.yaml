@@ -31,6 +31,14 @@ app:
     password: ${DEMO_USER_PASSWORD:}
     recovery-seconds: 20
     recovery-check-interval-ms: 3000
+    task-duration-seconds: 20
+    task-assign-interval-ms: 8000
+    charge-rate-pct-per-sec: 5
+    idle-discharge-pct: 1
+    idle-discharge-interval-sec: 5
+    operating-discharge-pct: 1
+    battery-full-pct: 100
+    primary-charge-station-id: 1
 
 springdoc:
   api-docs:
