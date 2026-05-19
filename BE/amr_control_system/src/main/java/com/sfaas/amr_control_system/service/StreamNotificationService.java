@@ -27,19 +27,23 @@ public class StreamNotificationService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    runBestEffort(action, "afterCommit");
+                    runBestEffort(action, true);
                 }
             });
             return;
         }
-        runBestEffort(action, "withoutTransaction");
+        runBestEffort(action, false);
     }
 
-    private void runBestEffort(Runnable action, String triggerType) {
+    private void runBestEffort(Runnable action, boolean committedAfterTransaction) {
         try {
             action.run();
         } catch (RuntimeException exception) {
-            log.warn("Stream notification failed on {}, but transaction commit is already finalized.", triggerType, exception);
+            if (committedAfterTransaction) {
+                log.warn("Stream notification failed after commit, but transaction commit is already finalized.", exception);
+                return;
+            }
+            log.warn("Stream notification failed without active transaction context.", exception);
         }
     }
 }
