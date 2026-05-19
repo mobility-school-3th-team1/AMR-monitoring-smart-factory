@@ -19,6 +19,7 @@
 | --- | --- |
 | `POST /auth/login` | 로그인 |
 | `GET /dashboard/summary` | SCR-01 (UI: `productionCount`·`activeAlarms`·`avgBatteryPercent` **미표시**) |
+| `GET /dashboard/recent-alarms` | SCR-01 알람 **목록** (실패 시 FE 더미) |
 | `GET /dashboard/recent-logs` | SCR-01 |
 | `GET /amrs` | SCR-01, SCR-02 |
 | `GET /amrs/{amrId}` | SCR-03 |
@@ -35,7 +36,6 @@
 | `GET /environment/areas/current` | SCR-01 환경 → **DAS MQTT** (`docs/FE-DAS_MQTT_연동.md`) |
 | `GET /charging/queue` | SCR-04 대기열 **빈 테이블 더미** |
 | `GET /analytics/kpis` | SCR-02/03 차트 보류 |
-| `GET /dashboard/recent-alarms` | SCR-01 활성 알람 KPI 삭제 (알람 목록 유지 시만 선택) |
 
 ### 시연 실시간 (비-REST)
 
@@ -172,7 +172,9 @@
 
 ### GET /environment/areas/current
 
-설명: 구역별 최신 환경 센서값 조회 (메인 대시보드 SCR-01 ③)
+> **[FE 녹화 시연: 미사용]** SCR-01 ③ 환경은 **DAS MQTT** `factory/environment/current` (`docs/FE-DAS_MQTT_연동.md` §4). BE 본 API는 **미구현(12-F 보류)**. 구역 마스터는 `DB/init.sql` `AREA`·`ENV_SENSOR`.
+
+설명: 구역별 최신 환경 센서값 조회 (메인 대시보드 SCR-01 ③, **제품 목표**)
 
 쿼리 파라미터: areaId (선택, 미지정 시 전체 구역)
 
@@ -592,6 +594,8 @@
 ```
 
 ## 8. 실시간 스트리밍(WebSocket)
+
+> **[FE 녹화 시연: 미사용]** FE는 **REST 폴링**으로 KPI·AMR 상태·알람을 갱신한다(C-P2-01). 맵 좌표·환경은 **MQTT←DAS**. BE WebSocket은 구현·유지하되 시연 FE 필수 아님.
 
 ### WS /api/v1/stream
 

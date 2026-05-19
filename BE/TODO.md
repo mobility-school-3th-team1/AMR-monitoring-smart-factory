@@ -5,6 +5,33 @@
 AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 기술 스택: Java Spring Boot, Spring Security (JWT), RESTful API + WebSocket, MySQL (JPA/Hibernate).
 
+## FE 녹화 시연 MVP (현재 1순위, 2026-05-19)
+
+**SSOT:** `docs/시연_MVP_합의.md` §5.1, `docs/FE-DAS_MQTT_연동.md`
+
+| 항목 | 시연 BE 범위 |
+| --- | --- |
+| **필수** | §5.1 REST (login, summary, **recent-alarms**, recent-logs, amrs, commands, charging stations/forecast, work-histories, workload) |
+| **스모크** | `docker compose up` 후 §5.1 경로 회귀 (**B1**) |
+| **하지 않음** | 12-F `GET /environment/areas/current`, analytics KPI 확장, position WS 스케줄, queue 시연 데이터 |
+| **유지·FE 미사용** | Phase B WebSocket (C-P2-01: 시연 FE = **REST 폴링**) |
+
+**모순 해소 (C-P2, BE 관점):**
+
+| ID | 확정 |
+| --- | --- |
+| C-P2-01 | 텔레메트리(좌표·환경) = FE←MQTT←DAS. BE WS **시연 필수 아님** |
+| C-P2-02 | 12-F **시연 착수 안 함**. 실시간 환경은 DAS MQTT |
+| C-P2-03 | BE `@Scheduled` position·`amrs.position.updated` **시연 제외** (DAS와 이중) |
+| C-P2-11 | 시연 런타임 = **H2 + BE Docker** (MySQL merge 시연 후) |
+
+| 순 | 작업 | 상태 |
+| --- | --- | --- |
+| B1 | §5.1 API Docker 스모크 (`scripts/smoke-*.py` 등) | [ ] 녹화 전 재확인 |
+| — | 12-F, Phase C, position WS | **시연 후** |
+
+---
+
 ## 현재 상태 (dev, 2026-05-19 기준)
 
 - **로컬 실행:** 호스트 JDK 없이 **Docker만** 사용. 빌드·실행은 `BE/docker-compose.yml` (`amr_control_system/Dockerfile` 내 `./gradlew bootJar`).
@@ -12,14 +39,12 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - **10-A (H2 물리 스키마 정합·API 스모크):** 완료 (2026-05-18).
 - **Phase A (REST 시연 경로):** 완료 (2026-05-18, Docker 스모크 검증).
 - **Phase B (WebSocket):** **완료** (2026-05-19). B-1~4 Docker WS 스모크 통과 (`scripts/smoke-websocket-phase-b.py`).
-- **기능 추가 개발:** **일시 중단** (FE·DAS MQTT 합의·BE 연동 공백). **설계 재검토** 후 Phase C·12-F 등 재개.
-- **Phase S (Swagger UI):** **S-1~S-3 완료** (2026-05-19). **S-4** 설계 재검토 이슈 대기.
-- **현재 BE 1순위:** **Phase S-4** (설계 재검토) 또는 팀 합의 후 Phase C·12-F 재개.
-- **설계 문서(dev):** `docs/API 정의.md` 등과 **실제 구현·FE/DAS 합의** 간 불일치 정리 예정 (Swagger 도입 후 재검토).
+- **녹화 스프린트:** 신규 BE API **추가 없음**. **B1 스모크**만 (상단 MVP 표).
+- **Phase S (Swagger UI):** **S-1~S-3 완료** (2026-05-19). S-4·Phase C·12-F는 **시연 후**.
 - **DB 영역 Docker compose:** 미 merge. 당분간 **H2 + BE Docker**로 시연·개발.
 - **DAS·FE·BE 합의:** 비상 정지는 BE가 DB 갱신 후 `accepted` 응답, FE가 DAS(MQTT) 정지 고지. BE↔DAS 직접 연동 없음.
-- **실시간 텔레메트리(맵 좌표·환경 센서):** FE ← **MQTT** ← DAS. BE `GET /environment/areas/current`(12-F)는 **보류** (명세·화면 설계서와 재정렬 필요).
-- **FE·BE 실시간:** BE `WS /api/v1/stream?token=` 구현 완료. FE 연동·MQTT 플러그인은 미착수.
+- **실시간 텔레메트리(맵 좌표·환경 센서):** FE ← **MQTT** ← DAS. BE `GET /environment/areas/current`(12-F)는 **시연 제외**.
+- **FE·BE 실시간:** BE `WS /api/v1/stream` 구현 완료. **시연 FE는 REST 폴링**(C-P2-01).
 
 ### 설계 대비 BE 구현 격차 (작업 기준)
 
@@ -44,16 +69,16 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 | 순서 | 작업 | 한 줄 설명 | 상태 |
 |------|------|-----------|------|
+| **1** | **FE 녹화 MVP B1** | §5.1 REST Docker 스모크 | **1순위** |
 | ~~—~~ | ~~Phase A REST 시연~~ | 12-A~G (12-F 제외) | **완료** |
 | ~~—~~ | ~~Phase B WebSocket 최소~~ | B-1~4 | **완료** |
-| **1** | **Phase S: Swagger UI** | S-1~S-3 완료 (OpenAPI·JWT·회귀 스모크) | **S-4** |
-| 2 | **설계 재검토** | `docs/API 정의.md`·화면 설계서 vs BE·FE·DAS MQTT | Swagger 후 |
-| (보류) | 12-F 환경 API | FE MQTT 합의와 충돌 가능 | 재검토 후 |
-| (보류) | Phase C | analytics KPI, 공통 오류 응답, 테스트 | 재검토 후 |
-| (병렬) | FE·BE 통합 | WS·REST, CORS·프록시 | FE 주도 |
+| (시연 후) | Phase S-4·설계 재검토 | API·화면 vs 구현 | 대기 |
+| (시연 후) | 12-F 환경 API | MQTT 합의 후 이력·스냅샷 API로 재정의 | 대기 |
+| (시연 후) | Phase C | analytics KPI, 공통 오류 응답 | 대기 |
+| (병렬) | FE·BE 통합 | REST·CORS·vite 프록시 (WS·MQTT는 FE) | FE 주도 |
 | (대기) | 10-B MySQL | DB compose merge 후 | — |
 
-**현재 BE 1순위:** **Phase S-4(설계 재검토)**. 기능 API 신규 구현은 **설계 재검토 합의 후** 재개.
+**현재 BE 1순위:** **녹화 MVP B1(§5.1 스모크)**. 신규 API 구현 **없음**.
 
 ---
 

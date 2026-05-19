@@ -208,15 +208,21 @@
 | --- | --- | --- |
 | A1 | **`docs/시연_MVP_합의.md`** | 본 문서 팀 확정 | (본 문서) |
 | A2 | **`docs/FE-DAS_MQTT_연동.md`** | Phase 0 확정 반영 | **반영됨** |
-| A3 | **`docs/화면 설계서.md`** | 「녹화 MVP」+ §3 UI 삭제·보류 + 정적 평면도·MQTT | **반영됨** |
-| A4 | **`docs/API 정의.md`** | 시연 필수 API = §5.1, environment·queue·kpis 시연 제외 각주 | **반영됨** |
+| A3 | **`docs/화면 설계서.md`** | 「녹화 MVP」+ SCR 각주·MQTT | **반영됨** |
+| A4 | **`docs/API 정의.md`** | §5.1·§2 environment·§8 WS·`recent-alarms` 정합 | **반영됨** |
 | A0 | **`AGENTS.md`** (루트·FE·BE·DB) | MVP SSOT·우선순위 규칙 | **반영됨** |
-| A5 | **`FE/TODO.md`** | §7 구현 순서 반영 |
-| A6 | **`BE/TODO.md`** | FE 녹화 지원 + queue/12-F/kpis **시연 불필요** |
+| A5 | **`FE/TODO.md`** | §7·C-P2 반영 | **반영됨** |
+| A6 | **`BE/TODO.md`** | §5.1·B1·12-F/kpis **시연 불필요** | **반영됨** |
 
 ### Tier B — 권장
 
-`설계-구현_정합성_검토.md` §10, ADR(녹화 시 MQTT **환경·좌표 필수**, E-stop publish), `프로젝트 정의서.md`, `README.md`(BE+MQTT+FE), `FE/AGENTS.md`.
+| 문서 | 상태 |
+| --- | --- |
+| `설계-구현_정합성_검토.md` §8.2 C-P2-03 | MQTT % 우선 갱신 |
+| ADR 비상 정지 | 녹화·MQTT §6 반영 |
+| `프로젝트 정의서.md` | 시연 아키텍처 절 |
+| `README.md` | 녹화 실행 순서 |
+| `데이터 스키마 설계.md` | C-P2-02 각주 |
 
 ### Tier C/D
 
@@ -271,10 +277,11 @@ Swagger, for_presentation, `errorCount` KPI 확장 — 시연 후.
 
 - [ ] 시연 = FE 녹화 6흐름  
 - [ ] SCR-01 = **정적 평면도 + MQTT(환경 16 + AMR %)**  
-- [x] §3 UI 삭제·보류 → `화면 설계서.md` MVP 절, `API 정의.md` 시연 절, `AGENTS.md`(4) 반영  
+- [x] §3 UI 삭제·보류 → `화면 설계서.md` SCR 각주, `API 정의.md` 시연 절, `AGENTS.md`(4) 반영  
+- [x] C-P2 최소 모순 문서화 → `FE/TODO`·`BE/TODO`, `README`, 스키마·정의서·ADR, `설계-구현` §8.2  
 - [x] DAS MQTT 명세 Phase 0 확정 (`FE-DAS_MQTT_연동.md`) — Node-RED 구현은 미완  
 - [ ] BE = §5.1만 필수  
-- [ ] `FE/TODO.md`, `BE/TODO.md` 시연 절 반영  
+- [x] `FE/TODO.md`, `BE/TODO.md` 시연 절 반영 (C-P2 최소 모순)  
 
 **확정일:** ___________  
 **참여:** FE / BE / DAS&DB

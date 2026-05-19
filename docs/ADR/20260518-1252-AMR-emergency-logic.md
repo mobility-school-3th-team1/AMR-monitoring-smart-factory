@@ -38,7 +38,8 @@ related_files:
        - (정책에 따라) 진행 중 `AMR_TASK` 상태 정리
      - BE → FE: DB **commit 성공 후** HTTP 200, `accepted: true`, `commandId`, `amrId`
      - FE → DAS: **MQTT**로 해당 AMR 정지 고지 → 좌표 갱신·작업 시뮬 중단
-     - BE → FE (WebSocket 구현 시): `amrs.status.updated` 등으로 UI 실시간 반영
+     - BE → FE: WebSocket `amrs.status.updated` 등 (**제품·선택**). **FE 녹화 시연:** REST 폴링으로 `EMERGENCY_STOP` 반영 (WS 미사용)
+     - FE → DAS: MQTT `factory/amr/command` (`docs/FE-DAS_MQTT_연동.md` §6). **녹화:** REST+UI 필수, MQTT는 DAS 미가동 시 생략 가능
   3. **BE는 DAS/MQTT에 직접 접속하지 않는다.** DAS로의 정지 전달은 FE 책임이다.
   4. **`accepted: true` 의미**: 명령이 큐에만 들어갔음이 아니라, **DB에 명령·운행 상태가 반영되었음**을 뜻한다. DAS 시뮬 중단 완료는 보장하지 않는다.
   5. **시연: 운행 자동 복구** — FE는 `resume` 명령을 보내지 않는다. `EMERGENCY_STOP`·`ERROR` 진입 후 BE가 **일정 시간 경과 시** `emergency_resolved_at`·`fault_recovered_at`를 채우고 `status`를 `IDLE`(또는 `OPERATING`)로 바꾼다. 작업자 현장 복구를 전제한 시뮬레이션이며, 복구 후 대시보드 `amrError`·`amrErrorUnresolved`가 감소한다. 비상 정지 직후에는 두 수치를 유지한다.
@@ -84,7 +85,7 @@ related_files:
 - [x] 시연 복구: FE `resume` 없음, BE 자동 복구·수치 감소 (`docs/API 정의.md` §3)
 - [ ] 자동 복구 대기 시간(초) BE 설정값 확정
 - [ ] `AMR_COMMAND.status` 초기값·전이 규칙 (예: INSERT 시 `EXECUTED`, `accepted=true`)
-- [ ] FE → DAS **MQTT 토픽·payload** 명세 (FE·DAS 영역 문서)
+- [x] FE → DAS **MQTT 토픽·payload** — `docs/FE-DAS_MQTT_연동.md` §6 (`factory/amr/command`)
 - [ ] `goTo`, `pause` 등 비상 정지 외 command의 DB 반영 범위 (시연 범위에 포함 여부)
 
 ## 변경 이력

@@ -36,12 +36,17 @@ AMR(자율 이동 로봇) 기반 스마트 팩토리 통합 모니터링 시스�
 | [데이터 스키마 설계](docs/데이터%20스키마%20설계.md) | ERD 및 데이터 모델 |
 | [협업 컨벤션](docs/협업%20컨벤션.md) | Git, PR, 커밋, 문서 선행 수정 원칙 |
 
+### FE 녹화 시연 (2026-05-19)
+
+시연 범위·UI 축소·MQTT·필수 API는 **[시연 MVP 합의](docs/시연_MVP_합의.md)** 와 **[FE-DAS MQTT 연동](docs/FE-DAS_MQTT_연동.md)** 이 SSOT이다. 구현 태스크는 [FE/TODO.md](FE/TODO.md), [BE/TODO.md](BE/TODO.md) 상단 「녹화 시연 MVP」를 따른다.
+
 ### 권장 읽기 순서
 
 1. [프로젝트 정의서](docs/프로젝트%20정의서.md)로 범위를 파악하고, [화면 설계서](docs/화면%20설계서.md)로 화면별 상세를 확인합니다.
 2. [API 정의](docs/API%20정의.md)로 클라이언트와 서버 간 계약을 파악합니다.
 3. [데이터 스키마 설계](docs/데이터%20스키마%20설계.md)로 저장 구조를 파악합니다.
 4. [협업 컨벤션](docs/협업%20컨벤션.md)으로 브랜치, PR, 문서 수정 순서를 맞춥니다.
+5. **녹화 시연 시:** [시연 MVP 합의](docs/시연_MVP_합의.md) → [FE-DAS MQTT 연동](docs/FE-DAS_MQTT_연동.md) → FE/BE TODO MVP 절.
 
 ### 아키텍처 결정 기록 (ADR)
 
@@ -67,14 +72,23 @@ PR 작성 시 [.github/pull_request_template.md](.github/pull_request_template.m
 
 ## 로컬 개발
 
-현재 이 저장소에는 `FE`, `BE`, `DB` 아래 애플리케이션 스캐폴딩이 포함되어 있지 않습니다. 빌드·실행 절차는 스캐폴딩이 생긴 뒤 아래 블록을 본문으로 채우고 주석을 제거합니다.
+### FE 녹화 시연 실행 순서 (C-P2 정합)
 
-<!--
-[작성할 내용] 필수 도구 및 권장 버전 (예: JDK, Node.js). 실제로 사용하는 버전은 팀 환경 또는 빌드 설정 파일 확정 후 기입.
+| 순 | 영역 | 명령·설정 |
+| --- | --- | --- |
+| 1 | BE | `cd BE` 후 `docker compose up --build` (프로파일 `docker`, H2) |
+| 2 | BE 스모크 | `BE/scripts/smoke-*.py` 또는 Swagger로 §5.1 REST 확인 ([BE/TODO.md](BE/TODO.md) B1) |
+| 3 | MQTT | Mosquitto 등 **WebSocket 9001** 기동 (DAS·FE 공통) |
+| 4 | DAS | Node-RED: `factory/environment/current`, `factory/amrs/positions` 발행 ([FE-DAS MQTT](docs/FE-DAS_MQTT_연동.md)) |
+| 5 | FE | `cd FE/frontend`, `npm install`, `.env`에 `VITE_MQTT_URL=ws://localhost:9001`, API는 vite **BE 프록시** |
+| 6 | 녹화 | 로그인 → SCR-01~05 6흐름 화면 녹화 |
 
-[작성할 내용] 저장소 루트 또는 각 영역에서의 설치·빌드·실행 명령 (예: npm install, ./mvnw spring-boot:run). 명령은 실제 추가된 스크립트와 일치시킬 것.
+**시연 계정:** `docs/API 정의.md` §1 (예: `admin` / `demo123`, Docker 프로파일 기준).
 
-[작성할 내용] Docker 또는 docker compose 사용 시 파일 경로와 한 줄 실행 방법
+**하지 않음:** FE WebSocket, `GET /environment/areas/current`, MySQL compose(시연 후).
 
-[작성할 내용] 로컬 실행에 필요한 환경 변수 이름과 의미 표 (실제 시크릿 값은 적지 말 것)
--->
+### 영역별 상세
+
+- FE: [FE/AGENTS.md](FE/AGENTS.md), [FE/TODO.md](FE/TODO.md)
+- BE: [BE/AGENTS.md](BE/AGENTS.md), [BE/TODO.md](BE/TODO.md)
+- DB 스키마: [DB/init.sql](DB/init.sql)
