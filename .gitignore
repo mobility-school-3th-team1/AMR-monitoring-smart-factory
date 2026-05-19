@@ -17,3 +17,7 @@ Thumbs.db
 .turbo/
 .parcel-cache/
 coverage/
+
+docker/node-red/node_modules/
+docker/node-red/lib/
+docker/node-red/.npm/

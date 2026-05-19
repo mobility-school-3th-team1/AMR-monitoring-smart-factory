@@ -39,6 +39,36 @@
         "sessionExpiry": ""
     },
     {
+        "id": "30a7902ccb1ce4eb",
+        "type": "modbus-client",
+        "name": "",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "host.docker.internal",
+        "tcpPort": "5020",
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB",
+        "serialType": "RTU-BUFFERD",
+        "serialBaudrate": 9600,
+        "serialDatabits": 8,
+        "serialStopbits": 1,
+        "serialParity": "none",
+        "serialConnectionDelay": 100,
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": "1",
+        "commandDelay": 1,
+        "clientTimeout": 1000,
+        "reconnectOnTimeout": false,
+        "reconnectTimeout": 1000,
+        "parallelUnitIdsAllowed": true,
+        "showErrors": false,
+        "showWarnings": true,
+        "showLogs": true
+    },
+    {
         "id": "fef1fc4e83d3a2ee",
         "type": "inject",
         "z": "56b1ad1a6ae62587",
@@ -125,7 +155,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 150,
-        "y": 140,
+        "y": 160,
         "wires": [
             [
                 "8da395472d09e53c",
@@ -146,7 +176,7 @@
         "finalize": "",
         "libs": [],
         "x": 380,
-        "y": 140,
+        "y": 160,
         "wires": [
             [
                 "7f44f9711bbe61e2"
@@ -168,7 +198,7 @@
         "expiry": "",
         "broker": "aa220a166400682c",
         "x": 600,
-        "y": 140,
+        "y": 160,
         "wires": []
     },
     {
@@ -184,8 +214,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 810,
-        "y": 140,
+        "x": 830,
+        "y": 160,
         "wires": [
             [
                 "7c57bdb63a634e0f"
@@ -197,15 +227,16 @@
         "type": "debug",
         "z": "56b1ad1a6ae62587",
         "name": "debug 2",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
-        "complete": "false",
+        "complete": "true",
+        "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1000,
-        "y": 140,
+        "x": 1020,
+        "y": 160,
         "wires": []
     },
     {
@@ -221,7 +252,7 @@
         "finalize": "",
         "libs": [],
         "x": 380,
-        "y": 220,
+        "y": 240,
         "wires": [
             [
                 "bc010e27b690e809"
@@ -243,7 +274,7 @@
         "expiry": "",
         "broker": "aa220a166400682c",
         "x": 600,
-        "y": 220,
+        "y": 240,
         "wires": []
     },
     {
@@ -259,8 +290,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 810,
-        "y": 220,
+        "x": 830,
+        "y": 240,
         "wires": [
             [
                 "d0b8625aeb9e3d9f"
@@ -272,6 +303,115 @@
         "type": "debug",
         "z": "56b1ad1a6ae62587",
         "name": "debug 3",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "def8cf8b3d1cda61",
+        "type": "modbus-read",
+        "z": "56b1ad1a6ae62587",
+        "name": "온습도 읽기",
+        "topic": "sensor/temp_humid",
+        "showStatusActivities": false,
+        "logIOActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "1",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "2",
+        "rate": "1",
+        "rateUnit": "s",
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "server": "30a7902ccb1ce4eb",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 120,
+        "y": 360,
+        "wires": [
+            [
+                "f0982f7085ba7f5f",
+                "94b07763b3a9c18a"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "f0982f7085ba7f5f",
+        "type": "function",
+        "z": "56b1ad1a6ae62587",
+        "name": "read_hum_temp",
+        "func": "// msg.payload에서 데이터 추출\n// payload[0] = 습도 Raw 데이터 (467)\n// payload[1] = 온도 Raw 데이터 (279)\nconst humRaw = msg.payload[0];\nconst tempRaw = msg.payload[1];\n\nlet humidity = 0;\nlet temperature = 0;\n\ntry {\n    // 1. 습도 계산 (C# 로직 동일)\n    humidity = humRaw / 10.0;\n\n    // 2. 온도 계산 (음수/2의 보수 처리 포함)\n    // Modbus 16비트 레지스터에서 0x8000(32768) 이상은 음수를 의미함\n    if (tempRaw >= 0x8000) {\n        temperature = -(0x10000 - tempRaw) / 10.0;\n    } else {\n        temperature = tempRaw / 10.0;\n    }\n\n    // 3. 결과 구조 재편성\n    msg.payload = {\n        humidity: parseFloat(humidity.toFixed(1)),\n        temperature: parseFloat(temperature.toFixed(1)),\n        timestamp: new Date().getTime() // DB 저장이나 차트 출력에 용이\n    };\n\n    return msg;\n} catch (e) {\n    node.error(\"데이터 파싱 중 오류 발생: \" + e.message);\n    return null;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 360,
+        "wires": [
+            [
+                "c131594449d83f47"
+            ]
+        ]
+    },
+    {
+        "id": "c131594449d83f47",
+        "type": "mqtt out",
+        "z": "56b1ad1a6ae62587",
+        "name": "SNSR_HUMID_001",
+        "topic": "/env/status/SNSR_HUMID_001",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 620,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "3365748b8679dfa3",
+        "type": "mqtt in",
+        "z": "56b1ad1a6ae62587",
+        "name": "SNSR_HUMID_001",
+        "topic": "/env/status/SNSR_HUMID_001",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 850,
+        "y": 360,
+        "wires": [
+            [
+                "57eb84c3a8c54c77"
+            ]
+        ]
+    },
+    {
+        "id": "57eb84c3a8c54c77",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 6",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -279,8 +419,24 @@
         "complete": "false",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1000,
-        "y": 220,
+        "x": 1020,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "94b07763b3a9c18a",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 4",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 360,
+        "y": 440,
         "wires": []
     }
 ]
