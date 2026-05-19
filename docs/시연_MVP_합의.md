@@ -205,10 +205,11 @@
 
 | 순 | 문서 | 항목 |
 | --- | --- | --- |
-| A1 | **`docs/시연_MVP_합의.md`** | 본 문서 팀 확정 |
+| A1 | **`docs/시연_MVP_합의.md`** | 본 문서 팀 확정 | (본 문서) |
 | A2 | **`docs/FE-DAS_MQTT_연동.md`** (신규) | §2 이관 + **토픽·브로커·발행 주기·구역 4×4 매핑** |
-| A3 | **`docs/화면 설계서.md`** | 「녹화 MVP」+ §3 UI 삭제·보류 + 정적 평면도·MQTT |
-| A4 | **`docs/API 정의.md`** | 시연 필수 API = §5.1, environment·queue·kpis 시연 제외 각주 |
+| A3 | **`docs/화면 설계서.md`** | 「녹화 MVP」+ §3 UI 삭제·보류 + 정적 평면도·MQTT | **반영됨** |
+| A4 | **`docs/API 정의.md`** | 시연 필수 API = §5.1, environment·queue·kpis 시연 제외 각주 | **반영됨** |
+| A0 | **`AGENTS.md`** (루트·FE·BE·DB) | MVP SSOT·우선순위 규칙 | **반영됨** |
 | A5 | **`FE/TODO.md`** | §7 구현 순서 반영 |
 | A6 | **`BE/TODO.md`** | FE 녹화 지원 + queue/12-F/kpis **시연 불필요** |
 
@@ -269,9 +270,10 @@ Swagger, for_presentation, `errorCount` KPI 확장 — 시연 후.
 
 - [ ] 시연 = FE 녹화 6흐름  
 - [ ] SCR-01 = **정적 평면도 + MQTT(환경 16 + AMR %)**  
-- [ ] §3 UI 삭제·보류 반영  
-- [ ] DAS MQTT 명세(`FE-DAS_MQTT_연동.md`) 확정  
+- [x] §3 UI 삭제·보류 → `화면 설계서.md` MVP 절, `API 정의.md` 시연 절, `AGENTS.md`(4) 반영  
+- [ ] DAS MQTT 명세(`FE-DAS_MQTT_연동.md` §6) 확정  
 - [ ] BE = §5.1만 필수  
+- [ ] `FE/TODO.md`, `BE/TODO.md` 시연 절 반영  
 
 **확정일:** ___________  
 **참여:** FE / BE / DAS&DB

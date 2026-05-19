@@ -7,6 +7,15 @@
 
 전체 시스템은 FE(프론트엔드, Vue.js) / BE(백엔드) / DB(MySQL, Node-RED)로 구성되며, BE는 MySQL 데이터베이스와 연동하고 FE에 데이터를 제공하는 중간 계층이다.
 
+## FE 녹화 시연 (BE 지원 범위)
+
+FE 녹화 시연 기간 BE는 **`../docs/시연_MVP_합의.md` §5.1** REST만 유지·검증한다.
+
+- **착수 금지(시연):** `GET /environment/areas/current`(12-F), `GET /analytics/kpis` 확장, `amrs.position.updated` 스케줄, FE WebSocket 필수화.
+- **`GET /charging/queue`:** FE는 빈 테이블 더미 — 시드·응답 품질 필수 아님.
+- 환경·AMR 평면도 좌표(%): **DAS MQTT** (`../docs/FE-DAS_MQTT_연동.md`). BE↔DAS 직접 연동 없음.
+- 런타임: Docker + H2 (`../docs/시연_MVP_합의.md` §4).
+
 ## 설계 문서 참조
 
 이 프로젝트의 설계 문서는 상위 디렉토리에 위치한다.
@@ -16,8 +25,10 @@
 - `../docs/API 정의.md` - **RESTful API 명세** (엔드포인트, 요청/응답 형식, WebSocket 이벤트)
 - `../docs/데이터 스키마 설계.md` - **ERD 및 테이블 정의** (엔티티 매핑에 필수)
 - `../docs/협업 컨벤션.md` - Git 워크플로우, 커밋, PR, 코드 품질 규칙
+- `../docs/시연_MVP_합의.md` - FE 녹화 시 BE 필수 API
+- `../docs/API 정의.md` 「FE 녹화 시연」절 - 시연 필수·제외 REST 요약
 
-API 엔드포인트를 구현할 때에는 `../docs/API 정의.md`에 정의된 경로, 파라미터, 응답 형식을 정확히 따라야 한다.
+API 구현 시 **시연 작업**이면 `../docs/시연_MVP_합의.md` §5와 `../docs/API 정의.md` 시연 절을 우선한다. 그 외에는 `../docs/API 정의.md` 전체 명세를 따른다.
 엔티티 클래스를 작성할 때에는 `../docs/데이터 스키마 설계.md`의 ERD를 기준으로 한다.
 
 ## 공통 규칙

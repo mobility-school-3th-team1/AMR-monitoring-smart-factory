@@ -9,6 +9,41 @@
     - 리소스명은 복수형을 우선한다.
     - 모든 변경 API는 인증이 필요하다.
 
+## FE 녹화 시연 (2026-05-19)
+
+상세·화면 매핑·UI 삭제는 `docs/시연_MVP_합의.md`를 따른다. **시연 구현 시 본 절과 MVP 문서가 우선**하며, 아래 본문 전체 명세와 충돌하는 API는 시연에서 호출하지 않는다.
+
+### 시연 필수 REST (BE)
+
+| 메서드·경로 | 화면 |
+| --- | --- |
+| `POST /auth/login` | 로그인 |
+| `GET /dashboard/summary` | SCR-01 (UI: `productionCount`·`activeAlarms`·`avgBatteryPercent` **미표시**) |
+| `GET /dashboard/recent-logs` | SCR-01 |
+| `GET /amrs` | SCR-01, SCR-02 |
+| `GET /amrs/{amrId}` | SCR-03 |
+| `POST /amrs/{amrId}/commands` | SCR-03 (`emergencyStop`) |
+| `GET /charging/stations` | SCR-04 |
+| `GET /charging/forecast` | SCR-04 |
+| `GET /work-histories` | SCR-05 |
+| `GET /analytics/workload` | SCR-05 |
+
+### 시연에서 호출하지 않음
+
+| 메서드·경로 | 사유 |
+| --- | --- |
+| `GET /environment/areas/current` | SCR-01 환경 → **DAS MQTT** (`docs/FE-DAS_MQTT_연동.md`) |
+| `GET /charging/queue` | SCR-04 대기열 **빈 테이블 더미** |
+| `GET /analytics/kpis` | SCR-02/03 차트 보류 |
+| `GET /dashboard/recent-alarms` | SCR-01 활성 알람 KPI 삭제 (알람 목록 유지 시만 선택) |
+
+### 시연 실시간 (비-REST)
+
+- AMR **x/y 백분율**, 구역별 환경 `sensor1`~`sensor4`: **DAS → MQTT → FE**. 명세는 `docs/FE-DAS_MQTT_연동.md`.
+- FE **WebSocket** (`/api/v1/stream`): 시연 **미사용**.
+
+---
+
 ## 1. 인증(Auth)
 
 ### POST /auth/login
@@ -611,3 +646,5 @@
 - 실시간 화면은 WebSocket 이벤트와 REST 조회를 혼합한다.
 - 명령 API: HTTP 응답의 `accepted`는 **DB 반영 완료**를 의미한다. DAS 시뮬 반영은 FE→MQTT 경로이며, 그 결과는 WebSocket 이벤트 또는 이후 REST 조회로 확인한다.
 - 비상 정지 전체 흐름은 `docs/화면 설계서.md`(SCR-03), `docs/ADR/20260518-1252-AMR-emergency-logic.md`를 따른다.
+
+**녹화 시연 MVP:** REST·MQTT 범위는 본 문서 상단 「FE 녹화 시연」절 및 `docs/시연_MVP_합의.md` §5. FE WebSocket 구독은 시연에서 생략한다.
