@@ -74,21 +74,23 @@ PR 작성 시 [.github/pull_request_template.md](.github/pull_request_template.m
 
 ### FE 녹화 시연 실행 순서 (Docker Compose)
 
-**전제:** BE·DB(DAS)·FE는 각각 **자기 폴더의 `docker-compose.yml`** 로만 기동한다. 호스트 JDK·Node 직접 실행은 하지 않는다.
+**전제:** BE·DAS·FE는 **Docker Compose**로만 기동한다. 호스트 JDK·Node 직접 실행은 하지 않는다.
 
 | 순 | 영역 | 명령 |
 | --- | --- | --- |
 | 1 | BE | `cd BE` → `cp .env.example .env` → `docker compose up --build` |
 | 2 | BE 스모크 | [BE/TODO.md](BE/TODO.md) B1 (`:8080` health·§5.1 REST) |
-| 3 | DAS&DB | `cd DB` → `docker compose up --build` (Mosquitto WS **9001** publish, Node-RED MQTT 발행) |
+| 3 | DAS&DB | 프로젝트 루트 → `cp .env.example .env`(최초 1회) → `docker compose --env-file .env -f docker/docker-compose.yml up -d --build` |
 | 4 | FE | `cd FE` → `cp .env.example .env` → `docker compose up --build` |
 | 5 | 녹화 | 호스트 브라우저에서 FE publish URL 접속 → 로그인 → SCR-01~05 |
 
 | 파트 | Compose·이미지 |
 | --- | --- |
-| BE | [BE/docker-compose.yml](BE/docker-compose.yml) (**main에 있음**) |
-| DB | `DB/docker-compose.yml` — **없을 때만** DAS 에이전트 작성 (미병합 브랜치 있을 수 있음) |
+| BE | [BE/docker-compose.yml](BE/docker-compose.yml) |
+| DAS&DB | [docker/docker-compose.yml](docker/docker-compose.yml) — Mosquitto **1883**·WS **9001**, Node-RED, MySQL |
 | FE | `FE/docker-compose.yml` — **없을 때만** FE 에이전트 F4에서 작성 |
+
+**DAS 포트:** Node-RED → MQTT **1883** (`MQTT_PORT`). FE 브라우저 → WebSocket **9001** (`MQTT_WS_PORT`, `VITE_MQTT_URL=ws://localhost:9001`). 상세: [docker/README.md](docker/README.md), [docs/FE-DAS_MQTT_연동.md](docs/FE-DAS_MQTT_연동.md) §7.
 
 에이전트 지시: [docs/시연_에이전트_프롬프트.md](docs/시연_에이전트_프롬프트.md) — 「진행 상황을 확인하고 **FE** / **BE** / **DAS·DB** 파트를 구현하라」
 
@@ -104,4 +106,4 @@ PR 작성 시 [.github/pull_request_template.md](.github/pull_request_template.m
 
 - FE: [FE/AGENTS.md](FE/AGENTS.md), [FE/TODO.md](FE/TODO.md)
 - BE: [BE/AGENTS.md](BE/AGENTS.md), [BE/TODO.md](BE/TODO.md)
-- DB 스키마: [DB/init.sql](DB/init.sql)
+- DB 스키마(DAS MySQL): [docker/mysql/init.sql](docker/mysql/init.sql)

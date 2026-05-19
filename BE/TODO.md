@@ -88,7 +88,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ### 12-A. 엔티티·상태 정규화 — 완료 (2026-05-18)
 
-- [x] `AmrStatusLog`에 `faultCode`, `faultMessage`, `faultRecoveredAt`, `emergencyResolvedAt` 매핑 (`DB/init.sql`·`docs/데이터 스키마 설계.md`와 동일).
+- [x] `AmrStatusLog`에 `faultCode`, `faultMessage`, `faultRecoveredAt`, `emergencyResolvedAt` 매핑 (`docker/mysql/init.sql`·`docs/데이터 스키마 설계.md`와 동일).
 - [x] `DashboardStatusNormalizer` 보강
   - DB/API 응답: 설계 enum **`OPERATING`, `IDLE`, `CHARGING`, `ERROR`, `EMERGENCY_STOP`** (대문자) 기준.
   - `IDLE`, `EMERGENCY_STOP` 명시 매핑 (`EMERGENCY_STOP` → `waiting` 오분류 수정).
@@ -277,7 +277,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ### [완료] 10-A 물리 스키마 정합 (H2, 2026-05-18)
 
-- 엔티티·Repository·Service를 `DB/init.sql` 테이블명·컬럼에 맞춤.
+- 엔티티·Repository·Service를 `docker/mysql/init.sql` 테이블명·컬럼에 맞춤.
 - `DemoUserDataLoader`, `DashboardDemoDataLoader`, `AlarmDemoDataLoader` 시드.
 - API 스모크: auth, dashboard, amrs, alarms, charging, work-histories, analytics → HTTP 200.
 
@@ -464,6 +464,6 @@ DEMO_USER_PASSWORD=demo123
 ## 참고
 
 - 설계 변경 시 `docs/` 먼저 수정 후 구현.
-- 물리 스키마: `DB/init.sql`, `docs/데이터 스키마 설계.md`.
+- 물리 스키마: `docker/mysql/init.sql`, `docs/데이터 스키마 설계.md`.
 - 화면·API 매핑: `docs/화면 설계서.md`.
 - PR 전: `docker compose up --build` + `python scripts/smoke-swagger-phase-s.py` + `python scripts/smoke-websocket-phase-b.py`.

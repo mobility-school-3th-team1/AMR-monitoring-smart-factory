@@ -10,7 +10,8 @@ AMR(자율 이동 로봇) 기반 스마트 팩토리 통합 모니터링 시스�
 ```
 FE/          프론트엔드 (Vue.js, Apache ECharts)
 BE/          백엔드 (Java Spring Boot, RESTful API)
-DB/          데이터베이스 스키마 및 DAS (MySQL, Node-RED)
+DB/          데이터베이스 설계·에이전트 규칙 (물리 DDL·DAS 런타임은 docker/)
+docker/      DAS 런타임 (Mosquitto, Node-RED, MySQL init.sql)
 docs/        설계 문서 (API 명세, ERD, 프로젝트 정의서, 협업 컨벤션)
 ```
 
@@ -32,7 +33,7 @@ docs/        설계 문서 (API 명세, ERD, 프로젝트 정의서, 협업 컨�
 
 ## FE 녹화 시연 실행
 
-전 파트 **Docker Compose** (`BE/`, `DB/`, `FE/` 각 `docker-compose.yml`). 순서·프롬프트: `docs/시연_에이전트_프롬프트.md`, `README.md` 로컬 개발 절.
+전 파트 **Docker Compose** (`BE/`, `docker/`, `FE/`). DAS는 프로젝트 루트에서 `docker/docker-compose.yml`. 순서·프롬프트: `docs/시연_에이전트_프롬프트.md`, `README.md` 로컬 개발 절.
 
 ## 설계 문서
 
