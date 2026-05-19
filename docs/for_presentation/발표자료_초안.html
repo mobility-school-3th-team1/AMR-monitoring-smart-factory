@@ -220,6 +220,22 @@
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       h1 { font-size: 1.75rem; }
     }
+    @media print {
+      html, body { overflow: visible; height: auto; background: #fff; }
+      .nav { display: none !important; }
+      .slide {
+        display: block !important;
+        height: auto;
+        min-height: 100vh;
+        page-break-after: always;
+        break-after: page;
+        overflow: visible;
+        padding: 2rem 2.5rem;
+        animation: none;
+      }
+      .slide:last-child { page-break-after: auto; }
+      .mermaid { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
