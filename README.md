@@ -19,6 +19,7 @@ AMR(자율 이동 로봇) 기반 스마트 팩토리 통합 모니터링 시스�
 | [`FE/`](FE/) | 프론트엔드. 작업 시 [`FE/AGENTS.md`](FE/AGENTS.md)를 우선합니다. |
 | [`BE/`](BE/) | 백엔드. 작업 시 [`BE/AGENTS.md`](BE/AGENTS.md)를 우선합니다. |
 | [`DB/`](DB/) | DB 스키마 및 DAS. 작업 시 [`DB/AGENTS.md`](DB/AGENTS.md)를 우선합니다. |
+| [`compose.yml`](compose.yml) | 통합 Docker Compose (BE + DAS + FE) |
 | [`docs/`](docs/) | 설계 및 명세 문서 |
 | [`docs/ADR/`](docs/ADR/) | 아키텍처 결정 기록 (ADR). 템플릿: [`adr_template.md`](docs/ADR/adr_template.md) |
 | [`.github/`](.github/) | 이슈 및 PR 템플릿 |
@@ -72,29 +73,41 @@ PR 작성 시 [.github/pull_request_template.md](.github/pull_request_template.m
 
 ## 로컬 개발
 
-### FE 녹화 시연 실행 순서 (Docker Compose)
+### 통합 실행 (권장)
 
 **전제:** BE·DAS·FE는 **Docker Compose**로만 기동한다. 호스트 JDK·Node 직접 실행은 하지 않는다.
 
-| 순 | 영역 | 명령 |
-| --- | --- | --- |
-| 1 | BE | `cd BE` → `cp .env.example .env` → `docker compose up --build` |
-| 2 | BE 스모크 | [BE/TODO.md](BE/TODO.md) B1 (`:8080` health·§5.1 REST) |
-| 3 | DAS&DB | 프로젝트 루트 → `cp .env.example .env`(최초 1회) → `docker compose --env-file .env -f docker/docker-compose.yml up -d --build` |
-| 4 | FE | `cd FE` → `cp .env.example .env` → `docker compose up --build` |
-| 5 | 녹화 | 호스트 브라우저에서 FE publish URL 접속 → 로그인 → SCR-01~05 |
+```bash
+# 프로젝트 루트, 최초 1회
+cp .env.example .env
+# .env 에 JWT_SECRET 설정 (openssl rand -base64 32)
 
-| 파트 | Compose·이미지 |
+docker compose up --build
+```
+
+| 확인 | URL·명령 |
 | --- | --- |
-| BE | [BE/docker-compose.yml](BE/docker-compose.yml) |
-| DAS&DB | [docker/docker-compose.yml](docker/docker-compose.yml) — Mosquitto **1883**·WS **9001**, Node-RED, MySQL |
-| FE | `FE/docker-compose.yml` — **없을 때만** FE 에이전트 F4에서 작성 |
+| FE UI | http://localhost:3000 (로그인 `admin` / `demo123`) |
+| BE health | http://localhost:8080/api/v1/actuator/health |
+| BE 스모크 | `cd BE` → `python scripts/smoke-mvp-b1.py` |
+| Node-RED | http://localhost:1880 |
+| MQTT WS (FE) | `VITE_MQTT_URL=ws://localhost:9001` ([.env.example](.env.example)) |
 
-**DAS 포트:** Node-RED → MQTT **1883** (`MQTT_PORT`). FE 브라우저 → WebSocket **9001** (`MQTT_WS_PORT`, `VITE_MQTT_URL=ws://localhost:9001`). 상세: [docker/README.md](docker/README.md), [docs/FE-DAS_MQTT_연동.md](docs/FE-DAS_MQTT_연동.md) §7.
+통합 정의: [compose.yml](compose.yml). 환경 변수: 루트 [.env.example](.env.example).
 
-에이전트 지시: [docs/시연_에이전트_프롬프트.md](docs/시연_에이전트_프롬프트.md) — 「진행 상황을 확인하고 **FE** / **BE** / **DAS·DB** 파트를 구현하라」
+### 영역별 단독 실행 (선택)
 
-**환경 변수 (G4):** [FE/.env.example](FE/.env.example), [FE/frontend/.env.example](FE/frontend/.env.example) — `VITE_MQTT_URL=ws://localhost:9001`
+| 파트 | Compose |
+| --- | --- |
+| BE | [BE/docker-compose.yml](BE/docker-compose.yml) — `BE/.env` 필요 |
+| DAS&DB | [docker/docker-compose.yml](docker/docker-compose.yml) |
+| FE | [FE/docker-compose.yml](FE/docker-compose.yml) — BE 선행·`be_default` 네트워크 |
+
+단독 FE 기동 시 [FE/.env.example](FE/.env.example) 참고.
+
+**DAS 포트:** Node-RED → MQTT **1883** (`MQTT_PORT`). FE 브라우저 → WebSocket **9001** (`MQTT_WS_PORT`). 상세: [docker/README.md](docker/README.md), [docs/FE-DAS_MQTT_연동.md](docs/FE-DAS_MQTT_연동.md) §7.
+
+에이전트 지시: [docs/시연_에이전트_프롬프트.md](docs/시연_에이전트_프롬프트.md)
 
 **MQTT·토픽:** [FE-DAS MQTT 연동](docs/FE-DAS_MQTT_연동.md)
 

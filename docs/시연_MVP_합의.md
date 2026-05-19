@@ -160,7 +160,7 @@
 | **BE** | `BE/docker-compose.yml`, §5 API·H2·`emergencyStop` | 12-F, KPI, position WS, queue 필수 아님 |
 | **DB** | `docker/mysql/init.sql` 참조 | MySQL merge(시연 후) |
 
-**녹화 인프라 (Docker Compose):** `BE/docker compose up` → 루트 `docker compose -f docker/docker-compose.yml up` → `FE/docker compose up`. 호스트 npm·JDK 직접 실행 없음.
+**녹화 인프라 (Docker Compose):** 프로젝트 루트 `docker compose up --build` ([compose.yml](../compose.yml)). 영역 단독 시 BE → DAS → FE 순. 호스트 npm·JDK 직접 실행 없음.
 
 ---
 

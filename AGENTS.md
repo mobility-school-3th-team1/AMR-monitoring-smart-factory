@@ -33,7 +33,9 @@ docs/        설계 문서 (API 명세, ERD, 프로젝트 정의서, 협업 컨�
 
 ## FE 녹화 시연 실행
 
-전 파트 **Docker Compose** (`BE/`, `docker/`, `FE/`). DAS는 프로젝트 루트에서 `docker/docker-compose.yml`. 순서·프롬프트: `docs/시연_에이전트_프롬프트.md`, `README.md` 로컬 개발 절.
+**통합 기동(권장):** 프로젝트 루트 `compose.yml` — `cp .env.example .env` 후 `docker compose up --build`.
+
+영역 단독: `BE/docker-compose.yml`, `docker/docker-compose.yml`, `FE/docker-compose.yml`. 순서·프롬프트: `docs/시연_에이전트_프롬프트.md`, `README.md` 로컬 개발 절.
 
 ## 설계 문서
 

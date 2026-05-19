@@ -10,8 +10,21 @@
 
 ## 실행 방법
 
-이 프로젝트는 루트 `.env` 파일에서 환경 변수를 읽도록 구성되어 있습니다.
-루트 폴더에서 아래 명령으로 실행하세요:
+### 통합 스택 (BE + DAS + FE, 권장)
+
+프로젝트 루트에서:
+
+```bash
+cp .env.example .env
+# JWT_SECRET 설정 후
+docker compose up --build
+```
+
+정의 파일: [compose.yml](../compose.yml). FE UI: http://localhost:3000
+
+### DAS·DB만 (단독)
+
+루트 `.env`에서 환경 변수를 읽습니다:
 
 ```bash
 docker compose --env-file .env -f docker/docker-compose.yml up --build

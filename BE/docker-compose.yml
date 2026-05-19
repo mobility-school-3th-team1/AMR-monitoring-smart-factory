@@ -1,4 +1,5 @@
-# BE standalone stack (H2). Run from BE/: docker compose up --build
+# BE 단독 스택 (H2). BE/ 에서: docker compose up --build
+# 통합 기동(권장): 프로젝트 루트 compose.yml — cp .env.example .env, docker compose up --build
 # Requires BE/.env (copy from .env.example and set JWT_SECRET).
 services:
   be:

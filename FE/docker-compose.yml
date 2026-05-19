@@ -1,9 +1,11 @@
-# FE 녹화 시연 — nginx 정적 빌드 + BE REST 프록시
+# FE 단독 스택 — nginx 정적 빌드 + BE REST 프록시
 #
 # 선행: BE 기동 (cd BE && docker compose up --build)
 #   → Docker 네트워크 be_default, 서비스명 be (nginx.conf upstream)
 #
-# 기동: cd FE && docker compose up --build
+# 통합 기동(권장): 프로젝트 루트 compose.yml — docker compose up --build
+#
+# FE/ 에서 단독: docker compose up --build
 # 접속: http://localhost:${FE_HOST_PORT:-3000}
 
 services:
@@ -12,7 +14,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_MQTT_URL: ${VITE_MQTT_URL:-ws://localhost:1883}
+        VITE_MQTT_URL: ${VITE_MQTT_URL:-ws://localhost:9001}
     container_name: amr-fe
     ports:
       - "${FE_HOST_PORT:-3000}:80"

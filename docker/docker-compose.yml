@@ -1,7 +1,8 @@
 version: '3.8'
 
-# Run from project root using .env:
-# docker compose --env-file .env -f docker/docker-compose.yml up
+# DAS·DB 단독 스택. 프로젝트 루트에서:
+#   docker compose --env-file .env -f docker/docker-compose.yml up --build
+# 통합 기동(권장): 프로젝트 루트 compose.yml — docker compose up --build
 
 services:
   mqtt:
