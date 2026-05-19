@@ -1,0 +1,61 @@
+version: '3.8'
+
+# Run from project root using .env:
+# docker compose --env-file .env -f docker/docker-compose.yml up
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: MQTT_Broker
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+      - "${MQTT_WS_PORT:-9001}:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      - scada-network
+    environment:
+      - network=scada-network
+
+  mysql:
+    image: mysql:latest
+    container_name: SCADA_MySQL
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - scada-network
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-scadadb}
+      TZ: 'Asia/Seoul'
+
+  nodered:
+    build:
+      context: ./node-red
+      dockerfile: Dockerfile
+    image: amr-nodered:local
+    container_name: Node-RED
+    ports:
+      - "${NODERED_PORT:-1880}:1880"
+    volumes:
+      - ./node-red:/data
+    networks:
+      - scada-network
+    environment:
+      - network=scada-network
+      - FLOWS=flows.json
+    healthcheck:
+      test: ["CMD-SHELL", "node /healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - mqtt
+      - mysql
+
+networks:
+  scada-network:
+    driver: bridge

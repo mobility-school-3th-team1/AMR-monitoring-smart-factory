@@ -18,3 +18,8 @@ Thumbs.db
 .parcel-cache/
 coverage/
 /FE/frontend/docs/
+
+docker/node-red/node_modules/
+docker/node-red/lib/
+docker/node-red/.npm/
+**/.npm/

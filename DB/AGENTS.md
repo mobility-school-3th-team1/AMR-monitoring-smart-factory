@@ -15,13 +15,13 @@ MySQL 데이터베이스 스키마를 정의/관리하고, Node-RED를 사용하
 | --- | --- |
 | 환경 | 구역당 4슬롯, 화면 합 **16** (`sensor1`~`sensor4` × 구역). payload는 `../docs/시연_MVP_합의.md` §2.2 |
 | AMR | `x`, `y` = 레이아웃 대비 **백분율(0~100)** |
-| DDL | `init.sql` = 스키마 참조. **시연 런타임은 BE H2** |
-| 기동 | **`DB/docker-compose.yml`** — Mosquitto·Node-RED (호스트 Node 직접 실행 금지) |
-| Docker | compose·Dockerfile **있으면 사용·수정만**. **없을 때만** 신규 작성 (미병합 브랜치 주의) |
+| DDL | **`docker/mysql/init.sql`** = 물리 스키마·시드. **시연 BE 런타임은 H2** |
+| 기동 | 프로젝트 루트 → **`docker/docker-compose.yml`** (Mosquitto **1883**·WS **9001**, Node-RED). 호스트 Node-RED 직접 실행 금지 |
+| Docker | DAS 구현·수정은 **`docker/`** 만. `DB/das/` 레거시 경로 사용 금지 |
 
 - `GET /environment/areas/current`용 로그 적재·MySQL compose는 **시연 후**.
 - `../docs/시연_MVP_합의.md` §7 D1~D3 완료 전 FE SCR-01 MQTT는 블로커.
-- 「진행 상황을 확인하고 **DAS·DB** 파트를 구현하라」→ `docs/시연_에이전트_프롬프트.md` **§3**. 작업 목록: `DB/TODO.md`.
+- 「진행 상황을 확인하고 **DAS·DB** 파트를 구현하라」→ `docs/시연_에이전트_프롬프트.md` **§3**. 작업 목록: `docker/TODO.md`(런타임), `DB/TODO.md`(추적).
 
 ## 설계 문서 참조
 

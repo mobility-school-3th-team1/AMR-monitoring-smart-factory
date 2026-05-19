@@ -1,0 +1,676 @@
+[
+    {
+        "id": "56b1ad1a6ae62587",
+        "type": "tab",
+        "label": "플로우 1",
+        "disabled": true,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "aa220a166400682c",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "MQTT_Broker",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "30a7902ccb1ce4eb",
+        "type": "modbus-client",
+        "name": "",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "host.docker.internal",
+        "tcpPort": "5020",
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB",
+        "serialType": "RTU-BUFFERD",
+        "serialBaudrate": 9600,
+        "serialDatabits": 8,
+        "serialStopbits": 1,
+        "serialParity": "none",
+        "serialConnectionDelay": 100,
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": "1",
+        "commandDelay": 1,
+        "clientTimeout": 1000,
+        "reconnectOnTimeout": false,
+        "reconnectTimeout": 1000,
+        "parallelUnitIdsAllowed": true,
+        "showErrors": false,
+        "showWarnings": true,
+        "showLogs": true
+    },
+    {
+        "id": "fef1fc4e83d3a2ee",
+        "type": "inject",
+        "z": "56b1ad1a6ae62587",
+        "name": "init",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 110,
+        "y": 60,
+        "wires": [
+            [
+                "02b9c01c8ba4e89f"
+            ]
+        ]
+    },
+    {
+        "id": "02b9c01c8ba4e89f",
+        "type": "function",
+        "z": "56b1ad1a6ae62587",
+        "name": "set_global",
+        "func": "// 전역변수 초기값 설정\nlet amr_01 = {\n    amr_id: 'AMR_BSA_01',\n    area: '조립 구역 1',\n    status: 'OPERATING',\n    pos_x: 0,\n    pos_y: 0,\n    yaw: 0,\n    load_weight: 400,\n    battery_pct: 94,\n    SOH_pct: 88,\n    battery_temp: 27.5,\n    updated_at: new Date().toISOString()\n};\n\nlet amr_02 = {\n    amr_id: 'AMR_BSA_02',\n    area: 'Lower Case 로딩 구역',\n    status: 'CHARGING',\n    pos_x: 0,\n    pos_y: 0,\n    yaw: 0,\n    load_weight: 0,\n    battery_pct: 46,\n    SOH_pct: 87,\n    battery_temp: 38.3,\n    updated_at: new Date().toISOString()\n};\n\nlet amr_03 = {\n    amr_id: 'AMR_BSA_03',\n    area: '조립 구역 2',\n    status: 'OPERATING',\n    pos_x: 0,\n    pos_y: 0,\n    yaw: 0,\n    load_weight: 500,\n    battery_pct: 82,\n    SOH_pct: 88,\n    battery_temp: 29.8,\n    updated_at: new Date().toISOString()\n};\n\nglobal.set('amr_01', amr_01);\nglobal.set('amr_02', amr_02);\nglobal.set('amr_03', amr_03);\n\nmsg.payload = '시뮬레이션 초기화';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 60,
+        "wires": [
+            [
+                "56c66c72f4abba2e"
+            ]
+        ]
+    },
+    {
+        "id": "56c66c72f4abba2e",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 480,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "558ddb45265fb6ad",
+        "type": "inject",
+        "z": "56b1ad1a6ae62587",
+        "name": "MQTT Pub TImer",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "8da395472d09e53c",
+                "800a56b4c4d09377"
+            ]
+        ]
+    },
+    {
+        "id": "8da395472d09e53c",
+        "type": "function",
+        "z": "56b1ad1a6ae62587",
+        "name": "AMR_BSA_01",
+        "func": "// AMR_BSA_01\nlet amr_tag = 'amr_01';\nlet amr = global.get(amr_tag);\namr.updated_at = new Date().toISOString();\n\n// 1. 배터리와 카운터 초기화 (없으면 초기값 설정)\nlet timer = context.get('timer') ?? 0;\n\n// 2. 타이머 증가 (1초에 한 번씩 실행되므로)\ntimer++;\n\n// 3. 10초가 되었을 때 로직 수행\nif (timer >= 10) {\n    if (amr.status === 'OPERATING') {\n        amr.battery_pct = Math.max(0, amr.battery_pct - 1); // 0% 밑으로 안 내려가게\n    } else if (amr.status === 'CHARGING') {\n        amr.battery_pct = Math.min(100, amr.battery_pct + 1); // 100% 위로 안 올라가게\n    }\n    timer = 0; // 타이머 리셋\n}\n\n// 4. 값 저장\nglobal.set(amr_tag, amr);\ncontext.set('timer', timer);\n\n// if (pos_x < 30) pos_x += 1; else pos_x = 0;\n// context.set('amr1_pos_x', pos_x);\n\n// if (pos_y < 30) pos_x += 1; else pos_y = 0;\n// context.set('amr1_pos_y', pos_y);\n\nmsg.payload = amr;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 160,
+        "wires": [
+            [
+                "7f44f9711bbe61e2"
+            ]
+        ]
+    },
+    {
+        "id": "7f44f9711bbe61e2",
+        "type": "mqtt out",
+        "z": "56b1ad1a6ae62587",
+        "name": "AMR_BSA_01",
+        "topic": "/amr/status/AMR_BSA_01",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 600,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "c056169670cac3b6",
+        "type": "mqtt in",
+        "z": "56b1ad1a6ae62587",
+        "name": "AMR_BSA_01",
+        "topic": "/amr/status/AMR_BSA_01",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 830,
+        "y": 160,
+        "wires": [
+            [
+                "7c57bdb63a634e0f"
+            ]
+        ]
+    },
+    {
+        "id": "7c57bdb63a634e0f",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 2",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "800a56b4c4d09377",
+        "type": "function",
+        "z": "56b1ad1a6ae62587",
+        "name": "AMR_BSA_02",
+        "func": "// AMR_BSA_02\nlet amr_tag = 'amr_02';\nlet amr = global.get(amr_tag);\namr.updated_at = new Date().toISOString();\n\n// 1. 배터리와 카운터 초기화 (없으면 초기값 설정)\nlet timer = context.get('timer') ?? 0;\n\n// 2. 타이머 증가 (1초에 한 번씩 실행되므로)\ntimer++;\n\n// 3. 10초가 되었을 때 로직 수행\nif (timer >= 10) {\n    if (amr.status === 'OPERATING') {\n        amr.battery_pct = Math.max(0, amr.battery_pct - 1); // 0% 밑으로 안 내려가게\n    } else if (amr.status === 'CHARGING') {\n        amr.battery_pct = Math.min(100, amr.battery_pct + 1); // 100% 위로 안 올라가게\n    }\n    timer = 0; // 타이머 리셋\n}\n\n// 4. 값 저장\nglobal.set(amr_tag, amr);\ncontext.set('timer', timer);\n\n// if (pos_x < 30) pos_x += 1; else pos_x = 0;\n// context.set('amr1_pos_x', pos_x);\n\n// if (pos_y < 30) pos_x += 1; else pos_y = 0;\n// context.set('amr1_pos_y', pos_y);\n\nmsg.payload = amr;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "bc010e27b690e809"
+            ]
+        ]
+    },
+    {
+        "id": "bc010e27b690e809",
+        "type": "mqtt out",
+        "z": "56b1ad1a6ae62587",
+        "name": "AMR_BSA_02",
+        "topic": "/amr/status/AMR_BSA_02",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 600,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "1bc4cbbdcd8c8f7b",
+        "type": "mqtt in",
+        "z": "56b1ad1a6ae62587",
+        "name": "AMR_BSA_02",
+        "topic": "/amr/status/AMR_BSA_02",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 830,
+        "y": 240,
+        "wires": [
+            [
+                "d0b8625aeb9e3d9f"
+            ]
+        ]
+    },
+    {
+        "id": "d0b8625aeb9e3d9f",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 3",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "def8cf8b3d1cda61",
+        "type": "modbus-read",
+        "z": "56b1ad1a6ae62587",
+        "name": "온습도 읽기",
+        "topic": "sensor/temp_humid",
+        "showStatusActivities": false,
+        "logIOActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "1",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "2",
+        "rate": "1",
+        "rateUnit": "s",
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "server": "30a7902ccb1ce4eb",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 120,
+        "y": 360,
+        "wires": [
+            [
+                "f0982f7085ba7f5f",
+                "94b07763b3a9c18a"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "f0982f7085ba7f5f",
+        "type": "function",
+        "z": "56b1ad1a6ae62587",
+        "name": "read_hum_temp",
+        "func": "// Node-RED Context 변수를 사용하여 이전 값을 저장 (변동성 제어용)\nlet lastData = context.get('lastData') || {\n    p: 22, // particle 초기값\n    c: 5   // cogas 초기값\n};\n\nlet default_temp = 23.2;\nlet default_humid = 35;\n\n// 1. 데이터 추출 및 계산 (온도/습도)\nconst humRaw = msg.payload[0];\nconst tempRaw = msg.payload[1];\n\ntry {\n    let humidity = parseFloat((humRaw / 10.0).toFixed(1));\n    let temperature = 0;\n\n    if (tempRaw >= 0x8000) {\n        temperature = -(0x10000 - tempRaw) / 10.0;\n    } else {\n        temperature = tempRaw / 10.0;\n    }\n    // 소수점 첫째 자리 고정\n    temperature = parseFloat(temperature.toFixed(1));\n\n    // 2. 변동 범위 제어 함수 (Random Walk)\n    // 기존 값에서 step 범위 내로만 변동\n    const getClampedValue = (current, step, min, max) => {\n        let change = (Math.random() * (step * 2) - step); // -step ~ +step 사이값\n        let newValue = current + change;\n        return parseFloat(Math.max(min, Math.min(max, newValue)).toFixed(1));\n    };\n\n    // 정수형 변동 함수 (Particle, CoGas용)\n    const getClampedInt = (current, step, min, max) => {\n        let change = Math.floor(Math.random() * (step * 2 + 1)) - step; // -step ~ +step 사이 정수\n        let newValue = current + change;\n        return Math.max(min, Math.min(max, newValue));\n    };\n\n    // 3. 데이터 업데이트\n    lastData.p = getClampedInt(lastData.p, 1, 10, 150); // ±2 변동\n    lastData.c = getClampedInt(lastData.c, 1, 0, 20);   // ±2 변동\n    context.set('lastData', lastData); // 변 변경된 값 저장\n\n    // 4. 결과 구조 편성\n    msg.payload = {\n        \"timestamp\": new Date().toISOString(),\n        \"areas\": {\n            \"AREA_LOAD_LC\": {\n                \"sensor1\": { \n                    \"temp\": temperature, \n                    \"humid\": humidity, \n                    \"particle\": lastData.p, \n                    \"cogas\": lastData.c \n                },\n            },\n            \"AREA_ASSEMBLE_01\": { \n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n                // 필요 시 위와 동일한 방식으로 센서 추가 가능\n            },\n            \"AREA_ASSEMBLE_02\": {\n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n            },\n            \"AREA_OUT_BSA\": {\n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n            }\n        }\n    };\n\n    return msg;\n} catch (e) {\n    node.error(\"데이터 파싱 오류: \" + e.message);\n    return null;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 360,
+        "wires": [
+            [
+                "c131594449d83f47"
+            ]
+        ]
+    },
+    {
+        "id": "c131594449d83f47",
+        "type": "mqtt out",
+        "z": "56b1ad1a6ae62587",
+        "name": "environment",
+        "topic": "factory/environment/current",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 590,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "3365748b8679dfa3",
+        "type": "mqtt in",
+        "z": "56b1ad1a6ae62587",
+        "name": "environment",
+        "topic": "factory/environment/current",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 830,
+        "y": 360,
+        "wires": [
+            [
+                "57eb84c3a8c54c77",
+                "c2a05f83564ce621"
+            ]
+        ]
+    },
+    {
+        "id": "57eb84c3a8c54c77",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 6",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "94b07763b3a9c18a",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 4",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 360,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "c2a05f83564ce621",
+        "type": "debug",
+        "z": "56b1ad1a6ae62587",
+        "name": "debug 5",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload.areas.AREA_LOAD_LC.sensor1",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "b701e8a4c3d25f10",
+        "type": "tab",
+        "label": "시연 MVP",
+        "disabled": false,
+        "info": "녹화 시연: factory/environment/current (5s), factory/amrs/positions (2s), factory/amr/command subscribe",
+        "env": []
+    },
+    {
+        "id": "b702e8a4c3d25f11",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "MVP init",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.2,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 80,
+        "wires": [
+            [
+                "b703e8a4c3d25f12"
+            ]
+        ]
+    },
+    {
+        "id": "b703e8a4c3d25f12",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "init_mvp_seed",
+        "func": "const sensor = (temp, humid, particle, cogas) => ({ temp, humid, particle, cogas });\nconst fourSensors = (t, h, p, c) => ({\n    sensor1: sensor(t, h, p, c),\n    sensor2: sensor(t + 1, h, p, c),\n    sensor3: sensor(t, h + 1, p + 1, c),\n    sensor4: sensor(t, h, p, c + 1)\n});\n\nconst envSeed = {\n    AREA_LOAD_LC: fourSensors(25, 33, 22, 5),\n    AREA_ASSEMBLE_01: fourSensors(24, 32, 21, 4),\n    AREA_ASSEMBLE_02: fourSensors(26, 34, 23, 6),\n    AREA_OUT_BSA: fourSensors(25, 33, 22, 5)\n};\n\nglobal.set('envSeed', envSeed);\nglobal.set('amrPositions', [\n    { amrId: 'amr-01', x: 25, y: 50 },\n    { amrId: 'amr-02', x: 40, y: 30 },\n    { amrId: 'amr-03', x: 55, y: 45 },\n    { amrId: 'amr-04', x: 70, y: 60 },\n    { amrId: 'amr-05', x: 15, y: 75 }\n]);\nglobal.set('amrStopped', {});\n\nmsg.payload = 'MVP seed initialized';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b704e8a4c3d25f13",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "env 5s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 180,
+        "wires": [
+            [
+                "b705e8a4c3d25f14"
+            ]
+        ]
+    },
+    {
+        "id": "b705e8a4c3d25f14",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "build_environment",
+        "func": "const areas = global.get('envSeed');\nif (!areas) {\n    node.warn('envSeed not initialized');\n    return null;\n}\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    areas\n});\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 180,
+        "wires": [
+            [
+                "b706e8a4c3d25f15"
+            ]
+        ]
+    },
+    {
+        "id": "b706e8a4c3d25f15",
+        "type": "mqtt out",
+        "z": "b701e8a4c3d25f10",
+        "name": "pub environment",
+        "topic": "factory/environment/current",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 580,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "b707e8a4c3d25f16",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "amr 2s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "2",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1.5",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 280,
+        "wires": [
+            [
+                "b708e8a4c3d25f17"
+            ]
+        ]
+    },
+    {
+        "id": "b708e8a4c3d25f17",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "build_amr_positions",
+        "func": "const base = global.get('amrPositions') || [];\nconst stopped = global.get('amrStopped') || {};\nconst positions = base.map((item) => {\n    if (stopped[item.amrId]) {\n        return { amrId: item.amrId, x: item.x, y: item.y };\n    }\n    return { amrId: item.amrId, x: item.x, y: item.y };\n});\nmsg.payload = JSON.stringify(positions);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 280,
+        "wires": [
+            [
+                "b709e8a4c3d25f18"
+            ]
+        ]
+    },
+    {
+        "id": "b709e8a4c3d25f18",
+        "type": "mqtt out",
+        "z": "b701e8a4c3d25f10",
+        "name": "pub amr positions",
+        "topic": "factory/amrs/positions",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 590,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "b70ae8a4c3d25f19",
+        "type": "mqtt in",
+        "z": "b701e8a4c3d25f10",
+        "name": "sub amr command",
+        "topic": "factory/amr/command",
+        "qos": "1",
+        "datatype": "utf8",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 400,
+        "wires": [
+            [
+                "b70be8a4c3d25f1a"
+            ]
+        ]
+    },
+    {
+        "id": "b70be8a4c3d25f1a",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "handle_emergency_stop",
+        "func": "let command;\ntry {\n    command = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    node.warn('Invalid command payload');\n    return null;\n}\n\nif (command.command !== 'emergencyStop' || !command.amrId) {\n    return null;\n}\n\nconst stopped = global.get('amrStopped') || {};\nstopped[command.amrId] = true;\nglobal.set('amrStopped', stopped);\n\nnode.status({ fill: 'red', shape: 'dot', text: command.amrId + ' stopped' });\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    }
+]

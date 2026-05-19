@@ -42,7 +42,7 @@ AMR-monitoring-smart-factory/
 | Docker Desktop | 최신 | BE 로컬 실행(권장) |
 | Node.js | 18 LTS 이상 | FE 개발 서버 |
 | Java JDK | 17 | BE 로컬 Gradle 실행(선택) |
-| MySQL | 8.x | `DB/init.sql` 적용(통합 DB 연동 시) |
+| MySQL | 8.x | `docker/mysql/init.sql` (DAS compose 시 자동 적용) |
 
 선택 도구: OpenSSL(`openssl rand -base64 32`), IDE(VS Code/Cursor, IntelliJ).
 
@@ -161,15 +161,25 @@ server: {
 
 ### 5.5 데이터베이스 (MySQL)
 
-물리 스키마와 시드는 `DB/init.sql`에 정의되어 있습니다.
+물리 스키마와 시드는 `docker/mysql/init.sql`에 정의되어 있습니다.
+
+**DAS compose (권장):**
 
 ```bash
-mysql -u <user> -p <database_name> < DB/init.sql
+# 프로젝트 루트
+cp .env.example .env   # 최초 1회
+docker compose --env-file .env -f docker/docker-compose.yml up -d --build
 ```
 
-**현재 BE는 MySQL이 아닌 H2를 사용**합니다. JPA 엔티티와 `init.sql` 테이블명·구조가 아직 완전히 일치하지 않으며, MySQL 연동·엔티티 정합은 `BE/TODO.md` 1순위 작업으로 진행 중입니다. DB 영역 작업 시 `DB/AGENTS.md`와 `docs/데이터 스키마 설계.md`를 함께 봅니다.
+MySQL만 수동 적용할 때:
 
-Node-RED 기반 DAS(시뮬레이션)는 설계상 포함되나, 저장소에 플로우 파일이 아직 없을 수 있습니다. 추가 시 `DB/` 하위에 문서화합니다.
+```bash
+mysql -u <user> -p <database_name> < docker/mysql/init.sql
+```
+
+**현재 BE는 MySQL이 아닌 H2를 사용**합니다. JPA 엔티티와 `init.sql` 테이블명·구조가 아직 완전히 일치하지 않으며, MySQL 연동·엔티티 정합은 `BE/TODO.md` 1순위 작업으로 진행 중입니다. DAS·스키마 작업 시 `docker/README.md`, `DB/AGENTS.md`, `docs/데이터 스키마 설계.md`를 함께 봅니다.
+
+Node-RED 시연 플로우: `docker/node-red/flows.json` (탭 「시연 MVP」). Mosquitto **1883**(Node-RED), **9001**(FE WebSocket).
 
 ## 6. 현재 환경 제한 사항
 
@@ -178,10 +188,10 @@ Node-RED 기반 DAS(시뮬레이션)는 설계상 포함되나, 저장소에 플
 | 항목 | 현재 상태 |
 |------|-----------|
 | BE 데이터 저장소 | H2 인메모리 (`application.yaml`, `application-docker.yaml`) |
-| 물리 MySQL | `DB/init.sql` 존재, BE JPA와 정합 작업 예정 |
-| 통합 docker-compose | 루트 단일 compose 없음. BE만 `BE/docker-compose.yml` |
-| WebSocket `/api/v1/stream` | API 명세·`BE/TODO.md`에 정의, 구현 진행 예정 |
-| FE 실시간 | `mqtt`/`reconnecting-websocket` 의존성 있음. BE MQTT 브로커 연동은 추후 |
+| 물리 MySQL | `docker/mysql/init.sql`, DAS compose로 기동 가능 |
+| Docker Compose | `BE/`, `docker/`, `FE/` 각각 분리. DAS: `docker/docker-compose.yml` |
+| WebSocket `/api/v1/stream` | 시연 FE **미사용** |
+| FE 실시간 | DAS MQTT `ws://localhost:9001` (`docs/FE-DAS_MQTT_연동.md`) |
 
 상세 백로그는 `BE/TODO.md`를 참고하세요.
 

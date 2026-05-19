@@ -13,7 +13,7 @@
 | 0-1 | 브로커: 개발 기본 `ws://localhost:9001` (브라우저 WebSocket MQTT). `VITE_MQTT_URL` |
 | 0-2 | 환경: **단일 토픽**, 4구역 전체 payload, **JSON 문자열** 1회 발행 |
 | 0-3 | AMR 좌표: **단일 토픽**, 전 AMR 배열, **JSON 문자열** 발행 |
-| 0-4 | 구역 마스터: `DB/init.sql` **`AREA`** (`area_id`, `area_name`, 임계값). UI 오버레이 위치는 §2.3 |
+| 0-4 | 구역 마스터: `docker/mysql/init.sql` **`AREA`** (`area_id`, `area_name`, 임계값). UI 오버레이 위치는 §2.3 |
 | 0-5 | 좌표 % 기준: 팀 공유 **공장 레이아웃 원본 이미지** (FE 정적 에셋). 픽셀·논리 40×50 상수 **사용 안 함** |
 | 0-6 | SCR-01 알람 **목록 유지** (`GET /dashboard/recent-alarms`). 실패 시 **더미 목록** |
 | 0-7 | 비상 정지 **녹화 포함**. FE 화면만 녹화 가능하면 됨(`POST`+UI). DAS MQTT publish **권장·미연결 시에도 녹화 가능** |
@@ -43,7 +43,7 @@
 
 ## 2.3 구역 마스터·UI 매핑 (0-4)
 
-### DB 참조 (`DB/init.sql`)
+### DB 참조 (`docker/mysql/init.sql`)
 
 시연 4구역 (`AREA`):
 
@@ -177,9 +177,18 @@
 
 ### 브로커 (0-1, DAS Docker)
 
-- **DAS:** `DB/docker-compose.yml` — Mosquitto WebSocket **9001** 호스트 publish.
-- 호스트 브라우저 MQTT: `ws://localhost:9001`.
-- FE·DAS가 동일 compose 네트워크일 때만 컨테이너 내부에서 `ws://mosquitto:9001` 등 서비스명 사용.
+DAS 스택: 프로젝트 루트에서 `docker compose --env-file .env -f docker/docker-compose.yml up -d --build` (`docker/README.md`).
+
+| 용도 | 포트 | 환경 변수 | 비고 |
+| --- | --- | --- | --- |
+| MQTT (Node-RED → 브로커) | **1883** | `MQTT_PORT` | 컨테이너 `MQTT_Broker:1883` |
+| MQTT WebSocket (FE 브라우저) | **9001** | `MQTT_WS_PORT` | 호스트 `ws://localhost:9001` |
+| Node-RED UI | 1880 | `NODERED_PORT` | |
+| MySQL | 3306 | `DB_PORT` | |
+
+- 호스트 브라우저 MQTT: `ws://localhost:9001` (`VITE_MQTT_URL`).
+- FE·DAS가 **동일 Docker 네트워크**일 때만 컨테이너 내부에서 `ws://MQTT_Broker:9001` 사용 (서비스·컨테이너명 `mqtt`, 호스트명 `MQTT_Broker`).
+- Mosquitto 설정: `docker/mosquitto/mosquitto.conf` (1883 + 9001 리스너).
 
 ---
 
@@ -190,7 +199,8 @@
 - [x] AMR 토픽 `factory/amrs/positions` (단일·JSON 문자열)
 - [x] E-stop `factory/amr/command` subscribe
 - [x] 발행 주기 5s / 2s (권장)
-- [x] 구역 키 = `DB/init.sql` `AREA.area_id`
-- [ ] Node-RED 플로우 구현·녹화 리허설
+- [x] 구역 키 = `docker/mysql/init.sql` `AREA.area_id`
+- [x] Node-RED 플로우 (`docker/node-red/flows.json` 탭 「시연 MVP」)·Mosquitto 1883/9001
+- [ ] 녹화 리허설 (FE `initMqtt` 연동 후)
 
 **Phase 0 확정일:** 2026-05-19

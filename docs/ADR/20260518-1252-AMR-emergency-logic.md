@@ -8,7 +8,7 @@ related_files:
   - "docs/화면 설계서.md"
   - "docs/API 정의.md"
   - "docs/데이터 스키마 설계.md"
-  - "DB/init.sql"
+  - "docker/mysql/init.sql"
 ---
 
 ## 배경과 문제 (Context)
@@ -19,7 +19,7 @@ related_files:
 - 비상 정지(Emergency Stop)는 `docs/화면 설계서.md` SCR-03 ⑤ 및 시연 시나리오에 포함된다.
 - DAS와 프론트엔드(FE)는 **MQTT**로 연결된다. 백엔드(BE)는 REST API, WebSocket, DB(MySQL)를 담당한다.
 - DAS·FE·BE 기능 구현 논의에서, 시뮬레이션 특성상 **운행 상태는 DB 데이터로 관리**하고, DAS 좌표 중단은 **FE가 MQTT로 고지**하는 흐름으로 합의하였다.
-- 기존 `POST /api/v1/amrs/{amrId}/commands` 및 `AMR_COMMAND` 테이블(`DB/init.sql`)은 존재하나, BE↔DAS 경계와 `accepted` 의미가 문서에 명시되어 있지 않았다.
+- 기존 `POST /api/v1/amrs/{amrId}/commands` 및 `AMR_COMMAND` 테이블(`docker/mysql/init.sql`)은 존재하나, BE↔DAS 경계와 `accepted` 의미가 문서에 명시되어 있지 않았다.
 
 ### 해결할 문제
 
@@ -45,7 +45,7 @@ related_files:
   5. **시연: 운행 자동 복구** — FE는 `resume` 명령을 보내지 않는다. `EMERGENCY_STOP`·`ERROR` 진입 후 BE가 **일정 시간 경과 시** `emergency_resolved_at`·`fault_recovered_at`를 채우고 `status`를 `IDLE`(또는 `OPERATING`)로 바꾼다. 작업자 현장 복구를 전제한 시뮬레이션이며, 복구 후 대시보드 `amrError`·`amrErrorUnresolved`가 감소한다. 비상 정지 직후에는 두 수치를 유지한다.
 - 버전/규칙
   - API: `docs/API 정의.md` §3 AMR, §8 WebSocket
-  - 스키마: `docs/데이터 스키마 설계.md`, 물리 DDL `DB/init.sql`
+  - 스키마: `docs/데이터 스키마 설계.md`, 물리 DDL `docker/mysql/init.sql`
   - 지원 command 문자열: `goTo`, `pause`, `resume`, `cancelTask`, `emergencyStop` (기존 API 명세 유지)
 - 선택 이유
   - 시연·소규모 팀에서 BE-DAS 직접 연동을 생략하면 구현·운영 비용이 낮다.

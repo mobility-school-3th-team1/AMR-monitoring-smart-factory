@@ -77,7 +77,7 @@
 | `cogas` | CO 가스 |
 
 - **4구역 × 4센서 = 16** 표시: **단일 토픽** `factory/environment/current`, payload `areas[area_id].sensor1~4` (Phase 0 확정, `docs/FE-DAS_MQTT_연동.md` §4).
-- 구역 `area_id`·이름: **`DB/init.sql` `AREA`** 4행. 이미지 위 오버레이 %는 FE 설정 파일 (`FE-DAS_MQTT_연동.md` §2.3).
+- 구역 `area_id`·이름: **`docker/mysql/init.sql` `AREA`** 4행. 이미지 위 오버레이 %는 FE 설정 파일 (`FE-DAS_MQTT_연동.md` §2.3).
 - **`GET /environment/areas/current`**: 시연 **미사용**.
 
 ### 2.3 AMR 상태 (좌표)
@@ -156,11 +156,11 @@
 | 영역 | 이번 시연 책임 | 하지 않음 |
 | --- | --- | --- |
 | **FE** | compose **없을 때만 F4 작성**, 평면도, MQTT, REST §5, §3, vite(G3) | WS, 12-F, 호스트 npm |
-| **DAS** | compose **없을 때만 작성**, MQTT·Node-RED §2 | BE 직접 연동, 호스트 Node-RED |
+| **DAS** | `docker/docker-compose.yml`, MQTT·Node-RED §2 (Mosquitto **1883**·WS **9001**) | BE 직접 연동, 호스트 Node-RED, `DB/das/` 레거시 |
 | **BE** | `BE/docker-compose.yml`, §5 API·H2·`emergencyStop` | 12-F, KPI, position WS, queue 필수 아님 |
-| **DB** | `init.sql` 참조, DAS compose | MySQL merge(시연 후) |
+| **DB** | `docker/mysql/init.sql` 참조 | MySQL merge(시연 후) |
 
-**녹화 인프라 (Docker Compose):** `BE/docker compose up` → `DB/docker compose up`(MQTT·Node-RED) → `FE/docker compose up`. 호스트 npm·JDK 직접 실행 없음.
+**녹화 인프라 (Docker Compose):** `BE/docker compose up` → 루트 `docker compose -f docker/docker-compose.yml up` → `FE/docker compose up`. 호스트 npm·JDK 직접 실행 없음.
 
 ---
 
@@ -279,7 +279,7 @@ Swagger, for_presentation, `errorCount` KPI 확장 — 시연 후.
 - [ ] SCR-01 = **정적 평면도 + MQTT(환경 16 + AMR %)**  
 - [x] §3 UI 삭제·보류 → `화면 설계서.md` SCR 각주, `API 정의.md` 시연 절, `AGENTS.md`(4) 반영  
 - [x] C-P2 최소 모순 문서화 → `FE/TODO`·`BE/TODO`, `README`, 스키마·정의서·ADR, `설계-구현` §8.2  
-- [x] DAS MQTT 명세 Phase 0 확정 (`FE-DAS_MQTT_연동.md`) — Node-RED 구현은 미완  
+- [x] DAS MQTT 명세 Phase 0 확정 (`FE-DAS_MQTT_연동.md`) — Node-RED `docker/node-red/flows.json` 구현 완료  
 - [ ] BE = §5.1만 필수  
 - [x] `FE/TODO.md`, `BE/TODO.md` 시연 절 반영 (C-P2 최소 모순)  
 

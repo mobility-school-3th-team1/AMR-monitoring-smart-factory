@@ -172,7 +172,7 @@
 
 ### GET /environment/areas/current
 
-> **[FE 녹화 시연: 미사용]** SCR-01 ③ 환경은 **DAS MQTT** `factory/environment/current` (`docs/FE-DAS_MQTT_연동.md` §4). BE 본 API는 **미구현(12-F 보류)**. 구역 마스터는 `DB/init.sql` `AREA`·`ENV_SENSOR`.
+> **[FE 녹화 시연: 미사용]** SCR-01 ③ 환경은 **DAS MQTT** `factory/environment/current` (`docs/FE-DAS_MQTT_연동.md` §4). BE 본 API는 **미구현(12-F 보류)**. 구역 마스터는 `docker/mysql/init.sql` `AREA`·`ENV_SENSOR`.
 
 설명: 구역별 최신 환경 센서값 조회 (메인 대시보드 SCR-01 ③, **제품 목표**)
 
