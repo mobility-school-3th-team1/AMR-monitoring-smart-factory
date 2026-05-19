@@ -5,6 +5,7 @@ import com.sfaas.amr_control_system.dto.LoginResponseDto;
 import com.sfaas.amr_control_system.dto.RefreshTokenRequestDto;
 import com.sfaas.amr_control_system.dto.RefreshTokenResponseDto;
 import com.sfaas.amr_control_system.service.AuthenticationService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,12 +23,14 @@ public class AuthController {
 
     private final AuthenticationService authenticationService;
 
+    @SecurityRequirements
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request) {
         LoginResponseDto response = authenticationService.login(request);
         return ResponseEntity.ok(response);
     }
 
+    @SecurityRequirements
     @PostMapping("/refresh")
     public ResponseEntity<RefreshTokenResponseDto> refresh(@RequestBody RefreshTokenRequestDto request) {
         RefreshTokenResponseDto response = authenticationService.refresh(request);

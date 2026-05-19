@@ -177,12 +177,13 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] `application.yaml` / `application-docker.yaml`: springdoc 경로
 - [x] Docker: `GET /api/v1/v3/api-docs`·Swagger UI HTML 200 (S-2 Try it out·JWT는 다음)
 
-### S-2. 노출·인증 검증
+### S-2. 노출·인증 검증 — 완료 (2026-05-19)
 
-- [ ] 컨트롤러 노출: `auth`, `dashboard`, `amrs`, `alarms`, `charging`, `work-histories`, `analytics`
-- [ ] Swagger **Authorize** → `POST /auth/login` → access token → `GET /dashboard/summary` 등 성공
-- [ ] 보호 API 무토큰 호출 시 401 (Security 회귀 없음)
-- [ ] (선택) 대표 API `@Operation` 최소 어노테이션 — 자동 스캔 우선
+- [x] 컨트롤러 노출: OpenAPI 7 REST 그룹 (`auth`, `dashboard`, `amr`, `alarm`, `charging`, `work-history`, `analytics` controller 태그)
+- [x] `POST /auth/login`·`/auth/refresh`: `@SecurityRequirements` (Swagger에서 잠금 없음) → 토큰 발급 후 **Authorize** → `GET /dashboard/summary` 등 200
+- [x] 보호 API 무토큰 → **401** (`SecurityConfig` `HttpStatusEntryPoint(UNAUTHORIZED)`)
+- [x] 자동 검증: `python scripts/smoke-swagger-phase-s.py` (Docker, `admin` / `demo123`)
+- [x] `@Operation` 생략 — springdoc 자동 스캔 유지
 
 ### S-3. Docker·문서·회귀
 
