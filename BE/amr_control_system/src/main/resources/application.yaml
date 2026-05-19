@@ -39,6 +39,10 @@ app:
     operating-discharge-pct: 1
     battery-full-pct: 100
     primary-charge-station-id: 1
+    low-battery-charge-threshold-pct: 20
+    critical-stop-battery-threshold-pct: 5
+    charging-position-x-percent: 50
+    charging-position-y-percent: 80
 
 springdoc:
   api-docs:

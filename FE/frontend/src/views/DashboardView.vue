@@ -25,11 +25,11 @@
         type="button"
         class="btn-emergency"
         :disabled="emergencyBusy"
-        @click="triggerDemoEmergency"
+        @click="triggerDemoEmergencyScenario"
       >
         비상 상황 발생 (시연)
       </button>
-      <span class="demo-emergency-hint">대상 AMR: {{ DEMO_EMERGENCY_AMR_ID }} · 맵 정지·자동 복구 시연</span>
+      <span class="demo-emergency-hint">알림만 발생 · SCR-03에서 {{ DEFAULT_DEMO_EMERGENCY_AMR_ID }} 비상 정지 실행</span>
     </div>
 
     <!-- 에러 메시지 -->
@@ -162,7 +162,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
-import { subscribe, publish } from '@/plugins/ws'
+import { subscribe } from '@/plugins/ws'
+import {
+  buildDemoEmergencyScenario,
+  DEFAULT_DEMO_EMERGENCY_AMR_ID,
+  writeDemoEmergencyScenario
+} from '@/config/demo-emergency-scenario'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import { ENV_SENSOR_SLOT_KEYS, FACTORY_LAYOUT_AREAS } from '@/config/factory-layout-areas'
 import factoryLayoutAssetUrl from '@/assets/factory-layout.png'
@@ -179,10 +184,7 @@ const DASHBOARD_DEFAULTS = {
 const MQTT_TOPICS = {
   environmentCurrent: 'factory/environment/current',
   amrPositions: 'factory/amrs/positions',
-  amrCommand: 'factory/amr/command'
 }
-
-const DEMO_EMERGENCY_AMR_ID = 'amr-01'
 
 const DEFAULT_SENSOR_VALUE = {
   temp: '-',
@@ -356,7 +358,9 @@ const mapStatusClass = (status) => {
   const normalizedStatus = String(status || '').toUpperCase()
   if (normalizedStatus === 'CHARGING') return 'status-charging'
   if (normalizedStatus === 'IDLE') return 'status-waiting'
-  if (normalizedStatus === 'ERROR' || normalizedStatus === 'EMERGENCY_STOP') return 'status-risk'
+  if (normalizedStatus === 'ERROR' || normalizedStatus === 'EMERGENCY_STOP' || normalizedStatus === 'STOPPED') {
+    return 'status-risk'
+  }
   return 'status-driving'
 }
 
@@ -398,38 +402,29 @@ const handleAmrPositionPayload = (payload) => {
   amrPositionMap.value = nextPositionMap
 }
 
-async function triggerDemoEmergency() {
+function triggerDemoEmergencyScenario() {
   if (emergencyBusy.value) return
 
-  const confirmAction = window.confirm(`비상 상황을 발생시키겠습니까? (${DEMO_EMERGENCY_AMR_ID})`)
+  const confirmAction = window.confirm(
+    `비상 상황 알림을 발생시킵니까? (${DEFAULT_DEMO_EMERGENCY_AMR_ID})\n개별 관제에서 비상 정지를 직접 실행해야 합니다.`
+  )
   if (!confirmAction) return
 
   emergencyBusy.value = true
   try {
-    const response = await api.post(`/amrs/${encodeURIComponent(DEMO_EMERGENCY_AMR_ID)}/commands`, {
-      command: 'emergencyStop'
-    })
-    const accepted = response?.data?.accepted === true
+    const scenario = buildDemoEmergencyScenario(DEFAULT_DEMO_EMERGENCY_AMR_ID)
+    writeDemoEmergencyScenario(scenario)
 
-    if (accepted) {
-      window.alert('비상 정지 명령이 수락되었습니다.')
-      await fetchDashboardData(false)
-      try {
-        publish(MQTT_TOPICS.amrCommand, {
-          amrId: DEMO_EMERGENCY_AMR_ID,
-          command: 'emergencyStop',
-          timestamp: new Date().toISOString()
-        })
-      } catch (publishError) {
-        console.warn('[Dashboard] MQTT publish skipped:', publishError)
-      }
-    } else {
-      window.alert('비상 정지 요청이 전송되었으나 서버에서 수락 응답을 받지 못했습니다.')
+    const alarmEntry = {
+      id: `demo-scenario-${Date.now()}`,
+      level: 'CRITICAL',
+      title: scenario.title,
+      message: scenario.message,
+      occurredAt: scenario.occurredAt
     }
-  } catch (requestError) {
-    console.error('triggerDemoEmergency error', requestError)
-    const message = requestError?.response?.data?.message || '비상 정지 요청 중 오류가 발생했습니다.'
-    window.alert(message)
+    recentAlarms.value = [alarmEntry, ...recentAlarms.value].slice(0, 5)
+
+    window.alert(`${scenario.message}\n\nAMR 개별 관제(SCR-03)로 이동해 비상 정지 버튼을 눌러 주세요.`)
   } finally {
     emergencyBusy.value = false
   }

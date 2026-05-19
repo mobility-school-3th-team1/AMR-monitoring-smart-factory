@@ -40,10 +40,20 @@ public class AmrAutoRecoveryService {
             }
 
             String normalizedStatus = DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus());
-            if (!DashboardStatusNormalizer.isUnresolvedAmrError(
+            boolean unresolvedError = DashboardStatusNormalizer.isUnresolvedAmrError(
                     normalizedStatus,
                     statusLog.getFaultRecoveredAt(),
-                    statusLog.getEmergencyResolvedAt())) {
+                    statusLog.getEmergencyResolvedAt());
+            boolean recoverableStopped = DashboardStatusNormalizer.STATUS_STOPPED.equals(normalizedStatus);
+            if (!unresolvedError && !recoverableStopped) {
+                continue;
+            }
+            if (recoverableStopped && !unresolvedError) {
+                Duration elapsed = Duration.between(statusLog.getUpdatedAt(), now);
+                if (elapsed.compareTo(recoveryDelay) < 0) {
+                    continue;
+                }
+                applyAutoRecovery(statusLog, normalizedStatus, now);
                 continue;
             }
 
@@ -57,7 +67,7 @@ public class AmrAutoRecoveryService {
     }
 
     private void applyAutoRecovery(AmrStatusLog statusLog, String normalizedStatus, LocalDateTime recoveredAt) {
-        statusLog.setStatus(DashboardStatusNormalizer.STATUS_IDLE);
+        String targetStatus = DashboardStatusNormalizer.STATUS_IDLE;
         statusLog.setUpdatedAt(recoveredAt);
 
         if (DashboardStatusNormalizer.STATUS_EMERGENCY_STOP.equals(normalizedStatus)) {
@@ -66,8 +76,16 @@ public class AmrAutoRecoveryService {
             statusLog.setFaultRecoveredAt(recoveredAt);
             statusLog.setFaultCode(null);
             statusLog.setFaultMessage(null);
+        } else if (DashboardStatusNormalizer.STATUS_STOPPED.equals(normalizedStatus)) {
+            int battery = statusLog.getBatteryPct() == null ? 0 : statusLog.getBatteryPct();
+            if (battery <= demoSimulationProperties.getLowBatteryChargeThresholdPct()) {
+                targetStatus = DashboardStatusNormalizer.STATUS_CHARGING;
+                statusLog.setPosX(demoSimulationProperties.getChargingPositionXPercent());
+                statusLog.setPosY(demoSimulationProperties.getChargingPositionYPercent());
+            }
         }
 
+        statusLog.setStatus(targetStatus);
         amrStatusLogRepository.save(statusLog);
 
         String amrLabel = statusLog.getAmr() != null
@@ -75,10 +93,10 @@ public class AmrAutoRecoveryService {
                 : "unknown";
         streamNotificationService.publishAmrStatusChangeAfterCommit(
                 amrLabel,
-                DashboardStatusNormalizer.STATUS_IDLE,
+                targetStatus,
                 null
         );
-        log.info("Auto-recovered AMR {} from {} to IDLE", amrLabel, normalizedStatus);
+        log.info("Auto-recovered AMR {} from {} to {}", amrLabel, normalizedStatus, targetStatus);
     }
 
     private List<AmrStatusLog> findLatestStatusPerAmr() {

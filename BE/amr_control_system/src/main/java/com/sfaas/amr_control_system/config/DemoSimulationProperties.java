@@ -28,4 +28,15 @@ public class DemoSimulationProperties {
     private int batteryFullPct = 100;
 
     private int primaryChargeStationId = 1;
+
+    /** 배터리 이하이면 작업 완료 후 충전 진입(%) */
+    private int lowBatteryChargeThresholdPct = 20;
+
+    /** 배터리 이하이면 STOPPED(%) */
+    private int criticalStopBatteryThresholdPct = 5;
+
+    /** 충전 스테이션 맵 좌표(백분율 0~100). 0.5 → 50 */
+    private int chargingPositionXPercent = 50;
+
+    private int chargingPositionYPercent = 80;
 }

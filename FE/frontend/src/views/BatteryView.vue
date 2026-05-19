@@ -136,9 +136,9 @@ const donutStyle = computed(() => {
   }
 })
 
-const totalChargingAmrs = computed(() =>
-  stations.value.reduce((accumulator, station) => accumulator + (station.occupiedCount || 0), 0)
-)
+const chargingAmrsForForecast = ref([])
+
+const totalChargingAmrs = computed(() => chargingAmrsForForecast.value.length)
 
 function collectPrimaryStationChargingAmrs(stationList) {
   const primaryStation = stationList.find((station) => station.id === DEMO_PRIMARY_STATION_ID)
@@ -148,7 +148,37 @@ function collectPrimaryStationChargingAmrs(stationList) {
   return primaryStation.amrs
 }
 
+function mapApiAmrToChargingRow(amr) {
+  return {
+    amrId: amr.id,
+    amrName: amr.name,
+    batteryPercent: amr.batteryPercent
+  }
+}
+
+async function fetchChargingAmrsForForecast() {
+  try {
+    const response = await api.get('/amrs?status=CHARGING&limit=50')
+    const list = response.data?.data ?? []
+    return Array.isArray(list) ? list.map(mapApiAmrToChargingRow) : []
+  } catch (fetchError) {
+    console.error('BatteryView charging amrs', fetchError)
+    return []
+  }
+}
+
+function mergeChargingAmrRows(stationAmrs, apiAmrs) {
+  const merged = new Map()
+  for (const row of [...stationAmrs, ...apiAmrs]) {
+    if (row?.amrId) {
+      merged.set(row.amrId, row)
+    }
+  }
+  return [...merged.values()]
+}
+
 function applyChargingForecastFromAmrs(chargingAmrs) {
+  chargingAmrsForForecast.value = chargingAmrs
   forecastSummary.value = forecastBucketsFromChargingAmrs(chargingAmrs)
   stats.value.maxEta = maxEtaFromChargingAmrs(chargingAmrs)
 }
@@ -184,16 +214,16 @@ async function loadData() {
     console.error('BatteryView queue', queueError)
   }
 
-  const chargingAmrs = collectPrimaryStationChargingAmrs(stations.value)
+  const stationAmrs = collectPrimaryStationChargingAmrs(stations.value)
+  const apiAmrs = await fetchChargingAmrsForForecast()
+  const chargingAmrs = mergeChargingAmrRows(stationAmrs, apiAmrs)
   applyChargingForecastFromAmrs(chargingAmrs)
 
   const stationCount = stations.value.length
   stats.value.stations = stationCount
   stats.value.normal = stations.value.filter((s) => s.occupiedCount < s.capacity).length
   stats.value.busy = stations.value.filter((s) => s.occupiedCount >= s.capacity).length
-  stats.value.charging = chargingAmrs.length > 0
-    ? chargingAmrs.length
-    : stations.value.reduce((acc, station) => acc + (station.occupiedCount || 0), 0)
+  stats.value.charging = chargingAmrs.length
   stats.value.avgBattery = stationCount
     ? Math.round(
         stations.value.reduce((acc, s) => acc + (s.averageBatteryPercent || 0), 0) / stationCount

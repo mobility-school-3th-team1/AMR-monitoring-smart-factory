@@ -2,10 +2,12 @@ package com.sfaas.amr_control_system.service;
 
 import com.sfaas.amr_control_system.config.DemoSimulationProperties;
 import com.sfaas.amr_control_system.entity.Amr;
+import com.sfaas.amr_control_system.entity.AmrChargeStation;
 import com.sfaas.amr_control_system.entity.AmrChargingSession;
 import com.sfaas.amr_control_system.entity.AmrStatusLog;
 import com.sfaas.amr_control_system.entity.AmrTask;
 import com.sfaas.amr_control_system.entity.Area;
+import com.sfaas.amr_control_system.repository.AmrChargeStationRepository;
 import com.sfaas.amr_control_system.repository.AmrChargingSessionRepository;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.repository.AmrTaskRepository;
@@ -26,7 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 시연용 AMR 운행·배터리·작업 시뮬레이션.
+ * 시연용 AMR 운행·배터리·작업·충전 시뮬레이션.
  */
 @Service
 @RequiredArgsConstructor
@@ -41,6 +43,7 @@ public class AmrDemoSimulationService {
     private final AmrStatusLogRepository amrStatusLogRepository;
     private final AmrTaskRepository amrTaskRepository;
     private final AmrChargingSessionRepository amrChargingSessionRepository;
+    private final AmrChargeStationRepository amrChargeStationRepository;
     private final AreaRepository areaRepository;
     private final Random random = new Random();
     private final AtomicInteger simulationTickCounter = new AtomicInteger(0);
@@ -66,13 +69,22 @@ public class AmrDemoSimulationService {
                 continue;
             }
 
+            if (DashboardStatusNormalizer.STATUS_STOPPED.equals(normalizedStatus)) {
+                continue;
+            }
+
             switch (normalizedStatus) {
                 case DashboardStatusNormalizer.STATUS_CHARGING -> applyChargingTick(statusLog, now);
-                case DashboardStatusNormalizer.STATUS_OPERATING -> applyBatteryDelta(statusLog, -demoSimulationProperties.getOperatingDischargePct(), now);
+                case DashboardStatusNormalizer.STATUS_OPERATING -> {
+                    applyBatteryDelta(statusLog, -demoSimulationProperties.getOperatingDischargePct(), now);
+                    applyCriticalStopIfNeeded(statusLog, now);
+                }
                 case DashboardStatusNormalizer.STATUS_IDLE -> {
                     if (tick % demoSimulationProperties.getIdleDischargeIntervalSec() == 0) {
                         applyBatteryDelta(statusLog, -demoSimulationProperties.getIdleDischargePct(), now);
+                        applyCriticalStopIfNeeded(statusLog, now);
                     }
+                    tryEnterChargingFromIdle(statusLog, now);
                 }
                 default -> {
                     // no battery simulation for other states
@@ -88,6 +100,7 @@ public class AmrDemoSimulationService {
                 .filter(log -> log.getAmr() != null)
                 .filter(log -> DashboardStatusNormalizer.STATUS_IDLE.equals(
                         DashboardStatusNormalizer.normalizeAmrStatus(log.getStatus())))
+                .filter(log -> !isLowBattery(log))
                 .filter(log -> amrTaskRepository.findFirstByAmr_AmrIdAndDropTimeIsNullOrderByPickTimeDesc(log.getAmr().getAmrId()).isEmpty())
                 .toList();
 
@@ -148,22 +161,71 @@ public class AmrDemoSimulationService {
         Amr amr = task.getAmr();
         amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
                 .ifPresent(statusLog -> {
-                    statusLog.setStatus(DashboardStatusNormalizer.STATUS_IDLE);
-                    statusLog.setArea(task.getToArea());
-                    statusLog.setUpdatedAt(now);
-                    amrStatusLogRepository.save(statusLog);
+                    if (isLowBattery(statusLog)) {
+                        enterChargingState(statusLog, now);
+                    } else {
+                        statusLog.setStatus(DashboardStatusNormalizer.STATUS_IDLE);
+                        statusLog.setArea(task.getToArea());
+                        statusLog.setUpdatedAt(now);
+                        amrStatusLogRepository.save(statusLog);
+                    }
                 });
 
         log.debug("Completed demo task {} for AMR {}", task.getTaskId(), AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
     }
 
+    private void tryEnterChargingFromIdle(AmrStatusLog statusLog, LocalDateTime now) {
+        if (!isLowBattery(statusLog)) {
+            return;
+        }
+        if (amrTaskRepository.findFirstByAmr_AmrIdAndDropTimeIsNullOrderByPickTimeDesc(statusLog.getAmr().getAmrId()).isPresent()) {
+            return;
+        }
+        enterChargingState(statusLog, now);
+    }
+
+    private void enterChargingState(AmrStatusLog statusLog, LocalDateTime now) {
+        statusLog.setStatus(DashboardStatusNormalizer.STATUS_CHARGING);
+        statusLog.setPosX(demoSimulationProperties.getChargingPositionXPercent());
+        statusLog.setPosY(demoSimulationProperties.getChargingPositionYPercent());
+        statusLog.setUpdatedAt(now);
+        amrStatusLogRepository.save(statusLog);
+
+        Amr amr = statusLog.getAmr();
+        boolean hasActiveSession = amrChargingSessionRepository.findByEndTimeIsNull().stream()
+                .anyMatch(session -> session.getAmr() != null
+                        && session.getAmr().getAmrId().equals(amr.getAmrId()));
+
+        if (!hasActiveSession) {
+            AmrChargeStation station = amrChargeStationRepository
+                    .findById(demoSimulationProperties.getPrimaryChargeStationId())
+                    .orElse(null);
+            if (station == null) {
+                return;
+            }
+            AmrChargingSession session = new AmrChargingSession();
+            session.setAmr(amr);
+            session.setStation(station);
+            session.setSessionStatus("CHARGING");
+            session.setStartTime(now);
+            amrChargingSessionRepository.save(session);
+        }
+
+        log.info("AMR {} entered CHARGING at map ({}, {})",
+                AmrIdentifierHelper.formatAmrId(amr.getAmrId()),
+                statusLog.getPosX(),
+                statusLog.getPosY());
+    }
+
     private void applyChargingTick(AmrStatusLog statusLog, LocalDateTime now) {
-        int currentBattery = statusLog.getBatteryPct() == null ? 0 : statusLog.getBatteryPct();
+        int currentBattery = batteryPercent(statusLog);
         int nextBattery = Math.min(
                 demoSimulationProperties.getBatteryFullPct(),
                 currentBattery + demoSimulationProperties.getChargeRatePctPerSec()
         );
         statusLog.setBatteryPct(nextBattery);
+        statusLog.setPosX(demoSimulationProperties.getChargingPositionXPercent());
+        statusLog.setPosY(demoSimulationProperties.getChargingPositionYPercent());
         statusLog.setUpdatedAt(now);
         amrStatusLogRepository.save(statusLog);
 
@@ -187,11 +249,31 @@ public class AmrDemoSimulationService {
     }
 
     private void applyBatteryDelta(AmrStatusLog statusLog, int delta, LocalDateTime now) {
-        int currentBattery = statusLog.getBatteryPct() == null ? 0 : statusLog.getBatteryPct();
+        int currentBattery = batteryPercent(statusLog);
         int nextBattery = Math.max(0, currentBattery + delta);
         statusLog.setBatteryPct(nextBattery);
         statusLog.setUpdatedAt(now);
         amrStatusLogRepository.save(statusLog);
+    }
+
+    private void applyCriticalStopIfNeeded(AmrStatusLog statusLog, LocalDateTime now) {
+        if (batteryPercent(statusLog) > demoSimulationProperties.getCriticalStopBatteryThresholdPct()) {
+            return;
+        }
+        statusLog.setStatus(DashboardStatusNormalizer.STATUS_STOPPED);
+        statusLog.setUpdatedAt(now);
+        amrStatusLogRepository.save(statusLog);
+        log.warn("AMR {} entered STOPPED (battery {}%)",
+                AmrIdentifierHelper.formatAmrId(statusLog.getAmr().getAmrId()),
+                statusLog.getBatteryPct());
+    }
+
+    private boolean isLowBattery(AmrStatusLog statusLog) {
+        return batteryPercent(statusLog) <= demoSimulationProperties.getLowBatteryChargeThresholdPct();
+    }
+
+    private int batteryPercent(AmrStatusLog statusLog) {
+        return statusLog.getBatteryPct() == null ? 0 : statusLog.getBatteryPct();
     }
 
     private List<AmrStatusLog> findLatestStatusPerAmr() {

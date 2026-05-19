@@ -11,7 +11,20 @@
           <option value="CHARGING">충전 중</option>
           <option value="ERROR">오류</option>
           <option value="EMERGENCY_STOP">비상 정지</option>
+          <option value="STOPPED">정지</option>
         </select>
+      </div>
+      <div class="amr-filter-row">
+        <label class="amr-filter-label" for="amr-status-sort">상태 정렬 순서</label>
+        <input
+          id="amr-status-sort"
+          v-model="statusSortOrder"
+          class="amr-sort-input"
+          type="text"
+          placeholder="EMERGENCY_STOP,ERROR,STOPPED,..."
+          @change="persistStatusSortOrder"
+        />
+        <button type="button" class="amr-sort-apply-btn" @click="applyStatusSort">적용</button>
       </div>
       <div class="amr-scroll">
         <div v-if="loadError" class="error-note">{{ loadError }}</div>
@@ -87,6 +100,9 @@ const isLoading = ref(true)
 const loadError = ref(null)
 const robots = ref([])
 const statusFilter = ref('')
+const STATUS_SORT_STORAGE_KEY = 'amrStatusSortOrder'
+const DEFAULT_STATUS_SORT_ORDER = 'EMERGENCY_STOP,ERROR,STOPPED,OPERATING,CHARGING,IDLE'
+const statusSortOrder = ref(localStorage.getItem(STATUS_SORT_STORAGE_KEY) || DEFAULT_STATUS_SORT_ORDER)
 
 // API 응답을 UI 모델로 변환
 const STATUS_MAP = {
@@ -104,6 +120,7 @@ function normalizeStatus(rawStatus) {
   if (s === 'OPERATING' || s === 'RUNNING' || s === 'DRIVING') return 'running'
   if (s === 'CHARGING') return 'charging'
   if (s === 'IDLE' || s === 'PAUSED' || s === 'STANDBY') return 'waiting'
+  if (s === 'STOPPED') return 'error'
   if (s === 'ERROR' || s === 'FAULT' || s === 'EMERGENCY_STOP') return 'error'
   // fallback
   return 'waiting'
@@ -115,6 +132,7 @@ function mapAmr(raw) {
   return {
     id:          raw.name || raw.id,
     rawId:       raw.id,
+    rawStatus:   String(raw.status || '').toUpperCase(),
     class:       s.cardClass,
     tag:         s.tag,
     tagDisplay:  s.tagDisplay,
@@ -140,6 +158,36 @@ const stats = computed(() => {
   return { total, operating, running, charging, waiting, error: errorAmt, unhealthy: errorAmt, lastCheck: list.find(r => r.class === 'error')?.id || '-' }
 })
 
+function parseStatusSortOrder() {
+  return statusSortOrder.value
+    .split(',')
+    .map((token) => token.trim().toUpperCase())
+    .filter(Boolean)
+}
+
+function sortRobotsByStatusOrder(list) {
+  const order = parseStatusSortOrder()
+  const rankMap = new Map(order.map((status, index) => [status, index]))
+  const fallbackRank = order.length + 100
+  return [...list].sort((left, right) => {
+    const leftRank = rankMap.get(String(left.rawStatus || '').toUpperCase()) ?? fallbackRank
+    const rightRank = rankMap.get(String(right.rawStatus || '').toUpperCase()) ?? fallbackRank
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank
+    }
+    return String(left.rawId).localeCompare(String(right.rawId))
+  })
+}
+
+function persistStatusSortOrder() {
+  localStorage.setItem(STATUS_SORT_STORAGE_KEY, statusSortOrder.value.trim() || DEFAULT_STATUS_SORT_ORDER)
+}
+
+function applyStatusSort() {
+  persistStatusSortOrder()
+  robots.value = sortRobotsByStatusOrder(robots.value)
+}
+
 // API 호출
 async function loadAmrs() {
   try {
@@ -148,7 +196,8 @@ async function loadAmrs() {
       query.set('status', statusFilter.value)
     }
     const res = await api.get(`/amrs?${query.toString()}`)
-    robots.value = (res.data.data || []).map(mapAmr)
+    const mapped = (res.data.data || []).map(mapAmr)
+    robots.value = sortRobotsByStatusOrder(mapped)
     loadError.value = null
   } catch (err) {
     loadError.value = err.response?.data?.message || 'AMR 목록 로드 실패'
@@ -181,6 +230,8 @@ function openDetail(amrId) {
 .amr-filter-row { padding: 8px 10px 0; display:flex; flex-direction:column; gap:4px; }
 .amr-filter-label { font-size:0.62rem; color:#64748b; font-weight:700; }
 .amr-filter-select { width:100%; font-size:0.68rem; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; }
+.amr-sort-input { width:100%; font-size:0.62rem; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; }
+.amr-sort-apply-btn { margin-top:4px; width:100%; padding:6px 8px; border:none; border-radius:6px; background:#64748b; color:#fff; font-size:0.65rem; font-weight:700; cursor:pointer; }
 .amr-scroll { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px; }
 .amr-selection { display:flex; flex-direction:column; gap:8px; }
 .amr-link { text-decoration:none; color:inherit; display:block; }

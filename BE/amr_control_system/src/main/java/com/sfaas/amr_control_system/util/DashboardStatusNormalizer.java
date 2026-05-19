@@ -11,14 +11,16 @@ public final class DashboardStatusNormalizer {
     public static final String STATUS_CHARGING = "CHARGING";
     public static final String STATUS_ERROR = "ERROR";
     public static final String STATUS_EMERGENCY_STOP = "EMERGENCY_STOP";
+    public static final String STATUS_STOPPED = "STOPPED";
     public static final String SUPPORTED_AMR_QUERY_STATUS_VALUES =
-            "OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
+            "OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP, STOPPED";
     private static final Set<String> SUPPORTED_AMR_QUERY_STATUSES = Set.of(
             STATUS_OPERATING,
             STATUS_IDLE,
             STATUS_CHARGING,
             STATUS_ERROR,
-            STATUS_EMERGENCY_STOP
+            STATUS_EMERGENCY_STOP,
+            STATUS_STOPPED
     );
     private DashboardStatusNormalizer() {
     }
@@ -46,13 +48,18 @@ public final class DashboardStatusNormalizer {
         if (STATUS_ERROR.equals(upper) || "FAULT".equals(upper)) {
             return STATUS_ERROR;
         }
+        if (STATUS_STOPPED.equals(upper) || "STOP".equals(upper) || "HALT".equals(upper)) {
+            return STATUS_STOPPED;
+        }
         if (STATUS_EMERGENCY_STOP.equals(upper)
-                || "EMERGENCYSTOP".equals(upper.replace("_", ""))
-                || "STOPPED".equals(upper)) {
+                || "EMERGENCYSTOP".equals(upper.replace("_", ""))) {
             return STATUS_EMERGENCY_STOP;
         }
 
         String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (lower.contains("정지") && !lower.contains("비상")) {
+            return STATUS_STOPPED;
+        }
         if (lower.contains("비상") || lower.contains("emergency")) {
             return STATUS_EMERGENCY_STOP;
         }
@@ -112,7 +119,9 @@ public final class DashboardStatusNormalizer {
     }
 
     public static boolean isErrorStatus(String normalizedStatus) {
-        return STATUS_ERROR.equals(normalizedStatus) || STATUS_EMERGENCY_STOP.equals(normalizedStatus);
+        return STATUS_ERROR.equals(normalizedStatus)
+                || STATUS_EMERGENCY_STOP.equals(normalizedStatus)
+                || STATUS_STOPPED.equals(normalizedStatus);
     }
 
     /**

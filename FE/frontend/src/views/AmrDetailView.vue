@@ -7,6 +7,23 @@
     >
       <div v-if="loadError" class="error-banner">{{ loadError }}</div>
 
+      <div class="amr-picker-row">
+        <label class="amr-picker-label" for="amr-number-input">AMR 번호</label>
+        <input
+          id="amr-number-input"
+          v-model.number="amrNumberInput"
+          class="amr-picker-input"
+          type="number"
+          min="1"
+          max="99"
+          placeholder="1"
+          @keyup.enter="loadAmrByNumber"
+        />
+        <button type="button" class="amr-picker-btn" @click="loadAmrByNumber">조회</button>
+      </div>
+
+      <div v-if="demoScenarioBanner" class="scenario-banner">{{ demoScenarioBanner }}</div>
+
       <div class="detail-header">
         <div>
           <strong class="amr-title">{{ displayName }}</strong>
@@ -45,18 +62,25 @@
 import BaseCard from '../components/atoms/BaseCard.vue'
 import SectionPanel from '../components/molecules/SectionPanel.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import {
+  clearDemoEmergencyScenario,
+  readDemoEmergencyScenario
+} from '@/config/demo-emergency-scenario'
 import api from '@/plugins/axios'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import { publish } from '@/plugins/ws'
 
 const route = useRoute()
+const router = useRouter()
 
 const MQTT_TOPIC_AMR_COMMAND = 'factory/amr/command'
 
 const loadError = ref(null)
 const detail = ref(null)
 const resolvedAmrId = ref('')
+const amrNumberInput = ref(1)
+const demoScenarioBanner = ref('')
 
 const displayName = computed(() => detail.value?.name || detail.value?.id || resolvedAmrId.value || '-')
 
@@ -67,7 +91,8 @@ const statusLabel = computed(() => {
     IDLE: '대기',
     CHARGING: '충전 중',
     ERROR: '오류',
-    EMERGENCY_STOP: '비상 정지'
+    EMERGENCY_STOP: '비상 정지',
+    STOPPED: '정지'
   }
   return labels[raw] || raw || '-'
 })
@@ -118,6 +143,36 @@ const lastSeenLabel = computed(() => {
   return `최종 수신: ${date.toLocaleString('ko-KR')}`
 })
 
+function formatAmrIdFromNumber(amrNumber) {
+  const parsed = Number(amrNumber)
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return ''
+  }
+  return `amr-${String(Math.trunc(parsed)).padStart(2, '0')}`
+}
+
+function refreshDemoScenarioBanner() {
+  const scenario = readDemoEmergencyScenario()
+  if (!scenario || !resolvedAmrId.value) {
+    demoScenarioBanner.value = ''
+    return
+  }
+  if (scenario.amrId === resolvedAmrId.value) {
+    demoScenarioBanner.value = scenario.message
+  } else {
+    demoScenarioBanner.value = ''
+  }
+}
+
+function loadAmrByNumber() {
+  const amrId = formatAmrIdFromNumber(amrNumberInput.value)
+  if (!amrId) {
+    loadError.value = '1 이상의 AMR 번호를 입력하세요.'
+    return
+  }
+  router.push({ path: '/amr-detail', query: { amr: amrId } })
+}
+
 function resolveAmrIdFromRoute() {
   const queryAmr = route.query.amr
   if (typeof queryAmr === 'string' && queryAmr.trim()) return queryAmr.trim()
@@ -139,6 +194,11 @@ async function loadAmrDetail() {
     const response = await api.get(`/amrs/${encodeURIComponent(amrId)}`)
     detail.value = response.data
     loadError.value = null
+    const matchedNumber = Number(String(amrId).replace(/\D/g, ''))
+    if (Number.isFinite(matchedNumber) && matchedNumber > 0) {
+      amrNumberInput.value = matchedNumber
+    }
+    refreshDemoScenarioBanner()
   } catch (err) {
     loadError.value = err.response?.data?.message || 'AMR 상세를 불러오지 못했습니다.'
     detail.value = null
@@ -158,6 +218,8 @@ async function triggerEmergency() {
     const accepted = resp?.data?.accepted === true
 
     if (accepted) {
+      clearDemoEmergencyScenario()
+      demoScenarioBanner.value = ''
       window.alert('비상 정지 명령이 수락되었습니다.')
       await loadAmrDetail()
       try {
@@ -201,6 +263,49 @@ watch(
 <style scoped>
 .detail-layout {
   display: grid;
+}
+
+.amr-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.amr-picker-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.amr-picker-input {
+  width: 72px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.amr-picker-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scenario-banner {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .error-banner {
