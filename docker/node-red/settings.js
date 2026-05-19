@@ -379,6 +379,9 @@ module.exports = {
      * will install/load. It can use '*' as a wildcard that matches anything.
      */
     externalModules: {
+        modules: {
+            allowList: ['mysql2', 'mysql2/promise']
+        },
         // autoInstall: false,   /** Whether the runtime will attempt to automatically install missing modules */
         // autoInstallRetry: 30, /** Interval, in seconds, between reinstall attempts */
         // palette: {              /** Configuration for the Palette Manager */
@@ -540,7 +543,12 @@ module.exports = {
      *    global.get("os")
      */
     functionGlobalContext: {
-        // os:require('os'),
+        demoMysqlConfig: {
+            host: process.env.MYSQL_HOST || 'SCADA_MySQL',
+            database: process.env.MYSQL_DATABASE || 'scadadb',
+            user: process.env.MYSQL_USER || 'root',
+            password: process.env.MYSQL_PASSWORD || process.env.DB_ROOT_PASSWORD || 'root_pw'
+        }
     },
 
     /** The maximum number of messages nodes will buffer internally as part of their

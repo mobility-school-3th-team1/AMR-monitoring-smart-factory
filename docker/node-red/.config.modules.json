@@ -1,0 +1,9 @@
+{
+    "mysql2": {
+        "spec": "mysql2/promise",
+        "module": "mysql2",
+        "subpath": "/promise",
+        "builtin": false,
+        "known": false
+    }
+}

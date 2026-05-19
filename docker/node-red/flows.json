@@ -538,13 +538,18 @@
         "type": "function",
         "z": "b701e8a4c3d25f10",
         "name": "sync_amr_status_from_db",
-        "func": "const mysql = require('mysql2/promise');\n\nconst host = env.get('MYSQL_HOST') || 'SCADA_MySQL';\nconst database = env.get('MYSQL_DATABASE') || 'scadadb';\nconst user = env.get('MYSQL_USER') || 'root';\nconst password = env.get('MYSQL_PASSWORD') || 'root_pw';\n\nlet pool = global.get('demoMysqlPool');\nif (!pool) {\n    pool = mysql.createPool({\n        host,\n        user,\n        password,\n        database,\n        waitForConnections: true,\n        connectionLimit: 3\n    });\n    global.set('demoMysqlPool', pool);\n}\n\nconst sql = `\nSELECT\n  CONCAT('amr-', LPAD(CAST(s.amr_id AS CHAR), 2, '0')) AS amrId,\n  s.status\nFROM AMR_STATUS_LOG s\nINNER JOIN (\n  SELECT amr_id, MAX(updated_at) AS max_updated_at\n  FROM AMR_STATUS_LOG\n  GROUP BY amr_id\n) latest ON s.amr_id = latest.amr_id AND s.updated_at = latest.max_updated_at\n`;\n\ntry {\n    const [rows] = await pool.query(sql);\n    const statusesFromDb = {};\n    const mqttStopLatch = global.get('mqttStopLatch') || {};\n\n    for (const row of rows) {\n        statusesFromDb[row.amrId] = row.status;\n        if (row.status !== 'EMERGENCY_STOP') {\n            delete mqttStopLatch[row.amrId];\n        }\n    }\n\n    global.set('amrStatusesFromDb', statusesFromDb);\n    global.set('mqttStopLatch', mqttStopLatch);\n} catch (error) {\n    node.warn('MySQL status sync failed: ' + error.message);\n}\n\nreturn null;",
+        "func": "const { host, database, user, password } = global.get('demoMysqlConfig');\n\nlet pool = global.get('demoMysqlPool');\nif (!pool) {\n    pool = mysql.createPool({\n        host,\n        user,\n        password,\n        database,\n        waitForConnections: true,\n        connectionLimit: 3\n    });\n    global.set('demoMysqlPool', pool);\n}\n\nconst sql = `\nSELECT\n  CONCAT('amr-', LPAD(CAST(s.amr_id AS CHAR), 2, '0')) AS amrId,\n  s.status\nFROM AMR_STATUS_LOG s\nINNER JOIN (\n  SELECT amr_id, MAX(updated_at) AS max_updated_at\n  FROM AMR_STATUS_LOG\n  GROUP BY amr_id\n) latest ON s.amr_id = latest.amr_id AND s.updated_at = latest.max_updated_at\n`;\n\ntry {\n    const [rows] = await pool.query(sql);\n    const statusesFromDb = {};\n    const mqttStopLatch = global.get('mqttStopLatch') || {};\n\n    for (const row of rows) {\n        statusesFromDb[row.amrId] = row.status;\n        if (row.status !== 'EMERGENCY_STOP') {\n            delete mqttStopLatch[row.amrId];\n        }\n    }\n\n    global.set('amrStatusesFromDb', statusesFromDb);\n    global.set('mqttStopLatch', mqttStopLatch);\n} catch (error) {\n    node.warn('MySQL status sync failed: ' + error.message);\n}\n\nreturn null;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
-        "libs": [],
+        "libs": [
+            {
+                "var": "mysql",
+                "module": "mysql2/promise"
+            }
+        ],
         "x": 360,
         "y": 120,
         "wires": [

@@ -48,6 +48,10 @@ services:
     environment:
       - network=scada-network
       - FLOWS=flows.json
+      - MYSQL_HOST=SCADA_MySQL
+      - MYSQL_DATABASE=${DB_NAME:-scadadb}
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${DB_ROOT_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "node /healthcheck.js"]
       interval: 30s
