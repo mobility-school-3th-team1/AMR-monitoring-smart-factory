@@ -31,6 +31,12 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME:-scadadb}
       TZ: Asia/Seoul
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
     restart: unless-stopped
 
   nodered:
@@ -47,6 +53,10 @@ services:
       - amr-net
     environment:
       FLOWS: flows.json
+      MYSQL_HOST: SCADA_MySQL
+      MYSQL_DATABASE: ${DB_NAME:-scadadb}
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${DB_ROOT_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "node /healthcheck.js"]
       interval: 30s
@@ -75,6 +85,14 @@ services:
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-demo123}
+      MYSQL_HOST: SCADA_MySQL
+      MYSQL_PORT: ${DB_PORT:-3306}
+      MYSQL_DATABASE: ${DB_NAME:-scadadb}
+      MYSQL_USER: root
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/actuator/health"]
       interval: 30s

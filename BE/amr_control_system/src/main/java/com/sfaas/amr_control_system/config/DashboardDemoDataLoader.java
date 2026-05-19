@@ -27,10 +27,11 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 /**
- * H2 개발용 시드. {@code DB/init.sql} 물리 스키마·샘플 값과 동일한 ID·테이블 구조를 사용한다.
+ * 시연용 시드. {@code docker/mysql/init.sql} 스키마·마스터 데이터 위에 운행 상태·이력을 채운다.
  */
 @Component
 @Order(2)
@@ -50,12 +51,21 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (amrRepository.count() > 0) {
+        if (amrStatusLogRepository.count() > 0) {
             return;
         }
 
-        log.info("Seeding H2 demo data (physical schema aligned with DB/init.sql).");
+        if (amrRepository.count() == 0) {
+            log.info("Seeding full demo data (physical schema aligned with docker/mysql/init.sql).");
+            seedFullDemoData();
+            return;
+        }
 
+        log.info("Seeding runtime demo data onto existing MySQL master rows from init.sql.");
+        seedRuntimeDemoData();
+    }
+
+    private void seedFullDemoData() {
         Site site = new Site();
         site.setSiteId("SITE_BSA_01");
         site.setSiteName("BSA 제조 공장");
@@ -80,7 +90,27 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
         );
         amrRepository.saveAll(amrs);
 
+        seedDemoRuntimeRecords(amrs, loadArea, assemble01, assemble02);
+    }
+
+    private void seedRuntimeDemoData() {
+        Area loadArea = areaRepository.findById("AREA_LOAD_LC")
+                .orElseThrow(() -> new IllegalStateException("AREA_LOAD_LC missing in init.sql"));
+        Area assemble01 = areaRepository.findById("AREA_ASSEMBLE_01")
+                .orElseThrow(() -> new IllegalStateException("AREA_ASSEMBLE_01 missing in init.sql"));
+        Area assemble02 = areaRepository.findById("AREA_ASSEMBLE_02")
+                .orElseThrow(() -> new IllegalStateException("AREA_ASSEMBLE_02 missing in init.sql"));
+
+        List<Amr> amrs = amrRepository.findAll().stream()
+                .sorted(Comparator.comparingInt(Amr::getAmrId))
+                .toList();
+
+        seedDemoRuntimeRecords(amrs, loadArea, assemble01, assemble02);
+    }
+
+    private void seedDemoRuntimeRecords(List<Amr> amrs, Area loadArea, Area assemble01, Area assemble02) {
         LocalDateTime now = LocalDateTime.now();
+
         amrStatusLogRepository.saveAll(List.of(
                 createStatusLog(amrs.get(0), assemble01, "OPERATING", 120, 450, 90, 50, 85, 98, 35.5f, now.minusMinutes(2)),
                 createStatusLog(amrs.get(1), assemble02, "IDLE", 50, 200, 0, 0, 95, 99, 30.0f, now.minusMinutes(5)),
@@ -101,64 +131,82 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
                         "LiDAR data invalid",
                         null,
                         null
-                )
+                ),
+                createStatusLog(amrs.get(4), assemble02, "IDLE", 60, 210, 0, 0, 88, 97, 29.5f, now.minusMinutes(7))
         ));
 
-        AmrChargeStation station1 = createStation(1, loadArea, "충전소_입고", "AVAILABLE");
-        AmrChargeStation station2 = createStation(2, loadArea, "충전소_입고", "OCCUPIED");
-        AmrChargeStation station3 = createStation(3, loadArea, "충전소_입고", "OCCUPIED");
-        amrChargeStationRepository.saveAll(List.of(station1, station2, station3));
+        if (amrChargeStationRepository.count() == 0) {
+            AmrChargeStation station1 = createStation(1, loadArea, "충전소_입고", "AVAILABLE");
+            AmrChargeStation station2 = createStation(2, loadArea, "충전소_입고", "OCCUPIED");
+            AmrChargeStation station3 = createStation(3, loadArea, "충전소_입고", "OCCUPIED");
+            amrChargeStationRepository.saveAll(List.of(station1, station2, station3));
+        }
 
-        amrChargingSessionRepository.saveAll(List.of(
-                createActiveSession(amrs.get(2), station2, "CHARGING", now.minusMinutes(25)),
-                createActiveSession(amrs.get(1), station3, "WAITING", now.minusMinutes(10)),
-                createCompletedSession(amrs.get(0), station1, now.minusHours(6), now.minusHours(5))
-        ));
+        if (amrChargingSessionRepository.count() == 0) {
+            AmrChargeStation station1 = amrChargeStationRepository.findById(1)
+                    .orElseThrow(() -> new IllegalStateException("Charge station 1 missing"));
+            AmrChargeStation station2 = amrChargeStationRepository.findById(2)
+                    .orElseThrow(() -> new IllegalStateException("Charge station 2 missing"));
+            AmrChargeStation station3 = amrChargeStationRepository.findById(3)
+                    .orElseThrow(() -> new IllegalStateException("Charge station 3 missing"));
 
-        WorkOrder workOrder = new WorkOrder();
-        workOrder.setPlannedQty(200);
-        workOrder.setPlannedStartDate(LocalDate.now().minusDays(1));
-        workOrder.setPlannedEndDate(LocalDate.now().plusDays(7));
-        workOrder.setStatus("RUNNING");
-        workOrderRepository.save(workOrder);
+            amrChargingSessionRepository.saveAll(List.of(
+                    createActiveSession(amrs.get(2), station2, "CHARGING", now.minusMinutes(25)),
+                    createActiveSession(amrs.get(1), station3, "WAITING", now.minusMinutes(10)),
+                    createCompletedSession(amrs.get(0), station1, now.minusHours(6), now.minusHours(5))
+            ));
+        }
 
-        AmrTask completedTask = new AmrTask();
-        completedTask.setAmr(amrs.get(0));
-        completedTask.setTaskType("TRANSPORT");
-        completedTask.setFromArea(loadArea);
-        completedTask.setToArea(assemble01);
-        completedTask.setStatus("COMPLETED");
-        completedTask.setPickTime(now.minusMinutes(30));
-        completedTask.setDropTime(now.minusMinutes(21));
-        amrTaskRepository.save(completedTask);
+        if (workOrderRepository.count() == 0) {
+            WorkOrder workOrder = new WorkOrder();
+            workOrder.setPlannedQty(200);
+            workOrder.setPlannedStartDate(LocalDate.now().minusDays(1));
+            workOrder.setPlannedEndDate(LocalDate.now().plusDays(7));
+            workOrder.setStatus("RUNNING");
+            workOrderRepository.save(workOrder);
+        }
 
-        AmrTask activeTask = new AmrTask();
-        activeTask.setAmr(amrs.get(1));
-        activeTask.setTaskType("TRANSPORT");
-        activeTask.setFromArea(assemble01);
-        activeTask.setToArea(loadArea);
-        activeTask.setStatus("IN_PROGRESS");
-        activeTask.setPickTime(now.minusMinutes(8));
-        amrTaskRepository.save(activeTask);
+        if (amrTaskRepository.count() == 0) {
+            AmrTask completedTask = new AmrTask();
+            completedTask.setAmr(amrs.get(0));
+            completedTask.setTaskType("TRANSPORT");
+            completedTask.setFromArea(loadArea);
+            completedTask.setToArea(assemble01);
+            completedTask.setStatus("COMPLETED");
+            completedTask.setPickTime(now.minusMinutes(30));
+            completedTask.setDropTime(now.minusMinutes(21));
+            amrTaskRepository.save(completedTask);
 
-        AmrTask failedTask = new AmrTask();
-        failedTask.setAmr(amrs.get(3));
-        failedTask.setTaskType("TRANSPORT");
-        failedTask.setFromArea(loadArea);
-        failedTask.setToArea(assemble02);
-        failedTask.setStatus("FAILED");
-        failedTask.setPickTime(now.minusHours(2));
-        failedTask.setDropTime(now.minusHours(1).minusMinutes(45));
-        amrTaskRepository.save(failedTask);
+            AmrTask activeTask = new AmrTask();
+            activeTask.setAmr(amrs.get(1));
+            activeTask.setTaskType("TRANSPORT");
+            activeTask.setFromArea(assemble01);
+            activeTask.setToArea(loadArea);
+            activeTask.setStatus("IN_PROGRESS");
+            activeTask.setPickTime(now.minusMinutes(8));
+            amrTaskRepository.save(activeTask);
 
-        Alarm sampleAlarm = new Alarm();
-        sampleAlarm.setSourceType("CHARGE_STATION");
-        sampleAlarm.setSourceId("1");
-        sampleAlarm.setLevel("warning");
-        sampleAlarm.setMessage("충전 스테이션 1 혼잡 상태");
-        sampleAlarm.setOccurredAt(now.minusDays(2));
-        sampleAlarm.setAcknowledged(false);
-        alarmRepository.save(sampleAlarm);
+            AmrTask failedTask = new AmrTask();
+            failedTask.setAmr(amrs.get(3));
+            failedTask.setTaskType("TRANSPORT");
+            failedTask.setFromArea(loadArea);
+            failedTask.setToArea(assemble02);
+            failedTask.setStatus("FAILED");
+            failedTask.setPickTime(now.minusHours(2));
+            failedTask.setDropTime(now.minusHours(1).minusMinutes(45));
+            amrTaskRepository.save(failedTask);
+        }
+
+        if (alarmRepository.count() == 0) {
+            Alarm sampleAlarm = new Alarm();
+            sampleAlarm.setSourceType("CHARGE_STATION");
+            sampleAlarm.setSourceId("1");
+            sampleAlarm.setLevel("warning");
+            sampleAlarm.setMessage("충전 스테이션 1 혼잡 상태");
+            sampleAlarm.setOccurredAt(now.minusDays(2));
+            sampleAlarm.setAcknowledged(false);
+            alarmRepository.save(sampleAlarm);
+        }
     }
 
     private Area createArea(

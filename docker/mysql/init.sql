@@ -173,6 +173,10 @@ CREATE TABLE AMR_STATUS_LOG (
     amr_id INT,
     area_id VARCHAR(50),
     status VARCHAR(50),
+    fault_code VARCHAR(50),
+    fault_message VARCHAR(255),
+    fault_recovered_at DATETIME,
+    emergency_resolved_at DATETIME,
     pos_x INT,
     pos_y INT,
     yaw INT,
@@ -182,7 +186,8 @@ CREATE TABLE AMR_STATUS_LOG (
     battery_temp FLOAT,
     updated_at DATETIME,
     CONSTRAINT FK_STAT_LOG_AMR FOREIGN KEY (amr_id) REFERENCES AMR_MASTER(amr_id),
-    CONSTRAINT FK_STAT_LOG_AREA FOREIGN KEY (area_id) REFERENCES AREA(area_id)
+    CONSTRAINT FK_STAT_LOG_AREA FOREIGN KEY (area_id) REFERENCES AREA(area_id),
+    INDEX IDX_AMR_STATUS_LOG_AMR_UPDATED (amr_id, updated_at)
 );
 
 -- 15. USER_ACCOUNT
@@ -337,28 +342,4 @@ INSERT INTO AMR_CHARGE_STATION (station_id, area_id, station_name, station_statu
 INSERT INTO AMR_CHARGE_STATION (station_id, area_id, station_name, station_status) VALUES (2, 'AREA_LOAD_LC', '충전소_입고', 'OCCUPIED');
 INSERT INTO AMR_CHARGE_STATION (station_id, area_id, station_name, station_status) VALUES (3, 'AREA_LOAD_LC', '충전소_입고', 'OCCUPIED');
 
--- AMR 작업
-INSERT INTO AMR_TASK (amr_id, task_type, lot_id, from_area_id, to_area_id, status, pick_time, drop_time)
-VALUES (1, 'TRANSPORT', 1, 'AREA_LOAD_LC', 'AREA_ASSEMBLE_01', 'COMPLETED', '2026-05-15 10:00:00', '2026-05-15 10:30:00');
-INSERT INTO AMR_TASK (amr_id, task_type, lot_id, from_area_id, to_area_id, status, pick_time, drop_time)
-VALUES (2, 'TRANSPORT', 3, 'AREA_ASSEMBLE_01', 'AREA_ASSEMBLE_02', 'COMPLETED', '2026-05-15 11:00:00', '2026-05-15 11:30:00');
-
--- AMR 상태 로그
-INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_weight, battery_pct, SOH_pct, battery_temp, updated_at)
-VALUES (1, 'AREA_ASSEMBLE_01', 'OPERATING', 120, 450, 90, 50, 85, 98, 35.5, '2026-05-15 11:25:00');
-INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_weight, battery_pct, SOH_pct, battery_temp, updated_at)
-VALUES (2, 'AREA_ASSEMBLE_02', 'IDLE', 50, 200, 0, 0, 95, 99, 30.0, '2026-05-15 09:00:00');
-INSERT INTO AMR_STATUS_LOG (amr_id, area_id, status, pos_x, pos_y, yaw, load_weight, battery_pct, SOH_pct, battery_temp, updated_at)
-VALUES (3, 'AREA_LOAD_LC', 'CHARGING', 300, 150, 180, 0, 20, 95, 28.5, '2026-05-15 10:45:00');
-
--- 사용자 인증
-INSERT INTO USER_ACCOUNT (user_id, username, password_hash, display_name, role, created_at)
-VALUES ('user-001', 'admin', '$2a$10$examplehashforadminpassword', '관리자', 'admin', '2026-05-01');
-INSERT INTO REFRESH_TOKEN (token, user_id, expires_at, revoked, created_at)
-VALUES ('refresh-token-example', 'user-001', '2026-05-16 08:00:00', FALSE, '2026-05-15 08:00:00');
-
--- 알람 및 AMR 명령
-INSERT INTO ALARM_LOG (source_type, source_id, level, message, occurred_at, acknowledged, acknowledged_at)
-VALUES ('CHARGE_STATION', '1', 'warning', '충전 스테이션 1 혼잡 상태', '2026-05-13 14:29:00', FALSE, NULL);
-INSERT INTO AMR_COMMAND (command_id, amr_id, command_type, params, accepted, status, requested_at)
-VALUES ('cmd-001', 1, 'emergencyStop', '{}', TRUE, 'PENDING', '2026-05-15 11:00:00');
+-- AMR_STATUS_LOG·AMR_TASK·USER·명령 시드는 BE 기동 시 DashboardDemoDataLoader·DemoUserDataLoader가 채운다.

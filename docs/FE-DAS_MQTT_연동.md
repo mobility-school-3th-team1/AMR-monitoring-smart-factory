@@ -134,6 +134,8 @@
 
 - `amrId`: BE `GET /amrs`의 `id`와 동일 문자열.
 - `x`, `y`: float, **percent 0~100**.
+- DAS는 MySQL `AMR_STATUS_LOG` 최신 `status`가 **`OPERATING`인 AMR만** 좌표를 갱신한다. `IDLE`·`CHARGING`·`ERROR`·`EMERGENCY_STOP`은 고정.
+- 비상 정지: FE가 `accepted: true` 수신 후 `factory/amr/command` publish → DAS 즉시 정지. DB 반영은 BE→MySQL, DAS는 1초 주기로 동기화.
 
 ---
 

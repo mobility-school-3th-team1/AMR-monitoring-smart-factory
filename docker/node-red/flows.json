@@ -462,7 +462,7 @@
         "type": "tab",
         "label": "시연 MVP",
         "disabled": false,
-        "info": "녹화 시연: factory/environment/current (1s), factory/amrs/positions (0.5s), factory/amr/command subscribe",
+        "info": "녹화 MVP: env 1s, AMR pos 0.5s (DB status), MySQL sync 1s, factory/amr/command",
         "env": []
     },
     {
@@ -495,7 +495,7 @@
         "type": "function",
         "z": "b701e8a4c3d25f10",
         "name": "init_mvp_seed",
-        "func": "const sensor = (temp, humid, particle, cogas) => ({ temp, humid, particle, cogas });\nconst fourSensors = (t, h, p, c) => ({\n    sensor1: sensor(t, h, p, c),\n    sensor2: sensor(t + 1, h, p, c),\n    sensor3: sensor(t, h + 1, p + 1, c),\n    sensor4: sensor(t, h, p, c + 1)\n});\n\nconst envSeed = {\n    AREA_LOAD_LC: fourSensors(25, 33, 22, 5),\n    AREA_ASSEMBLE_01: fourSensors(24, 32, 21, 4),\n    AREA_ASSEMBLE_02: fourSensors(26, 34, 23, 6),\n    AREA_OUT_BSA: fourSensors(25, 33, 22, 5)\n};\n\nglobal.set('envSeed', envSeed);\nglobal.set('amrPositions', [\n    { amrId: 'amr-01', x: 25, y: 50 },\n    { amrId: 'amr-02', x: 40, y: 30 },\n    { amrId: 'amr-03', x: 55, y: 45 },\n    { amrId: 'amr-04', x: 70, y: 60 },\n    { amrId: 'amr-05', x: 15, y: 75 }\n]);\nglobal.set('amrStopped', {});\n\nmsg.payload = 'MVP seed initialized';\nreturn msg;",
+        "func": "const sensor = (temp, humid, particle, cogas) => ({ temp, humid, particle, cogas });\nconst fourSensors = (t, h, p, c) => ({\n    sensor1: sensor(t, h, p, c),\n    sensor2: sensor(t + 1, h, p, c),\n    sensor3: sensor(t, h + 1, p + 1, c),\n    sensor4: sensor(t, h, p, c + 1)\n});\n\nconst envSeed = {\n    AREA_LOAD_LC: fourSensors(25, 33, 22, 5),\n    AREA_ASSEMBLE_01: fourSensors(24, 32, 21, 4),\n    AREA_ASSEMBLE_02: fourSensors(26, 34, 23, 6),\n    AREA_OUT_BSA: fourSensors(25, 33, 22, 5)\n};\n\nglobal.set('envSeed', envSeed);\nglobal.set('amrPositions', [\n    { amrId: 'amr-01', x: 25, y: 50 },\n    { amrId: 'amr-02', x: 40, y: 30 },\n    { amrId: 'amr-03', x: 55, y: 45 },\n    { amrId: 'amr-04', x: 70, y: 60 },\n    { amrId: 'amr-05', x: 15, y: 75 }\n]);\nglobal.set('mqttStopLatch', {});\nglobal.set('amrStatusesFromDb', {});\n\nmsg.payload = 'MVP seed initialized';\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -504,6 +504,49 @@
         "libs": [],
         "x": 340,
         "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b70cf001syncinj",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "db status 1s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 120,
+        "wires": [
+            [
+                "b70cf002syncfn"
+            ]
+        ]
+    },
+    {
+        "id": "b70cf002syncfn",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "sync_amr_status_from_db",
+        "func": "const mysql = require('mysql2/promise');\n\nconst host = env.get('MYSQL_HOST') || 'SCADA_MySQL';\nconst database = env.get('MYSQL_DATABASE') || 'scadadb';\nconst user = env.get('MYSQL_USER') || 'root';\nconst password = env.get('MYSQL_PASSWORD') || 'root_pw';\n\nlet pool = global.get('demoMysqlPool');\nif (!pool) {\n    pool = mysql.createPool({\n        host,\n        user,\n        password,\n        database,\n        waitForConnections: true,\n        connectionLimit: 3\n    });\n    global.set('demoMysqlPool', pool);\n}\n\nconst sql = `\nSELECT\n  CONCAT('amr-', LPAD(CAST(s.amr_id AS CHAR), 2, '0')) AS amrId,\n  s.status\nFROM AMR_STATUS_LOG s\nINNER JOIN (\n  SELECT amr_id, MAX(updated_at) AS max_updated_at\n  FROM AMR_STATUS_LOG\n  GROUP BY amr_id\n) latest ON s.amr_id = latest.amr_id AND s.updated_at = latest.max_updated_at\n`;\n\ntry {\n    const [rows] = await pool.query(sql);\n    const statusesFromDb = {};\n    const mqttStopLatch = global.get('mqttStopLatch') || {};\n\n    for (const row of rows) {\n        statusesFromDb[row.amrId] = row.status;\n        if (row.status !== 'EMERGENCY_STOP') {\n            delete mqttStopLatch[row.amrId];\n        }\n    }\n\n    global.set('amrStatusesFromDb', statusesFromDb);\n    global.set('mqttStopLatch', mqttStopLatch);\n} catch (error) {\n    node.warn('MySQL status sync failed: ' + error.message);\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 120,
         "wires": [
             []
         ]
@@ -601,7 +644,7 @@
         "type": "function",
         "z": "b701e8a4c3d25f10",
         "name": "build_amr_positions",
-        "func": "const step = 1.5;\nconst base = global.get('amrPositions') || [];\nconst stopped = global.get('amrStopped') || {};\n\nconst nextPositions = base.map((item) => {\n    if (stopped[item.amrId]) {\n        return { amrId: item.amrId, x: item.x, y: item.y };\n    }\n\n    const directionKey = 'amrDir_' + item.amrId;\n    let direction = global.get(directionKey) || { dx: 1, dy: 1 };\n    let x = Number(item.x) + direction.dx * step;\n    let y = Number(item.y) + direction.dy * step;\n\n    if (x <= 5 || x >= 95) {\n        direction.dx *= -1;\n        x = Math.min(95, Math.max(5, x));\n    }\n    if (y <= 5 || y >= 95) {\n        direction.dy *= -1;\n        y = Math.min(95, Math.max(5, y));\n    }\n\n    global.set(directionKey, direction);\n    return {\n        amrId: item.amrId,\n        x: Math.round(x * 10) / 10,\n        y: Math.round(y * 10) / 10\n    };\n});\n\nglobal.set('amrPositions', nextPositions);\nmsg.payload = JSON.stringify(nextPositions);\nreturn msg;",
+        "func": "const OPERATING_STATUS = 'OPERATING';\nconst step = 1.5;\nconst base = global.get('amrPositions') || [];\nconst statusesFromDb = global.get('amrStatusesFromDb') || {};\nconst mqttStopLatch = global.get('mqttStopLatch') || {};\n\nconst nextPositions = base.map((item) => {\n    const dbStatus = statusesFromDb[item.amrId] || 'IDLE';\n    const canMove = dbStatus === OPERATING_STATUS && !mqttStopLatch[item.amrId];\n\n    if (!canMove) {\n        return { amrId: item.amrId, x: item.x, y: item.y };\n    }\n\n    const directionKey = 'amrDir_' + item.amrId;\n    let direction = global.get(directionKey) || { dx: 1, dy: 1 };\n    let x = Number(item.x) + direction.dx * step;\n    let y = Number(item.y) + direction.dy * step;\n\n    if (x <= 5 || x >= 95) {\n        direction.dx *= -1;\n        x = Math.min(95, Math.max(5, x));\n    }\n    if (y <= 5 || y >= 95) {\n        direction.dy *= -1;\n        y = Math.min(95, Math.max(5, y));\n    }\n\n    global.set(directionKey, direction);\n    return {\n        amrId: item.amrId,\n        x: Math.round(x * 10) / 10,\n        y: Math.round(y * 10) / 10\n    };\n});\n\nglobal.set('amrPositions', nextPositions);\nmsg.payload = JSON.stringify(nextPositions);\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -660,7 +703,7 @@
         "type": "function",
         "z": "b701e8a4c3d25f10",
         "name": "handle_emergency_stop",
-        "func": "let command;\ntry {\n    command = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    node.warn('Invalid command payload');\n    return null;\n}\n\nif (command.command !== 'emergencyStop' || !command.amrId) {\n    return null;\n}\n\nconst stopped = global.get('amrStopped') || {};\nstopped[command.amrId] = true;\nglobal.set('amrStopped', stopped);\n\nnode.status({ fill: 'red', shape: 'dot', text: command.amrId + ' stopped' });\nreturn null;",
+        "func": "let command;\ntry {\n    command = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    node.warn('Invalid command payload');\n    return null;\n}\n\nif (command.command !== 'emergencyStop' || !command.amrId) {\n    return null;\n}\n\nconst mqttStopLatch = global.get('mqttStopLatch') || {};\nmqttStopLatch[command.amrId] = true;\nglobal.set('mqttStopLatch', mqttStopLatch);\n\nnode.status({ fill: 'red', shape: 'dot', text: command.amrId + ' stopped' });\nreturn null;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,

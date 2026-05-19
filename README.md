@@ -93,7 +93,9 @@ docker compose up --build
 | Node-RED | http://localhost:1880 |
 | MQTT WS (FE) | `VITE_MQTT_URL=ws://localhost:9001` ([.env.example](.env.example)) |
 
-통합 정의: [compose.yml](compose.yml). 환경 변수: 루트 [.env.example](.env.example).
+통합 정의: [compose.yml](compose.yml). BE·DAS는 동일 MySQL(`SCADA_MySQL`)을 사용한다. 환경 변수: 루트 [.env.example](.env.example).
+
+`init.sql` 변경 후에는 `docker compose down -v`로 DB 볼륨을 초기화한 뒤 재기동한다.
 
 ### 영역별 단독 실행 (선택)
 

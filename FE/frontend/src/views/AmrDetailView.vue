@@ -160,18 +160,17 @@ async function triggerEmergency() {
     if (accepted) {
       window.alert('비상 정지 명령이 수락되었습니다.')
       await loadAmrDetail()
+      try {
+        publish(MQTT_TOPIC_AMR_COMMAND, {
+          amrId,
+          command: 'emergencyStop',
+          timestamp: new Date().toISOString()
+        })
+      } catch (pubErr) {
+        console.warn('MQTT publish skipped:', pubErr)
+      }
     } else {
       window.alert('비상 정지 요청이 전송되었으나 서버에서 수락 응답을 받지 못했습니다.')
-    }
-
-    try {
-      publish(MQTT_TOPIC_AMR_COMMAND, {
-        amrId,
-        command: 'emergencyStop',
-        timestamp: new Date().toISOString()
-      })
-    } catch (pubErr) {
-      console.warn('MQTT publish skipped:', pubErr)
     }
   } catch (err) {
     console.error('triggerEmergency error', err)

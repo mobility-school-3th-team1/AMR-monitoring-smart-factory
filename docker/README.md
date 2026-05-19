@@ -10,6 +10,15 @@
 
 ## 실행 방법
 
+### MySQL 스키마 변경 후
+
+`docker/mysql/init.sql`이 바뀌면 기존 볼륨을 제거한 뒤 재기동해야 합니다.
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
 ### 통합 스택 (BE + DAS + FE, 권장)
 
 프로젝트 루트에서:
@@ -44,7 +53,7 @@ docker compose --env-file .env -f docker/docker-compose.yml up --build
 | 토픽 | 방향 | 주기 |
 | --- | --- | --- |
 | `factory/environment/current` | publish | 1초 (센서 값 변동) |
-| `factory/amrs/positions` | publish | 0.5초 (좌표 이동) |
+| `factory/amrs/positions` | publish | 0.5초 (`OPERATING` AMR만 좌표 이동, status는 MySQL `AMR_STATUS_LOG`) |
 | `factory/amr/command` | subscribe (`emergencyStop`) | - |
 
 검증 (호스트, Mosquitto 클라이언트 설치 시):
