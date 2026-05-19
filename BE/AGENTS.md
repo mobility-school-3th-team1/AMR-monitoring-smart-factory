@@ -120,7 +120,7 @@ src/main/java/com/{group}/{artifact}/
   1. **Authorize 없이** `POST /auth/login` 실행 → `accessToken` 복사
   2. **Authorize** → 토큰만 입력 (`Bearer ` 접두사 없음)
   3. 보호 API Try it out (`GET /dashboard/summary` 등)
-- **로컬 회귀 (Docker 기동 후):** `python scripts/smoke-swagger-phase-s.py`, `python scripts/smoke-websocket-phase-b.py` (`pip install websocket-client`)
+- **로컬 회귀 (Docker 기동 후):** `python scripts/smoke-mvp-b1.py`, `python scripts/smoke-swagger-phase-s.py`, `python scripts/smoke-websocket-phase-b.py` (`pip install websocket-client`)
 - 목록 API 기본값: `page=1`, `limit=20`
 - 날짜/시간: ISO 8601 UTC
 - 리소스명은 복수형을 우선한다 (예: `/amrs`, `/alarms`, `/charging/stations`)

@@ -27,7 +27,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 | 순 | 작업 | 상태 |
 | --- | --- | --- |
-| B1 | §5.1 API Docker 스모크 (`scripts/smoke-*.py` 등) | [ ] 녹화 전 재확인 |
+| B1 | §5.1 API Docker 스모크 (`scripts/smoke-mvp-b1.py`) | [x] 완료 (2026-05-19) |
 | — | 12-F, Phase C, position WS | **시연 후** |
 
 ---
@@ -39,7 +39,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - **10-A (H2 물리 스키마 정합·API 스모크):** 완료 (2026-05-18).
 - **Phase A (REST 시연 경로):** 완료 (2026-05-18, Docker 스모크 검증).
 - **Phase B (WebSocket):** **완료** (2026-05-19). B-1~4 Docker WS 스모크 통과 (`scripts/smoke-websocket-phase-b.py`).
-- **녹화 스프린트:** 신규 BE API **추가 없음**. **B1 스모크**만 (상단 MVP 표).
+- **녹화 스프린트:** 신규 BE API **추가 없음**. **B1 스모크 완료** (2026-05-19, `scripts/smoke-mvp-b1.py`).
 - **Phase S (Swagger UI):** **S-1~S-3 완료** (2026-05-19). S-4·Phase C·12-F는 **시연 후**.
 - **DB 영역 Docker compose:** 미 merge. 당분간 **H2 + BE Docker**로 시연·개발.
 - **DAS·FE·BE 합의:** 비상 정지는 BE가 DB 갱신 후 `accepted` 응답, FE가 DAS(MQTT) 정지 고지. BE↔DAS 직접 연동 없음.
@@ -69,7 +69,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 | 순서 | 작업 | 한 줄 설명 | 상태 |
 |------|------|-----------|------|
-| **1** | **FE 녹화 MVP B1** | §5.1 REST Docker 스모크 | **1순위** |
+| ~~**1**~~ | ~~**FE 녹화 MVP B1**~~ | §5.1 REST Docker 스모크 | **완료** (2026-05-19) |
 | ~~—~~ | ~~Phase A REST 시연~~ | 12-A~G (12-F 제외) | **완료** |
 | ~~—~~ | ~~Phase B WebSocket 최소~~ | B-1~4 | **완료** |
 | (시연 후) | Phase S-4·설계 재검토 | API·화면 vs 구현 | 대기 |
@@ -78,7 +78,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | (병렬) | FE·BE 통합 | REST·CORS·vite 프록시 (WS·MQTT는 FE) | FE 주도 |
 | (대기) | 10-B MySQL | DB compose merge 후 | — |
 
-**현재 BE 1순위:** **녹화 MVP B1(§5.1 스모크)**. 신규 API 구현 **없음**.
+**현재 BE 1순위:** **시연 후** Phase S-4(설계 재검토) 또는 Phase C. 녹화 MVP B1 **완료**. 신규 API 구현 **없음**.
 
 ---
 
@@ -322,6 +322,11 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 - `scripts/smoke-websocket-phase-b.py` ALL PASSED (H2 fresh: `docker compose down -v` 후 기동).
 
+### [완료] 녹화 MVP B1 — §5.1 REST Docker 스모크 (2026-05-19)
+
+- `scripts/smoke-mvp-b1.py`: login, summary(`amrError`/`amrErrorUnresolved`), recent-alarms, recent-logs, amrs(필터), amr-01, charging stations/forecast, work-histories, workload, `emergencyStop`(amr-02) → ALL PASSED.
+- 회귀: `smoke-swagger-phase-s.py`, `smoke-websocket-phase-b.py` 동시 ALL PASSED.
+
 ---
 
 ## 개발 계획 (레거시 섹션·참고)
@@ -409,6 +414,14 @@ docker compose up -d --build
 python scripts/smoke-swagger-phase-s.py
 ```
 
+**MVP B1 (§5.1 REST, 녹화 필수 경로):**
+
+```bash
+cd BE
+docker compose up -d --build
+python scripts/smoke-mvp-b1.py
+```
+
 **Phase B WebSocket 스모크:**
 
 ```bash
@@ -420,7 +433,7 @@ python scripts/smoke-websocket-phase-b.py
 
 (PowerShell 대안: `scripts/smoke-websocket-phase-b.ps1` — 수신은 백그라운드 스레드 필요, **Python 스크립트 권장**.)
 
-**PR 전 권장:** 위 두 Python 스크립트 모두 ALL PASSED.
+**PR 전 권장:** `smoke-mvp-b1.py` + `smoke-swagger-phase-s.py` + `smoke-websocket-phase-b.py` 모두 ALL PASSED.
 
 ---
 
@@ -466,4 +479,4 @@ DEMO_USER_PASSWORD=demo123
 - 설계 변경 시 `docs/` 먼저 수정 후 구현.
 - 물리 스키마: `DB/init.sql`, `docs/데이터 스키마 설계.md`.
 - 화면·API 매핑: `docs/화면 설계서.md`.
-- PR 전: `docker compose up --build` + `python scripts/smoke-swagger-phase-s.py` + `python scripts/smoke-websocket-phase-b.py`.
+- PR 전: `docker compose up --build` + `python scripts/smoke-mvp-b1.py` + `python scripts/smoke-swagger-phase-s.py` + `python scripts/smoke-websocket-phase-b.py`.
