@@ -48,8 +48,8 @@
 
 | 항목 | 규칙 |
 | --- | --- |
-| **레이아웃** | FE 정적 공장 이미지 1장. 가로·세로 **논리 크기** (예: width=40, height=50)는 DAS·FE가 동일 상수로 공유 |
-| **AMR 위치** | DAS가 발행하는 `x`, `y`는 **픽셀이 아닌 백분율(0~100)**. 예: 논리 (10, 25) → **x=25%, y=50%** |
+| **레이아웃** | 팀 공유 **원본 이미지** → FE 정적 에셋. 좌표 %는 **이미지 표시 영역** 기준 (논리 40×50 상수 없음) |
+| **AMR 위치** | DAS 발행 `x`, `y` = **0~100 백분율**. 토픽 `factory/amrs/positions`, JSON **문자열** |
 | **FE 표시** | 이미지 컨테이너 기준 `left: x%`, `top: y%` (또는 transform)로 마커 배치 |
 | **BE `position`** | REST의 절대좌표는 **보조**·목록용. SCR-01 맵 **주 데이터 소스 = MQTT** |
 
@@ -76,7 +76,8 @@
 | `particle` | 미세먼지(파티클) |
 | `cogas` | CO 가스 |
 
-- **4구역 × 4센서 = 16** 표시: FE는 구역별 MQTT 구독 또는 단일 토픽 내 구역 키 — **DAS 명세 확정 후 FE 매핑**.
+- **4구역 × 4센서 = 16** 표시: **단일 토픽** `factory/environment/current`, payload `areas[area_id].sensor1~4` (Phase 0 확정, `docs/FE-DAS_MQTT_연동.md` §4).
+- 구역 `area_id`·이름: **`DB/init.sql` `AREA`** 4행. 이미지 위 오버레이 %는 FE 설정 파일 (`FE-DAS_MQTT_연동.md` §2.3).
 - **`GET /environment/areas/current`**: 시연 **미사용**.
 
 ### 2.3 AMR 상태 (좌표)
@@ -84,7 +85,7 @@
 | 항목 | 규칙 |
 | --- | --- |
 | **내용** | AMR 식별자 + **x%, y%** (백분율). 상태 색·라벨은 **BE REST** `GET /amrs`와 병합 가능 |
-| **비상 정지** | ADR 유지: `POST /commands` `accepted` 후 FE → DAS **MQTT 정지** (토픽은 DAS 명세) |
+| **비상 정지** | 녹화 포함: `POST` → UI `EMERGENCY_STOP`. FE → `factory/amr/command` publish (**DAS 없어도 녹화 가능**) |
 
 ### 2.4 FE MQTT 구현 요약
 
@@ -104,7 +105,7 @@
 | **삭제** | 활성 알람 KPI | UI·연동 제거 | — |
 | **삭제** | 평균 배터리 KPI | UI·연동 제거 | — |
 | **유지** | 운영/대기/충전/에러(·미해결) 요약, 작업 로그, 평면도, 환경 | 구현·녹화 필수 | BE `summary`·`recent-logs`; MQTT 환경·AMR 좌표 |
-| **유지** | 실시간 중요 알람 **목록** | 팀 미삭제 명시 — **유지**(KPI만 삭제) | BE `recent-alarms` (선택) |
+| **유지** | 실시간 중요 알람 **목록** | Phase 0 확정: **유지**. BE `recent-alarms` 우선, **실패 시 더미 목록** | BE `recent-alarms` 또는 FE 더미 |
 
 ### 3.2 SCR-02 AMR 전체 관리
 
@@ -171,6 +172,7 @@
 | --- | --- | --- |
 | `POST /auth/login` | 로그인 | |
 | `GET /dashboard/summary` | SCR-01, (SCR-03 요약) | **productionCount·activeAlarms·avgBattery 필드 UI 미사용** |
+| `GET /dashboard/recent-alarms` | SCR-01 목록 | 실패 시 FE 더미 |
 | `GET /dashboard/recent-logs` | SCR-01 | |
 | `GET /amrs` | SCR-01(상태색), SCR-02 | |
 | `GET /amrs/{amrId}` | SCR-03 | |
@@ -184,7 +186,6 @@
 
 | API | 이유 |
 | --- | --- |
-| `GET /dashboard/recent-alarms` | SCR-01 활성 알람 KPI 삭제. 알람 **목록** 유지 시에만 선택 호출 |
 | `GET /charging/queue` | SCR-04 빈 테이블 더미 |
 | `GET /analytics/kpis` | SCR-02/03 차트 보류 |
 | `GET /environment/areas/current` | MQTT로 대체 |
@@ -193,9 +194,9 @@
 
 | 용도 | Payload | FE 소비처 |
 | --- | --- | --- |
-| 환경(구역당) | §2.2 `sensor1`~`sensor4` | SCR-01 환경 영역 (합 16 표시) |
-| AMR 좌표 | `amrId` + `x`, `y` (**%**) | SCR-01 평면도 마커 |
-| (선택) 비상 정지 | DAS 명세 | SCR-03 `publish` after `accepted` |
+| 환경 | `factory/environment/current` (JSON 문자열, `areas`×`sensor1~4`) | SCR-01 환경 16 |
+| AMR 좌표 | `factory/amrs/positions` (JSON 문자열, 배열) | SCR-01 평면도 |
+| 비상 정지 | FE publish `factory/amr/command` | SCR-03 (녹화: REST+UI 필수) |
 
 ---
 
@@ -206,7 +207,7 @@
 | 순 | 문서 | 항목 |
 | --- | --- | --- |
 | A1 | **`docs/시연_MVP_합의.md`** | 본 문서 팀 확정 | (본 문서) |
-| A2 | **`docs/FE-DAS_MQTT_연동.md`** (신규) | §2 이관 + **토픽·브로커·발행 주기·구역 4×4 매핑** |
+| A2 | **`docs/FE-DAS_MQTT_연동.md`** | Phase 0 확정 반영 | **반영됨** |
 | A3 | **`docs/화면 설계서.md`** | 「녹화 MVP」+ §3 UI 삭제·보류 + 정적 평면도·MQTT | **반영됨** |
 | A4 | **`docs/API 정의.md`** | 시연 필수 API = §5.1, environment·queue·kpis 시연 제외 각주 | **반영됨** |
 | A0 | **`AGENTS.md`** (루트·FE·BE·DB) | MVP SSOT·우선순위 규칙 | **반영됨** |
@@ -271,7 +272,7 @@ Swagger, for_presentation, `errorCount` KPI 확장 — 시연 후.
 - [ ] 시연 = FE 녹화 6흐름  
 - [ ] SCR-01 = **정적 평면도 + MQTT(환경 16 + AMR %)**  
 - [x] §3 UI 삭제·보류 → `화면 설계서.md` MVP 절, `API 정의.md` 시연 절, `AGENTS.md`(4) 반영  
-- [ ] DAS MQTT 명세(`FE-DAS_MQTT_연동.md` §6) 확정  
+- [x] DAS MQTT 명세 Phase 0 확정 (`FE-DAS_MQTT_연동.md`) — Node-RED 구현은 미완  
 - [ ] BE = §5.1만 필수  
 - [ ] `FE/TODO.md`, `BE/TODO.md` 시연 절 반영  
 
