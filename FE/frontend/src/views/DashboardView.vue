@@ -151,6 +151,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import { subscribe } from '@/plugins/ws'
+import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import { ENV_SENSOR_SLOT_KEYS, FACTORY_LAYOUT_AREAS } from '@/config/factory-layout-areas'
 import factoryLayoutAssetUrl from '@/assets/factory-layout.png'
 
@@ -394,7 +395,7 @@ const mqttUnsubscribeHandlers = []
 
 onMounted(() => {
   fetchDashboardData(true)
-  refreshTimer = setInterval(() => fetchDashboardData(false), 10000)
+  refreshTimer = setInterval(() => fetchDashboardData(false), DEMO_REST_POLLING_INTERVAL_MS)
 
   try {
     const unsubscribeEnvironment = subscribe(MQTT_TOPICS.environmentCurrent, handleEnvironmentPayload)

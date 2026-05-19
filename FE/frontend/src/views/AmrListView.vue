@@ -65,11 +65,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
+import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 
 const router = useRouter()
 
 const AMR_LIST_LIMIT = 50
-const POLLING_INTERVAL_MS = 10000
 
 // 상태
 const isLoading = ref(true)
@@ -146,7 +146,7 @@ let refreshTimer = null
 
 onMounted(() => {
   loadAmrs()
-  refreshTimer = setInterval(loadAmrs, POLLING_INTERVAL_MS)
+  refreshTimer = setInterval(loadAmrs, DEMO_REST_POLLING_INTERVAL_MS)
 })
 
 onUnmounted(() => {

@@ -88,9 +88,9 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/plugins/axios'
+import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 
 const FORECAST_BUCKET_ORDER = ['0-30m', '30-60m', '60m+']
-const POLLING_INTERVAL_MS = 10000
 
 const stations = ref([])
 const queue = ref([])
@@ -180,7 +180,7 @@ let refreshTimer = null
 
 onMounted(() => {
   loadData()
-  refreshTimer = setInterval(loadData, POLLING_INTERVAL_MS)
+  refreshTimer = setInterval(loadData, DEMO_REST_POLLING_INTERVAL_MS)
 })
 
 onUnmounted(() => {

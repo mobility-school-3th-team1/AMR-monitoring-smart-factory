@@ -462,7 +462,7 @@
         "type": "tab",
         "label": "시연 MVP",
         "disabled": false,
-        "info": "녹화 시연: factory/environment/current (5s), factory/amrs/positions (2s), factory/amr/command subscribe",
+        "info": "녹화 시연: factory/environment/current (1s), factory/amrs/positions (0.5s), factory/amr/command subscribe",
         "env": []
     },
     {
@@ -512,16 +512,16 @@
         "id": "b704e8a4c3d25f13",
         "type": "inject",
         "z": "b701e8a4c3d25f10",
-        "name": "env 5s",
+        "name": "env 1s",
         "props": [
             {
                 "p": "payload"
             }
         ],
-        "repeat": "5",
+        "repeat": "1",
         "crontab": "",
         "once": true,
-        "onceDelay": "1",
+        "onceDelay": "0.5",
         "topic": "",
         "payload": "",
         "payloadType": "date",
@@ -538,7 +538,7 @@
         "type": "function",
         "z": "b701e8a4c3d25f10",
         "name": "build_environment",
-        "func": "const areas = global.get('envSeed');\nif (!areas) {\n    node.warn('envSeed not initialized');\n    return null;\n}\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    areas\n});\nreturn msg;",
+        "func": "const areas = global.get('envSeed');\nif (!areas) {\n    node.warn('envSeed not initialized');\n    return null;\n}\n\nconst bump = (value, delta, min, max) => {\n    const next = Number(value) + delta;\n    return Math.min(max, Math.max(min, Math.round(next * 10) / 10));\n};\n\nObject.keys(areas).forEach((areaId) => {\n    const area = areas[areaId];\n    ['sensor1', 'sensor2', 'sensor3', 'sensor4'].forEach((sensorKey) => {\n        const sensor = area[sensorKey];\n        if (!sensor) return;\n        sensor.temp = bump(sensor.temp, (Math.random() - 0.5) * 1.2, 20, 30);\n        sensor.humid = bump(sensor.humid, (Math.random() - 0.5) * 1.5, 28, 38);\n        sensor.particle = bump(sensor.particle, (Math.random() - 0.5) * 2, 15, 28);\n        sensor.cogas = bump(sensor.cogas, (Math.random() - 0.5) * 0.6, 3, 8);\n    });\n});\n\nglobal.set('envSeed', areas);\n\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    areas\n});\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -575,16 +575,16 @@
         "id": "b707e8a4c3d25f16",
         "type": "inject",
         "z": "b701e8a4c3d25f10",
-        "name": "amr 2s",
+        "name": "amr 0.5s",
         "props": [
             {
                 "p": "payload"
             }
         ],
-        "repeat": "2",
+        "repeat": "0.5",
         "crontab": "",
         "once": true,
-        "onceDelay": "1.5",
+        "onceDelay": "0.8",
         "topic": "",
         "payload": "",
         "payloadType": "date",
@@ -601,7 +601,7 @@
         "type": "function",
         "z": "b701e8a4c3d25f10",
         "name": "build_amr_positions",
-        "func": "const base = global.get('amrPositions') || [];\nconst stopped = global.get('amrStopped') || {};\nconst positions = base.map((item) => {\n    if (stopped[item.amrId]) {\n        return { amrId: item.amrId, x: item.x, y: item.y };\n    }\n    return { amrId: item.amrId, x: item.x, y: item.y };\n});\nmsg.payload = JSON.stringify(positions);\nreturn msg;",
+        "func": "const step = 1.5;\nconst base = global.get('amrPositions') || [];\nconst stopped = global.get('amrStopped') || {};\n\nconst nextPositions = base.map((item) => {\n    if (stopped[item.amrId]) {\n        return { amrId: item.amrId, x: item.x, y: item.y };\n    }\n\n    const directionKey = 'amrDir_' + item.amrId;\n    let direction = global.get(directionKey) || { dx: 1, dy: 1 };\n    let x = Number(item.x) + direction.dx * step;\n    let y = Number(item.y) + direction.dy * step;\n\n    if (x <= 5 || x >= 95) {\n        direction.dx *= -1;\n        x = Math.min(95, Math.max(5, x));\n    }\n    if (y <= 5 || y >= 95) {\n        direction.dy *= -1;\n        y = Math.min(95, Math.max(5, y));\n    }\n\n    global.set(directionKey, direction);\n    return {\n        amrId: item.amrId,\n        x: Math.round(x * 10) / 10,\n        y: Math.round(y * 10) / 10\n    };\n});\n\nglobal.set('amrPositions', nextPositions);\nmsg.payload = JSON.stringify(nextPositions);\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,

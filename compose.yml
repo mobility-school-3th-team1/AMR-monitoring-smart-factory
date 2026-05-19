@@ -1,5 +1,5 @@
 # 통합 스택 (BE + DAS·DB + FE). 프로젝트 루트에서:
-#   cp .env.example .env   # JWT_SECRET 필수
+#   cp .env.example .env   # JWT_SECRET 미설정 시 compose 기본값 사용(로컬 시연용)
 #   docker compose up --build
 #
 # 영역 단독 기동: BE/docker-compose.yml, docker/docker-compose.yml, FE/docker-compose.yml
@@ -68,10 +68,10 @@ services:
       - "${BE_PORT:-8080}:8080"
     env_file:
       - path: .env
-        required: true
+        required: false
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-demo123}

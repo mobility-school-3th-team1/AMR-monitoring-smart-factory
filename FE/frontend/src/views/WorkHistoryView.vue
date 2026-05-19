@@ -71,8 +71,7 @@ import { ref, shallowRef, computed, onMounted, onUnmounted, nextTick } from 'vue
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
 import api from '@/plugins/axios'
-
-const POLLING_INTERVAL_MS = 10000
+import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 const WORK_HISTORY_PAGE_LIMIT = 20
 
 const hourlyChartRef = ref(null)
@@ -241,7 +240,7 @@ let refreshTimer = null
 onMounted(async () => {
   await loadWorkloadAndHistory()
   window.addEventListener('resize', handleWindowResize)
-  refreshTimer = setInterval(loadWorkloadAndHistory, POLLING_INTERVAL_MS)
+  refreshTimer = setInterval(loadWorkloadAndHistory, DEMO_REST_POLLING_INTERVAL_MS)
 })
 
 onUnmounted(() => {

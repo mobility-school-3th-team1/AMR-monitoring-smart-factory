@@ -75,7 +75,7 @@
 
 - Payload는 **UTF-8 JSON을 직렬화한 문자열** (`JSON.stringify` 후 publish).
 - FE 수신: `message.toString()` → `JSON.parse`.
-- 발행 주기(녹화): 환경 **5초**, AMR 좌표 **2초** (DAS, 녹화용 안정 값).
+- 발행 주기(녹화): 환경 **1초**, AMR 좌표 **0.5초** (DAS, 시연 시 값·좌표 변동).
 
 ---
 

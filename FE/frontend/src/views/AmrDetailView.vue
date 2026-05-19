@@ -47,12 +47,12 @@ import SectionPanel from '../components/molecules/SectionPanel.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/plugins/axios'
+import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import { publish } from '@/plugins/ws'
 
 const route = useRoute()
 
 const MQTT_TOPIC_AMR_COMMAND = 'factory/amr/command'
-const POLLING_INTERVAL_MS = 10000
 
 const loadError = ref(null)
 const detail = ref(null)
@@ -184,7 +184,7 @@ let refreshTimer = null
 
 onMounted(() => {
   loadAmrDetail()
-  refreshTimer = setInterval(loadAmrDetail, POLLING_INTERVAL_MS)
+  refreshTimer = setInterval(loadAmrDetail, DEMO_REST_POLLING_INTERVAL_MS)
 })
 
 onUnmounted(() => {

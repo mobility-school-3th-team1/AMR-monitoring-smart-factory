@@ -29,8 +29,8 @@ jwt:
 app:
   demo:
     password: ${DEMO_USER_PASSWORD:}
-    recovery-seconds: 60
-    recovery-check-interval-ms: 10000
+    recovery-seconds: 20
+    recovery-check-interval-ms: 3000
 
 springdoc:
   api-docs:

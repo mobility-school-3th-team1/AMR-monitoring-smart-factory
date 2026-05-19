@@ -43,8 +43,8 @@ docker compose --env-file .env -f docker/docker-compose.yml up --build
 
 | 토픽 | 방향 | 주기 |
 | --- | --- | --- |
-| `factory/environment/current` | publish | 5초 |
-| `factory/amrs/positions` | publish | 2초 |
+| `factory/environment/current` | publish | 1초 (센서 값 변동) |
+| `factory/amrs/positions` | publish | 0.5초 (좌표 이동) |
 | `factory/amr/command` | subscribe (`emergencyStop`) | - |
 
 검증 (호스트, Mosquitto 클라이언트 설치 시):
