@@ -34,7 +34,7 @@
           <div class="map-label-chip">AMR 위치 현황도</div>
           <div class="floor-map">
             <div class="floor-map-grid">
-              <img class="floor-map-image" src="/factory-layout.png" alt="공장 레이아웃" />
+              <img class="floor-map-image" :src="factoryLayoutAssetUrl" alt="공장 레이아웃" />
               <div v-if="visibleAmrList.length === 0" class="map-overlay map-overlay--hint">AMR 좌표 수신 대기 중입니다.</div>
               <div
                 v-for="amr in visibleAmrList"
@@ -64,7 +64,7 @@
           <div class="map-label-chip">공정 구역 환경 현황</div>
           <div class="floor-map">
             <div class="floor-map-grid env-grid">
-              <img class="floor-map-image" src="/factory-layout.png" alt="공장 레이아웃" />
+              <img class="floor-map-image" :src="factoryLayoutAssetUrl" alt="공장 레이아웃" />
               <div class="map-overlay">
                 <div
                   v-for="area in environmentAreaCards"
@@ -82,7 +82,7 @@
                   <div class="zone-sensor-list">
                     <div v-for="sensor in area.sensors" :key="sensor.slot" class="zone-sensor-row">
                       <span class="slot-label">{{ sensor.slotLabel }}</span>
-                      <span class="zone-meta">{{ sensor.temp }}°C · H {{ sensor.humid }}% · P {{ sensor.particle }} · CO {{ sensor.cogas }}</span>
+                      <span class="zone-meta">{{ sensor.temp }}°C, H {{ sensor.humid }}%, P {{ sensor.particle }}, CO {{ sensor.cogas }}</span>
                     </div>
                   </div>
                 </div>
@@ -109,7 +109,7 @@
                     <div class="alert-title">{{ alarm.title || alarm.message }}</div>
                     <div class="alert-desc">{{ alarm.message }}</div>
                   </div>
-                  <span class="alert-chip" :class="alarm.level === 'CRITICAL' ? 'critical' : (alarm.level === 'WARNING' ? 'warn' : '')">{{ alarm.level }} · {{ formatTime(alarm.occurredAt) }}</span>
+                  <span class="alert-chip" :class="alarm.level === 'CRITICAL' ? 'critical' : (alarm.level === 'WARNING' ? 'warn' : '')">{{ alarm.level }}, {{ formatTime(alarm.occurredAt) }}</span>
                 </div>
               </template>
             </div>
@@ -152,6 +152,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import { subscribe } from '@/plugins/ws'
 import { ENV_SENSOR_SLOT_KEYS, FACTORY_LAYOUT_AREAS } from '@/config/factory-layout-areas'
+import factoryLayoutAssetUrl from '@/assets/factory-layout.png'
 
 // 기본값 — API 응답에서 누락된 필드를 0으로 보호
 const DASHBOARD_DEFAULTS = {

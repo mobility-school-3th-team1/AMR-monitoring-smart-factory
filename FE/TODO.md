@@ -30,15 +30,15 @@
 
 | 순 | ID | 작업 | 상태 |
 | --- | --- | --- | --- |
-| F1 | | 팀 공유 **공장 레이아웃 이미지** → `src/assets/`. `factory-layout-areas.js`에 `AREA_*` 오버레이 % (`FE-DAS` §2.3) | [ ] |
-| F2 | C-P2-05,06 | `main.js`에서 `initMqtt()`. `VITE_MQTT_URL`. `subscribe` 환경·AMR 좌표 | [ ] |
-| F3 | C-P2-02,03,08 | **SCR-01:** KPI §3.1 삭제(생산·활성알람·평균배터리). 평면도 % 마커. 환경 16. `summary`·`recent-logs`·`recent-alarms`(실패 시 더미) | [ ] |
-| F4 | G3 | compose/Dockerfile **없을 때만** 작성 · 있으면 vite 프록시·env만 · `cp .env.example .env` | [ ] |
-| F5 | C-P2-09 | **SCR-02:** `GET /amrs`. status enum. §3.2 보류 차트 **숨김** | [ ] |
-| F6 | C-P2-12 | **SCR-03:** `GET /amrs/{id}`, E-stop `POST`+UI. §3.3 삭제 UI. MQTT `factory/amr/command` | [ ] |
-| F7 | C-P2-07 | **SCR-04:** `stations`·`forecast`. queue **빈 테이블**. 충전 알람 제거 | [ ] |
-| F8 | | **SCR-05:** `work-histories`·`workload`. §3.5 카드 2개 삭제 | [ ] |
-| F9 | | **SCR-02** 차트 잔여 정리(플레이스홀더 제거) | [ ] |
+| F1 | | 팀 공유 **공장 레이아웃 이미지** → `src/assets/`. `factory-layout-areas.js`에 `AREA_*` 오버레이 % (`FE-DAS` §2.3) | [x] |
+| F2 | C-P2-05,06 | `main.js`에서 `initMqtt()`. `VITE_MQTT_URL`. `subscribe` 환경·AMR 좌표 | [x] |
+| F3 | C-P2-02,03,08 | **SCR-01:** KPI §3.1 삭제(생산·활성알람·평균배터리). 평면도 % 마커. 환경 16. `summary`·`recent-logs`·`recent-alarms`(실패 시 더미) | [x] |
+| F4 | G3 | compose/Dockerfile **없을 때만** 작성 · 있으면 vite 프록시·env만 · `cp .env.example .env` | [x] |
+| F5 | C-P2-09 | **SCR-02:** `GET /amrs`. status enum. §3.2 보류 차트 **숨김** | [x] |
+| F6 | C-P2-12 | **SCR-03:** `GET /amrs/{id}`, E-stop `POST`+UI. §3.3 삭제 UI. MQTT `factory/amr/command` | [x] |
+| F7 | C-P2-07 | **SCR-04:** `stations`·`forecast`. queue **빈 테이블**. 충전 알람 제거 | [x] |
+| F8 | | **SCR-05:** `work-histories`·`workload`. §3.5 카드 2개 삭제 | [x] |
+| F9 | | **SCR-02** 차트 잔여 정리(플레이스홀더 제거) | [x] |
 | F10 | | 6흐름 **화면 녹화** | [ ] |
 
 ### DAS 병행 (FE 블로커)

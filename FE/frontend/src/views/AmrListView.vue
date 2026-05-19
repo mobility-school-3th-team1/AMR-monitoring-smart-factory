@@ -34,28 +34,6 @@
         <div class="sum-card" style="border-top: 3px solid #ef4444;"><h4 style="color:#ef4444">오류</h4><div style="color:#ef4444">{{ stats.error }}/{{ stats.operating }}</div></div>
       </div>
 
-      <div class="grid-layout">
-        <article class="widget">
-          <div class="widget-title">공정별 평균 대기 시간 (분)</div>
-          <div class="chart-box">차트 영역 (샘플)</div>
-        </article>
-
-        <article class="widget span-2">
-          <div class="widget-title">일별 오류 발생 건수</div>
-          <div class="chart-box">차트 영역 (샘플)</div>
-        </article>
-
-        <article class="widget span-2">
-          <div class="widget-title">평균 시간 준수율 (%)</div>
-          <div class="chart-box">차트 영역 (샘플)</div>
-        </article>
-
-        <article class="widget">
-          <div class="widget-title">건전성 기준 미달 기체</div>
-          <div class="compact-stat"><div class="big">{{ stats.unhealthy }}<span style="font-size:0.9rem; color:#64748b; margin-left:6px;">/ {{ stats.total }} 대</span></div><div class="muted">최근 점검 대상: <strong>{{ stats.lastCheck }}</strong></div></div>
-        </article>
-      </div>
-
       <div class="bottom-grid">
         <article class="widget">
           <div class="widget-title">AMR 현재 위치 및 상태 목록 <span style="font-size:0.65rem; font-weight:600; color:#64748b;">(운행 중: {{ stats.running }}대, 충전 중: {{ stats.charging }}대, 대기 중: {{ stats.waiting }}대 / 전체: {{ stats.total }}대)</span></div>
@@ -91,7 +69,7 @@ import api from '@/plugins/axios'
 const router = useRouter()
 
 const AMR_LIST_LIMIT = 50
-const POLLING_INTERVAL_MS = 15000
+const POLLING_INTERVAL_MS = 10000
 
 // 상태
 const isLoading = ref(true)
@@ -130,7 +108,7 @@ function mapAmr(raw) {
     tagDisplay:  s.tagDisplay,
     tagClass:    s.tagClass,
     battery:     raw.batteryPercent ?? 0,
-    meta:        `${s.tagDisplay} · 배터리 ${raw.batteryPercent ?? 0}%`,
+    meta:        `${s.tagDisplay}, 배터리 ${raw.batteryPercent ?? 0}%`,
     location:    raw.position?.zone || '-',
     destination: raw.destination?.zone || '-',
     task:        raw.currentTask || '-',
@@ -146,7 +124,7 @@ const stats = computed(() => {
   const waiting  = list.filter(r => r.class === 'waiting').length
   const errorAmt = list.filter(r => r.class === 'error').length
   const total    = list.length
-  const operating = running + waiting + errorAmt
+  const operating = running + charging + waiting + errorAmt
   return { total, operating, running, charging, waiting, error: errorAmt, unhealthy: errorAmt, lastCheck: list.find(r => r.class === 'error')?.id || '-' }
 })
 
@@ -206,14 +184,6 @@ function openDetail(amrId) {
 .sum-card h4 { font-size:0.68rem; color:#64748b; }
 .sum-card div { font-size:1.15rem; font-weight:800; }
 
-.grid-layout { flex:0.56; display:grid; grid-template-columns: repeat(3,1fr); grid-template-rows: 0.72fr 0.72fr; gap:8px; min-height:0; }
-.widget { background:white; border-radius:8px; padding:10px; box-shadow:0 2px 5px rgba(0,0,0,0.08); display:flex; flex-direction:column; min-height:0; }
-.widget-title { font-size:0.78rem; font-weight:700; margin-bottom:8px; border-left:4px solid #3b82f6; padding-left:10px; }
-.span-2 { grid-column: span 2; }
-.compact-stat { font-size:0.72rem; }
-.compact-stat .big { font-size:2rem; font-weight:800; color:#1e293b; }
-.compact-stat .muted { font-size:0.62rem; color:#94a3b8; }
-
 .bottom-grid { display:grid; grid-template-columns: 1fr; gap:10px; flex:1; min-height:0; }
 .table-wrapper { flex:1; overflow-y:auto; border:1px solid #e2e8f0; border-radius:6px; }
 table { width:100%; border-collapse: collapse; font-size:0.72rem; }
@@ -230,7 +200,6 @@ td { padding:6px 8px; border-bottom:1px solid #f1f5f9; }
 
 @media (max-width: 1200px) {
   .amr-panel { width: 280px; }
-  .grid-layout { grid-template-columns: repeat(2,1fr); }
 }
 
 </style>
