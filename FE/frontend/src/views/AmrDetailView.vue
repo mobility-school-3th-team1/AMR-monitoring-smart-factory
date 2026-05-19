@@ -75,7 +75,6 @@
 </template>
 
 <script setup>
-import BaseBadge from '../components/atoms/BaseBadge.vue'
 import BaseCard from '../components/atoms/BaseCard.vue'
 import SectionPanel from '../components/molecules/SectionPanel.vue'
 import { ref, computed, onMounted } from 'vue'

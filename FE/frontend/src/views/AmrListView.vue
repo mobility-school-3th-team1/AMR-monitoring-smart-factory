@@ -103,12 +103,25 @@ const STATUS_MAP = {
   running:  { tag: '운행', tagDisplay: '운행 중',  tagClass: 'status-running',  cardClass: 'running'  },
   charging: { tag: '충전', tagDisplay: '충전 중',  tagClass: 'status-charging', cardClass: 'charging' },
   waiting:  { tag: '대기', tagDisplay: '대기',     tagClass: 'status-waiting',  cardClass: 'waiting'  },
-  error:    { tag: '오류', tagDisplay: '오류',     tagClass: 'status-error',    cardClass: 'error'    },
-  idle:     { tag: '대기', tagDisplay: '대기',     tagClass: 'status-waiting',  cardClass: 'waiting'  },
+  error:    { tag: '오류', tagDisplay: '오류',     tagClass: 'status-error',    cardClass: 'error'    }
+}
+
+// Normalize backend status enums to UI keys
+function normalizeStatus(rawStatus) {
+  if (!rawStatus) return 'waiting'
+  const s = String(rawStatus).trim().toUpperCase()
+  // Backend may use OPERATING, IDLE, CHARGING, ERROR, etc.
+  if (s === 'OPERATING' || s === 'RUNNING' || s === 'DRIVING') return 'running'
+  if (s === 'CHARGING') return 'charging'
+  if (s === 'IDLE' || s === 'PAUSED' || s === 'STANDBY') return 'waiting'
+  if (s === 'ERROR' || s === 'FAULT' || s === 'EMERGENCY_STOP') return 'error'
+  // fallback
+  return 'waiting'
 }
 
 function mapAmr(raw) {
-  const s = STATUS_MAP[raw.status] || STATUS_MAP.waiting
+  const uiKey = normalizeStatus(raw.status)
+  const s = STATUS_MAP[uiKey] || STATUS_MAP.waiting
   return {
     id:          raw.name || raw.id,
     rawId:       raw.id,

@@ -3,14 +3,6 @@
     <!-- KPI 요약 카드 -->
     <section class="kpi-cards">
       <div class="kpi-card">
-        <div class="kpi-label">생산 건수</div>
-        <div class="kpi-value">{{ dashboardData.productionCount }}<span class="kpi-unit">건</span></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">활성 알람</div>
-        <div class="kpi-value">{{ dashboardData.activeAlarms }}<span class="kpi-unit">건</span></div>
-      </div>
-      <div class="kpi-card">
         <div class="kpi-label">운영 중 AMR</div>
         <div class="kpi-value">{{ dashboardData.amrOperating }}<span class="kpi-unit">대</span></div>
       </div>
@@ -23,8 +15,8 @@
         <div class="kpi-value">{{ dashboardData.amrWaiting }}<span class="kpi-unit">대</span></div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">평균 배터리</div>
-        <div class="kpi-value">{{ dashboardData.avgBatteryPercent }}<span class="kpi-unit">%</span></div>
+        <div class="kpi-label">미해결 알람</div>
+        <div class="kpi-value">{{ dashboardData.activeAlarms }}<span class="kpi-unit">건</span></div>
       </div>
     </section>
 
@@ -43,8 +35,17 @@
           <div class="floor-map">
             <div class="floor-map-grid">
               <img class="floor-map-image" src="/factory-layout.png" alt="공장 레이아웃" />
-              <div v-if="visibleAmrList.length === 0" class="map-overlay map-overlay--hint">AMR 좌표가 들어오면 이 위에 표시됩니다.</div>
-              <div v-for="(amr, index) in visibleAmrList" :key="amr.id" class="amr-mark" :class="`status-${amr.status || 'driving'}`" :data-battery="`${amr.batteryPercent || 0}%`" :style="{ left: `${10 + (index % 4) * 20}%`, top: `${20 + Math.floor(index / 4) * 30}%` }">{{ amr.name }}</div>
+              <div v-if="visibleAmrList.length === 0" class="map-overlay map-overlay--hint">AMR 좌표 수신 대기 중입니다.</div>
+              <div
+                v-for="amr in visibleAmrList"
+                :key="amr.id"
+                class="amr-mark"
+                :class="mapStatusClass(amr.status)"
+                :data-battery="`${amr.batteryPercent || 0}%`"
+                :style="{ left: `${amr.mapPosition.x}%`, top: `${amr.mapPosition.y}%` }"
+              >
+                {{ amr.name || amr.id }}
+              </div>
             </div>
           </div>
 
@@ -65,11 +66,26 @@
             <div class="floor-map-grid env-grid">
               <img class="floor-map-image" src="/factory-layout.png" alt="공장 레이아웃" />
               <div class="map-overlay">
-                <div class="map-zone env-low" style="top:6%; left:5%; width:20%; height:30%;"><span class="zone-title">원자재 창고</span><span class="zone-meta">22.6°C · 습도 43%<br>미세먼지 12</span></div>
-                <div class="map-zone env-low" style="top:6%; left:30%; width:25%; height:24%;"><span class="zone-title">A 라인</span><span class="zone-meta">24.8°C · 습도 56%<br>미세먼지 16</span></div>
-                <div class="map-zone env-mid" style="top:36%; left:30%; width:25%; height:24%;"><span class="zone-title">B 라인</span><span class="zone-meta">21.9°C · 습도 39%<br>미세먼지 18</span></div>
-                <div class="map-zone env-low" style="top:6%; left:60%; width:15%; height:58%;"><span class="zone-title">조립 라인</span><span class="zone-meta">23.1°C · 습도 41%<br>미세먼지 14</span></div>
-                <div class="map-zone env-mid" style="top:6%; left:80%; width:15%; height:58%;"><span class="zone-title">검사 라인</span><span class="zone-meta">25.3°C · 습도 61%<br>미세먼지 19</span></div>
+                <div
+                  v-for="area in environmentAreaCards"
+                  :key="area.areaId"
+                  class="map-zone"
+                  :class="area.tone"
+                  :style="{
+                    top: `${area.overlay.top}%`,
+                    left: `${area.overlay.left}%`,
+                    width: `${area.overlay.width}%`,
+                    height: `${area.overlay.height}%`
+                  }"
+                >
+                  <span class="zone-title">{{ area.areaName }}</span>
+                  <div class="zone-sensor-list">
+                    <div v-for="sensor in area.sensors" :key="sensor.slot" class="zone-sensor-row">
+                      <span class="slot-label">{{ sensor.slotLabel }}</span>
+                      <span class="zone-meta">{{ sensor.temp }}°C · H {{ sensor.humid }}% · P {{ sensor.particle }} · CO {{ sensor.cogas }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -134,16 +150,80 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
+import { subscribe } from '@/plugins/ws'
+import { ENV_SENSOR_SLOT_KEYS, FACTORY_LAYOUT_AREAS } from '@/config/factory-layout-areas'
 
 // 기본값 — API 응답에서 누락된 필드를 0으로 보호
 const DASHBOARD_DEFAULTS = {
-  productionCount: 0,
   activeAlarms: 0,
   amrOperating: 0,
   amrCharging: 0,
   amrWaiting: 0,
-  avgBatteryPercent: 0,
   averageTaskTimeMin: 0
+}
+
+const MQTT_TOPICS = {
+  environmentCurrent: 'factory/environment/current',
+  amrPositions: 'factory/amrs/positions'
+}
+
+const DEFAULT_SENSOR_VALUE = {
+  temp: '-',
+  humid: '-',
+  particle: '-',
+  cogas: '-'
+}
+
+const DASHBOARD_DUMMY_ALARMS = [
+  {
+    id: 'dummy-critical-1',
+    level: 'CRITICAL',
+    title: '비상 스위치 점검 필요',
+    message: 'AMR-01 비상 스위치 응답이 지연되었습니다.',
+    occurredAt: new Date().toISOString()
+  },
+  {
+    id: 'dummy-warning-1',
+    level: 'WARNING',
+    title: '충전 대기열 혼잡',
+    message: '입고 구역 충전 스테이션 대기열이 증가했습니다.',
+    occurredAt: new Date().toISOString()
+  }
+]
+
+const DASHBOARD_DUMMY_ENVIRONMENT = {
+  AREA_LOAD_LC: {
+    sensor1: { temp: 25, humid: 33, particle: 22, cogas: 5 },
+    sensor2: { temp: 24, humid: 32, particle: 21, cogas: 4 },
+    sensor3: { temp: 26, humid: 34, particle: 23, cogas: 6 },
+    sensor4: { temp: 25, humid: 33, particle: 22, cogas: 5 }
+  },
+  AREA_ASSEMBLE_01: {
+    sensor1: { temp: 24, humid: 42, particle: 16, cogas: 7 },
+    sensor2: { temp: 25, humid: 44, particle: 18, cogas: 6 },
+    sensor3: { temp: 24, humid: 41, particle: 17, cogas: 6 },
+    sensor4: { temp: 25, humid: 43, particle: 19, cogas: 8 }
+  },
+  AREA_ASSEMBLE_02: {
+    sensor1: { temp: 23, humid: 39, particle: 14, cogas: 5 },
+    sensor2: { temp: 22, humid: 38, particle: 15, cogas: 5 },
+    sensor3: { temp: 23, humid: 37, particle: 14, cogas: 4 },
+    sensor4: { temp: 22, humid: 39, particle: 15, cogas: 5 }
+  },
+  AREA_OUT_BSA: {
+    sensor1: { temp: 26, humid: 47, particle: 20, cogas: 9 },
+    sensor2: { temp: 27, humid: 49, particle: 21, cogas: 10 },
+    sensor3: { temp: 26, humid: 46, particle: 20, cogas: 9 },
+    sensor4: { temp: 27, humid: 48, particle: 22, cogas: 11 }
+  }
+}
+
+const MQTT_POSITION_FALLBACK = {
+  startX: 12,
+  startY: 22,
+  xStep: 18,
+  yStep: 28,
+  rowSize: 4
 }
 
 // 상태
@@ -151,11 +231,53 @@ const isLoading = ref(true)
 const error = ref(null)
 const dashboardData = ref({ ...DASHBOARD_DEFAULTS })
 const amrList = ref([])
+const amrPositionMap = ref({})
+const environmentAreas = ref({ ...DASHBOARD_DUMMY_ENVIRONMENT })
 const recentAlarms = ref([])
 const recentLogs = ref([])
 
 // 플로어맵에 표시할 AMR 최대 8개 — 매 렌더마다 slice 재계산을 막기 위해 computed 사용
-const visibleAmrList = computed(() => amrList.value.slice(0, 8))
+const visibleAmrList = computed(() => {
+  return amrList.value.slice(0, 8).map((amr, index) => {
+    const mqttPosition = amrPositionMap.value[amr.id]
+    const fallbackX = MQTT_POSITION_FALLBACK.startX + (index % MQTT_POSITION_FALLBACK.rowSize) * MQTT_POSITION_FALLBACK.xStep
+    const fallbackY = MQTT_POSITION_FALLBACK.startY + Math.floor(index / MQTT_POSITION_FALLBACK.rowSize) * MQTT_POSITION_FALLBACK.yStep
+
+    return {
+      ...amr,
+      mapPosition: mqttPosition || {
+        x: clampPercent(fallbackX),
+        y: clampPercent(fallbackY)
+      }
+    }
+  })
+})
+
+const environmentAreaCards = computed(() => {
+  return FACTORY_LAYOUT_AREAS.map((layoutArea) => {
+    const areaPayload = environmentAreas.value[layoutArea.areaId] || {}
+    const sensors = ENV_SENSOR_SLOT_KEYS.map((slotKey, index) => {
+      const sensorPayload = areaPayload[slotKey] || DEFAULT_SENSOR_VALUE
+
+      return {
+        slot: slotKey,
+        slotLabel: `S${index + 1}`,
+        temp: safeMetric(sensorPayload.temp),
+        humid: safeMetric(sensorPayload.humid),
+        particle: safeMetric(sensorPayload.particle),
+        cogas: safeMetric(sensorPayload.cogas)
+      }
+    })
+
+    return {
+      areaId: layoutArea.areaId,
+      areaName: layoutArea.areaName,
+      overlay: layoutArea.overlay,
+      tone: layoutArea.defaultTone,
+      sensors
+    }
+  })
+})
 
 // API 호출
 // showLoading: 최초 로드 시에만 true — 폴링 갱신 시에는 스피너 없이 인플레이스 업데이트
@@ -164,23 +286,98 @@ const fetchDashboardData = async (showLoading = false) => {
     if (showLoading) isLoading.value = true
     error.value = null
 
-    const [summaryRes, alarmsRes, logsRes, amrsRes] = await Promise.all([
+    const [summaryRes, alarmsRes, logsRes, amrsRes] = await Promise.allSettled([
       api.get('/dashboard/summary'),
       api.get('/dashboard/recent-alarms?limit=5'),
       api.get('/dashboard/recent-logs?page=1&limit=10'),
       api.get('/amrs?page=1&limit=20')
     ])
 
-    dashboardData.value = { ...DASHBOARD_DEFAULTS, ...summaryRes.data }
-    recentAlarms.value = alarmsRes.data.data || []
-    recentLogs.value = logsRes.data.data || []
-    amrList.value = amrsRes.data.data || []
+    const failedEndpoints = []
+
+    if (summaryRes.status === 'fulfilled') {
+      dashboardData.value = { ...DASHBOARD_DEFAULTS, ...summaryRes.value.data }
+    } else {
+      dashboardData.value = { ...DASHBOARD_DEFAULTS }
+      failedEndpoints.push('summary')
+    }
+
+    if (alarmsRes.status === 'fulfilled') {
+      recentAlarms.value = alarmsRes.value.data.data || []
+    } else {
+      recentAlarms.value = DASHBOARD_DUMMY_ALARMS
+      failedEndpoints.push('recent-alarms')
+    }
+
+    if (logsRes.status === 'fulfilled') {
+      recentLogs.value = logsRes.value.data.data || []
+    } else {
+      recentLogs.value = []
+      failedEndpoints.push('recent-logs')
+    }
+
+    if (amrsRes.status === 'fulfilled') {
+      amrList.value = amrsRes.value.data.data || []
+    } else {
+      amrList.value = []
+      failedEndpoints.push('amrs')
+    }
+
+    if (failedEndpoints.length > 0) {
+      error.value = `일부 데이터 갱신 실패: ${failedEndpoints.join(', ')}`
+    }
   } catch (err) {
     error.value = err.response?.data?.message || '데이터 로드 실패'
     console.error('Dashboard error:', err)
   } finally {
     if (showLoading) isLoading.value = false
   }
+}
+
+const mapStatusClass = (status) => {
+  const normalizedStatus = String(status || '').toUpperCase()
+  if (normalizedStatus === 'CHARGING') return 'status-charging'
+  if (normalizedStatus === 'IDLE') return 'status-waiting'
+  if (normalizedStatus === 'ERROR' || normalizedStatus === 'EMERGENCY_STOP') return 'status-risk'
+  return 'status-driving'
+}
+
+const clampPercent = (value) => {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return 0
+  return Math.min(100, Math.max(0, numericValue))
+}
+
+const safeMetric = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
+  return value
+}
+
+const handleEnvironmentPayload = (payload) => {
+  if (!payload || typeof payload !== 'object') return
+  if (!payload.areas || typeof payload.areas !== 'object') return
+
+  environmentAreas.value = {
+    ...DASHBOARD_DUMMY_ENVIRONMENT,
+    ...payload.areas
+  }
+}
+
+const handleAmrPositionPayload = (payload) => {
+  if (!Array.isArray(payload)) return
+
+  const nextPositionMap = payload.reduce((accumulator, amrPosition) => {
+    if (!amrPosition || !amrPosition.amrId) return accumulator
+
+    accumulator[amrPosition.amrId] = {
+      x: clampPercent(amrPosition.x),
+      y: clampPercent(amrPosition.y)
+    }
+
+    return accumulator
+  }, {})
+
+  amrPositionMap.value = nextPositionMap
 }
 
 // 시간 포맷
@@ -192,14 +389,30 @@ const formatTime = (isoString) => {
 
 // 새로고침 타이머
 let refreshTimer = null
+const mqttUnsubscribeHandlers = []
 
 onMounted(() => {
   fetchDashboardData(true)
   refreshTimer = setInterval(() => fetchDashboardData(false), 10000)
+
+  try {
+    const unsubscribeEnvironment = subscribe(MQTT_TOPICS.environmentCurrent, handleEnvironmentPayload)
+    const unsubscribeAmrPositions = subscribe(MQTT_TOPICS.amrPositions, handleAmrPositionPayload)
+
+    mqttUnsubscribeHandlers.push(unsubscribeEnvironment)
+    mqttUnsubscribeHandlers.push(unsubscribeAmrPositions)
+  } catch (mqttError) {
+    console.warn('[Dashboard] MQTT subscribe skipped:', mqttError)
+  }
 })
 
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
+  mqttUnsubscribeHandlers.forEach((unsubscribeHandler) => {
+    if (typeof unsubscribeHandler === 'function') {
+      unsubscribeHandler()
+    }
+  })
 })
 </script>
 
@@ -216,7 +429,7 @@ onUnmounted(() => {
 
 .kpi-cards {
   display: grid;
-  grid-template-columns: repeat(6, minmax(100px, 1fr));
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 6px;
   align-items: stretch;
   min-height: 0;
@@ -371,17 +584,17 @@ onUnmounted(() => {
 .map-zone {
   position: absolute;
   border: 1px solid #cbd5e1;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
-  gap: 2px;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 3px;
   padding: 4px 6px;
-  font-size: 0.6rem;
+  font-size: 0.56rem;
   font-weight: 700;
   color: #64748b;
-  text-align: center;
+  text-align: left;
   line-height: 1.15;
   border-radius: 4px;
   z-index: 3;
@@ -394,14 +607,34 @@ onUnmounted(() => {
   display: block;
   font-size: 0.62rem;
   color: #0f172a;
+  margin-bottom: 1px;
 }
 
 .zone-meta {
-  display: block;
-  font-size: 0.52rem;
+  display: inline;
+  font-size: 0.5rem;
   color: #475569;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
+}
+
+.zone-sensor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.zone-sensor-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.slot-label {
+  color: #0f172a;
+  font-size: 0.48rem;
+  font-weight: 800;
+  min-width: 14px;
 }
 
 .status-strip {
@@ -613,7 +846,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1400px) {
-  .kpi-cards { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+  .kpi-cards { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
   .dashboard-grid { grid-template-columns: 1fr; }
   .floor-map-panel { grid-row: auto; }
 }
