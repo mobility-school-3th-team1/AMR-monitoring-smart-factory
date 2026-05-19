@@ -9,6 +9,8 @@ public class DashboardSummaryDto {
     private Integer amrOperating;
     private Integer amrCharging;
     private Integer amrWaiting;
+    private Integer amrError;
+    private Integer amrErrorUnresolved;
     private Integer avgBatteryPercent;
     private Double averageTaskTimeMin;
 }

@@ -85,7 +85,23 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
                 createStatusLog(amrs.get(0), assemble01, "OPERATING", 120, 450, 90, 50, 85, 98, 35.5f, now.minusMinutes(2)),
                 createStatusLog(amrs.get(1), assemble02, "IDLE", 50, 200, 0, 0, 95, 99, 30.0f, now.minusMinutes(5)),
                 createStatusLog(amrs.get(2), loadArea, "CHARGING", 300, 150, 180, 0, 20, 95, 28.5f, now.minusMinutes(10)),
-                createStatusLog(amrs.get(3), assemble01, "ERROR", 130, 65, 0, 0, 20, 90, 31.0f, now.minusMinutes(3))
+                createStatusLog(
+                        amrs.get(3),
+                        assemble01,
+                        "ERROR",
+                        130,
+                        65,
+                        0,
+                        0,
+                        20,
+                        90,
+                        31.0f,
+                        now,
+                        "SENSOR_FAULT",
+                        "LiDAR data invalid",
+                        null,
+                        null
+                )
         ));
 
         AmrChargeStation station1 = createStation(1, loadArea, "충전소_입고", "AVAILABLE");
@@ -199,10 +215,50 @@ public class DashboardDemoDataLoader implements CommandLineRunner {
             float batteryTemp,
             LocalDateTime updatedAt
     ) {
+        return createStatusLog(
+                amr,
+                area,
+                status,
+                posX,
+                posY,
+                yaw,
+                loadWeight,
+                batteryPct,
+                sohPct,
+                batteryTemp,
+                updatedAt,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    private AmrStatusLog createStatusLog(
+            Amr amr,
+            Area area,
+            String status,
+            int posX,
+            int posY,
+            int yaw,
+            int loadWeight,
+            int batteryPct,
+            int sohPct,
+            float batteryTemp,
+            LocalDateTime updatedAt,
+            String faultCode,
+            String faultMessage,
+            LocalDateTime faultRecoveredAt,
+            LocalDateTime emergencyResolvedAt
+    ) {
         AmrStatusLog statusLog = new AmrStatusLog();
         statusLog.setAmr(amr);
         statusLog.setArea(area);
         statusLog.setStatus(status);
+        statusLog.setFaultCode(faultCode);
+        statusLog.setFaultMessage(faultMessage);
+        statusLog.setFaultRecoveredAt(faultRecoveredAt);
+        statusLog.setEmergencyResolvedAt(emergencyResolvedAt);
         statusLog.setPosX(posX);
         statusLog.setPosY(posY);
         statusLog.setYaw(yaw);

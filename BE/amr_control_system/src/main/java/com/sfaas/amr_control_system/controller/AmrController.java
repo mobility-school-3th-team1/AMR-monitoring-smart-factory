@@ -34,9 +34,10 @@ public class AmrController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer batteryMin,
             @RequestParam(required = false) Integer batteryMax,
-            @RequestParam(required = false) String search
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sort
     ) {
-        return ResponseEntity.ok(amrService.listAmrs(page, limit, status, batteryMin, batteryMax, search));
+        return ResponseEntity.ok(amrService.listAmrs(page, limit, status, batteryMin, batteryMax, search, sort));
     }
 
     @GetMapping("/{amrId}")

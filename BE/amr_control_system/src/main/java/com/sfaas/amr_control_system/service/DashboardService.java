@@ -48,18 +48,28 @@ public class DashboardService {
         int amrOperating = 0;
         int amrCharging = 0;
         int amrWaiting = 0;
+        int amrError = 0;
+        int amrErrorUnresolved = 0;
         int batterySum = 0;
         int batteryCount = 0;
 
         for (AmrStatusLog statusLog : latestStatusPerAmr) {
             String normalizedStatus = DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus());
             switch (normalizedStatus) {
-                case "operating" -> amrOperating++;
-                case "charging" -> amrCharging++;
-                case "waiting" -> amrWaiting++;
+                case DashboardStatusNormalizer.STATUS_OPERATING -> amrOperating++;
+                case DashboardStatusNormalizer.STATUS_CHARGING -> amrCharging++;
+                case DashboardStatusNormalizer.STATUS_IDLE -> amrWaiting++;
                 default -> {
-                    // error 등은 알람으로만 반영
                 }
+            }
+            if (DashboardStatusNormalizer.isErrorStatus(normalizedStatus)) {
+                amrError++;
+            }
+            if (DashboardStatusNormalizer.isUnresolvedAmrError(
+                    normalizedStatus,
+                    statusLog.getFaultRecoveredAt(),
+                    statusLog.getEmergencyResolvedAt())) {
+                amrErrorUnresolved++;
             }
             if (statusLog.getBatteryPct() != null) {
                 batterySum += statusLog.getBatteryPct();
@@ -73,6 +83,8 @@ public class DashboardService {
         summary.setAmrOperating(amrOperating);
         summary.setAmrCharging(amrCharging);
         summary.setAmrWaiting(amrWaiting);
+        summary.setAmrError(amrError);
+        summary.setAmrErrorUnresolved(amrErrorUnresolved);
         summary.setAvgBatteryPercent(batteryCount == 0 ? 0 : Math.round((float) batterySum / batteryCount));
         summary.setAverageTaskTimeMin(calculateAverageTaskTimeMinutes());
         return summary;
@@ -178,9 +190,10 @@ public class DashboardService {
 
     private String mapLogLevel(String amrStatus) {
         return switch (DashboardStatusNormalizer.normalizeAmrStatus(amrStatus)) {
-            case "error" -> "error";
-            case "charging" -> "info";
-            case "operating" -> "info";
+            case DashboardStatusNormalizer.STATUS_ERROR,
+                 DashboardStatusNormalizer.STATUS_EMERGENCY_STOP -> "error";
+            case DashboardStatusNormalizer.STATUS_CHARGING,
+                 DashboardStatusNormalizer.STATUS_OPERATING -> "info";
             default -> "info";
         };
     }

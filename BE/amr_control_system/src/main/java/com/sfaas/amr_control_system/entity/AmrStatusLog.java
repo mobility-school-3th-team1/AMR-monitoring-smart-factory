@@ -34,6 +34,18 @@ public class AmrStatusLog {
     @Column(name = "status", length = 50)
     private String status;
 
+    @Column(name = "fault_code", length = 50)
+    private String faultCode;
+
+    @Column(name = "fault_message", length = 255)
+    private String faultMessage;
+
+    @Column(name = "fault_recovered_at")
+    private LocalDateTime faultRecoveredAt;
+
+    @Column(name = "emergency_resolved_at")
+    private LocalDateTime emergencyResolvedAt;
+
     @Column(name = "pos_x")
     private Integer posX;
 

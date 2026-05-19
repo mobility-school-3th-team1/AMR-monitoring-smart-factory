@@ -47,7 +47,8 @@ public class AlarmDemoDataLoader implements CommandLineRunner {
         List<Alarm> alarms = new ArrayList<>();
 
         for (AmrStatusLog statusLog : amrStatusLogRepository.findAllByOrderByUpdatedAtDesc()) {
-            if (!"error".equals(DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus()))) {
+            if (!DashboardStatusNormalizer.STATUS_ERROR.equals(
+                    DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus()))) {
                 continue;
             }
             Alarm alarm = new Alarm();
