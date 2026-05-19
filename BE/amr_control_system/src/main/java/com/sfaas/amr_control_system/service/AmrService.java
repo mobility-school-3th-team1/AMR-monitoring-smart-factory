@@ -57,7 +57,7 @@ public class AmrService {
     private static final String EMPTY_JSON_PARAMS = "{}";
     private static final String SORT_UNRESOLVED_FIRST = "unresolvedfirst";
     private static final String INVALID_STATUS_QUERY_MESSAGE =
-            "status must include one or more of: OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
+            "status must include one or more of: " + DashboardStatusNormalizer.SUPPORTED_AMR_QUERY_STATUS_VALUES;
 
     private final AmrRepository amrRepository;
     private final AmrStatusLogRepository amrStatusLogRepository;
@@ -340,7 +340,7 @@ public class AmrService {
         Set<String> wantedStatuses = Arrays.stream(statusQuery.split(","))
                 .map(String::trim)
                 .filter(token -> !token.isEmpty())
-                .map(DashboardStatusNormalizer::normalizeAmrQueryStatus)
+                .map(this::parseStatusFilterToken)
                 .collect(Collectors.toSet());
 
         if (wantedStatuses.isEmpty()) {
@@ -348,6 +348,17 @@ public class AmrService {
         }
 
         return wantedStatuses;
+    }
+
+    private String parseStatusFilterToken(String token) {
+        try {
+            return DashboardStatusNormalizer.normalizeAmrQueryStatus(token);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException(
+                    "Unsupported status value: " + token + ". Allowed values: "
+                            + DashboardStatusNormalizer.SUPPORTED_AMR_QUERY_STATUS_VALUES
+            );
+        }
     }
 
     private Comparator<AmrListRow> amrListRowComparator(String sort) {

@@ -11,6 +11,8 @@ public final class DashboardStatusNormalizer {
     public static final String STATUS_CHARGING = "CHARGING";
     public static final String STATUS_ERROR = "ERROR";
     public static final String STATUS_EMERGENCY_STOP = "EMERGENCY_STOP";
+    public static final String SUPPORTED_AMR_QUERY_STATUS_VALUES =
+            "OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
     private static final Set<String> SUPPORTED_AMR_QUERY_STATUSES = Set.of(
             STATUS_OPERATING,
             STATUS_IDLE,
@@ -19,7 +21,7 @@ public final class DashboardStatusNormalizer {
             STATUS_EMERGENCY_STOP
     );
     private static final String INVALID_AMR_QUERY_STATUS_MESSAGE =
-            "status value must be one of: OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP";
+            "status value must be one of: " + SUPPORTED_AMR_QUERY_STATUS_VALUES;
 
     private DashboardStatusNormalizer() {
     }
