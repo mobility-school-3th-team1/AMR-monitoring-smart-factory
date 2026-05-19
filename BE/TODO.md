@@ -12,10 +12,14 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - **10-A (H2 물리 스키마 정합·API 스모크):** 완료 (2026-05-18).
 - **Phase A (REST 시연 경로):** 완료 (2026-05-18, Docker 스모크 검증).
 - **Phase B (WebSocket):** **완료** (2026-05-19). B-1~4 Docker WS 스모크 통과 (`scripts/smoke-websocket-phase-b.py`).
-- **설계 문서(dev):** `docs/API 정의.md`, `docs/데이터 스키마 설계.md`, `docs/화면 설계서.md`, `docs/ADR/20260518-1252-AMR-emergency-logic.md` 반영 완료 (PR #27 merge).
+- **기능 추가 개발:** **일시 중단** (FE·DAS MQTT 합의·BE 연동 공백). **설계 재검토** 후 Phase C·12-F 등 재개.
+- **Phase S (Swagger UI):** **S-1~S-3 완료** (2026-05-19). **S-4** 설계 재검토 이슈 대기.
+- **현재 BE 1순위:** **Phase S-4** (설계 재검토) 또는 팀 합의 후 Phase C·12-F 재개.
+- **설계 문서(dev):** `docs/API 정의.md` 등과 **실제 구현·FE/DAS 합의** 간 불일치 정리 예정 (Swagger 도입 후 재검토).
 - **DB 영역 Docker compose:** 미 merge. 당분간 **H2 + BE Docker**로 시연·개발.
 - **DAS·FE·BE 합의:** 비상 정지는 BE가 DB 갱신 후 `accepted` 응답, FE가 DAS(MQTT) 정지 고지. BE↔DAS 직접 연동 없음.
-- **FE 실시간:** `FE/frontend/src/plugins/ws.js`는 **MQTT(DAS)** 용이며 `main.js`에서 비활성. BE `WS /api/v1/stream` FE 연동은 미착수 → BE는 **JWT query `?token=`(A안)** 으로 구현 중.
+- **실시간 텔레메트리(맵 좌표·환경 센서):** FE ← **MQTT** ← DAS. BE `GET /environment/areas/current`(12-F)는 **보류** (명세·화면 설계서와 재정렬 필요).
+- **FE·BE 실시간:** BE `WS /api/v1/stream?token=` 구현 완료. FE 연동·MQTT 플러그인은 미착수.
 
 ### 설계 대비 BE 구현 격차 (작업 기준)
 
@@ -27,7 +31,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | `AmrStatusLog` | `fault_code`, `fault_recovered_at`, `emergency_resolved_at` | **12-A 완료** (엔티티·시드) | — |
 | 운행 자동 복구 | ~60초 후 IDLE 등, FE `resume` 없음 | **12-D 완료** (`AmrAutoRecoveryService`) | — |
 | `GET /amrs` | `status` 콤마, `sort=unresolvedFirst`, 응답 `faultCode` | **12-E 완료** (`faultCode` 쿼리는 `docs/API 정의.md` §3 미정의) | — |
-| `GET /environment/areas/current` | SCR-01 ③ | 컨트롤러·서비스 없음 | **A-선택** |
+| `GET /environment/areas/current` | SCR-01 ③ (명세) | 미구현 | **보류** — 실시간 환경은 FE←MQTT←DAS, 설계 재검토 후 |
 | `GET /analytics/kpis` | `errorCount`, `scheduleComplianceRate` | 필드 없음 | **B (시연 후)** |
 | `WS /api/v1/stream` | 5종 이벤트, JWT | **시연 2종 완료:** handshake·`amrs.status.updated`·`dashboard.summary.updated` (Docker 스모크 검증). **잔여:** 선택 이벤트 3종 | — |
 | `AMR_COMMAND` | 명령 이력 | **12-C 완료** (emergencyStop INSERT) | — |
@@ -36,20 +40,20 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ---
 
-## 다음 예정 작업 (팀 공유용) — BE 시연 우선
+## 다음 예정 작업 (팀 공유용)
 
-| 순서 | 작업 | 한 줄 설명 | BE 담당 |
-|------|------|-----------|---------|
-| ~~0~~ | ~~10-A 물리 스키마 정합~~ | **완료** (2026-05-18) | — |
-| ~~—~~ | ~~설계 문서 반영~~ | dev에 API·화면·ADR 반영 완료 | — |
-| **1** | **Phase A: REST 시연 경로** | 필수 REST·**12-G Docker 스모크** 완료. 잔여: **12-F** 선택 | **완료** |
-| ~~2~~ | ~~**Phase B: WebSocket 최소**~~ | B-1~4 **완료** (2026-05-19) | — |
-| (병렬) | **FE·BE 통합** | CORS·프록시·runbook (FE/인프라) | BE: Security·헬스 URL 문서화 |
-| 3 | 공통 오류 응답 | API 실패 형식 통일 | 시연 직전·직후 |
-| (대기) | **10-B MySQL** | DB compose merge 후 | 시연 필수 아님 |
-| (후순) | Analytics KPI 확장, 테스트·CSV | `errorCount` 등 | 시연 후 |
+| 순서 | 작업 | 한 줄 설명 | 상태 |
+|------|------|-----------|------|
+| ~~—~~ | ~~Phase A REST 시연~~ | 12-A~G (12-F 제외) | **완료** |
+| ~~—~~ | ~~Phase B WebSocket 최소~~ | B-1~4 | **완료** |
+| **1** | **Phase S: Swagger UI** | S-1~S-3 완료 (OpenAPI·JWT·회귀 스모크) | **S-4** |
+| 2 | **설계 재검토** | `docs/API 정의.md`·화면 설계서 vs BE·FE·DAS MQTT | Swagger 후 |
+| (보류) | 12-F 환경 API | FE MQTT 합의와 충돌 가능 | 재검토 후 |
+| (보류) | Phase C | analytics KPI, 공통 오류 응답, 테스트 | 재검토 후 |
+| (병렬) | FE·BE 통합 | WS·REST, CORS·프록시 | FE 주도 |
+| (대기) | 10-B MySQL | DB compose merge 후 | — |
 
-**현재 BE 1순위:** **12-F** 환경 API(선택) 또는 **Phase C** (analytics KPI, 공통 오류 응답).
+**현재 BE 1순위:** **Phase S-4(설계 재검토)**. 기능 API 신규 구현은 **설계 재검토 합의 후** 재개.
 
 ---
 
@@ -101,12 +105,12 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] `sort=unresolvedFirst`: 미해결 우선, 동일 시 `EMERGENCY_STOP` 우선, 그다음 이름.
 - [x] 응답 `status`·`faultCode`: `AmrDto`·`buildAmrDto`와 설계 enum 정합.
 
-### 12-F. 환경 API (선택, SCR-01 ③)
+### 12-F. 환경 API (SCR-01 ③) — **보류 (설계 재검토)**
 
-- [ ] `EnvironmentController` + `EnvironmentService`: `GET /environment/areas/current`
-- [ ] `EnvSensor` + `EnvSensorLog` 최신 `measured_at` per sensor 집계.
-- [ ] `DashboardDemoDataLoader`에 `ENV_SENSOR_LOG` 시드 추가 (`init.sql`에는 INSERT 없음, H2 시연용).
-- [ ] 미구현 시 FE는 하드코딩 유지 가능 → **Phase A 필수 아님**.
+- 실시간 환경(온도/습도/파티클)은 **FE ← MQTT ← DAS** 합의. BE REST `GET /environment/areas/current`는 `docs/API 정의.md`·화면 설계서와 **재정렬 후** 별도 이슈.
+- [ ] (보류) `EnvironmentController` + `EnvironmentService`
+- [ ] (보류) `ENV_SENSOR_LOG` 시드·집계
+- 엔티티 `EnvSensor`/`EnvSensorLog`는 DB 마스터·향후 적재용으로 유지 가능.
 
 ### 12-G. Phase A 검증 체크리스트 — Docker 스모크 검증됨 (2026-05-18)
 
@@ -129,7 +133,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] `SecurityConfig`: `/stream` permitAll (handshake에서 JWT 거부).
 - [x] `StreamWebSocketHandler` + `WebSocketSessionRegistry`: 세션 등록.
 - [x] 연결 확인용 `stream.connected` 이벤트 1회 전송 (API §8 필수 이벤트 아님).
-- [ ] **Docker WS 스모크** (B-4): `docker compose up --build` 후 wscat 등으로 연결·토큰 거부/수락 확인.
+- [x] **Docker WS 스모크** (B-4): `scripts/smoke-websocket-phase-b.py`.
 
 ### B-2. 이벤트 발행기 — 완료 (2026-05-19)
 
@@ -141,7 +145,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 - [x] **필수 발행 (시연)**
   - `amrs.status.updated` — `AmrService.sendCommand`·`AmrAutoRecoveryService` 복구
-  - `dashboard.summary.updated` — `AmrStatusChangedStreamListener`에서 `getSummary()` payload
+  - `dashboard.summary.updated` — `StreamNotificationService` afterCommit + `getSummary()` payload
 - [x] `StreamNotificationService` + `TransactionSynchronizationManager.afterCommit` (commit 이후 WS 발행).
 - [ ] **선택 발행**
   - `amrs.position.updated` — `@Scheduled` 3~5초마다 `pos_x`/`pos_y` 소폭 변경 (DAS 없을 때 연출)
@@ -159,7 +163,43 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ---
 
-## Phase C — 시연 후·인프라
+## Phase S — Swagger UI (OpenAPI) — **S-3 완료, S-4 대기**
+
+목표: 기능 개발 중단 기간에 **현재 구현 REST API**를 브라우저에서 탐색·호출하고, `docs/API 정의.md`와의 차이를 팀이 확인할 수 있게 한다.
+
+**범위:** REST 8개 컨트롤러 영역, JWT Bearer Try it out.  
+**범위 외:** WebSocket `/stream`, DAS/MQTT, FE UI, 12-F·Phase C 신규 API.
+
+### S-1. 의존성·설정 — 완료 (2026-05-19)
+
+- [x] `build.gradle`: `springdoc-openapi-starter-webmvc-ui:2.8.8`
+- [x] `OpenApiConfig`, `OpenApiDocumentationConstants`: API 메타, 서버 `http://localhost:8080/api/v1`, JWT Bearer `bearerAuth`
+- [x] `SecurityConfig`: `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` permitAll
+- [x] `application.yaml` / `application-docker.yaml`: springdoc 경로
+- [x] Docker: `GET /api/v1/v3/api-docs`·Swagger UI HTML 200 (S-2 Try it out·JWT는 다음)
+
+### S-2. 노출·인증 검증 — 완료 (2026-05-19)
+
+- [x] 컨트롤러 노출: OpenAPI 7 REST 그룹 (`auth`, `dashboard`, `amr`, `alarm`, `charging`, `work-history`, `analytics` controller 태그)
+- [x] `POST /auth/login`·`/auth/refresh`: `@SecurityRequirements` (Swagger에서 잠금 없음) → 토큰 발급 후 **Authorize** → `GET /dashboard/summary` 등 200
+- [x] 보호 API 무토큰 → **401** (`SecurityConfig` `HttpStatusEntryPoint(UNAUTHORIZED)`)
+- [x] 자동 검증: `python scripts/smoke-swagger-phase-s.py` (Docker, `admin` / `demo123`)
+- [x] `@Operation` 생략 — springdoc 자동 스캔 유지
+
+### S-3. Docker·문서·회귀 — 완료 (2026-05-19)
+
+- [x] `docker compose up --build` 후 Swagger UI·OpenAPI JSON HTTP 200
+- [x] 회귀: `python scripts/smoke-swagger-phase-s.py` (REST·OpenAPI·JWT), `python scripts/smoke-websocket-phase-b.py` (WS) ALL PASSED
+- [x] `BE/TODO.md` Docker 표·`BE/AGENTS.md` Swagger URL·JWT Try it out·회귀 명령 기록
+
+### S-4. 완료 후
+
+- [ ] 설계 재검토 이슈: API 명세·화면 설계서·FE/DAS MQTT 경계 정리
+- [ ] Phase C·12-F 등 **재개 여부** 팀 합의
+
+---
+
+## Phase C — 시연 후·인프라 (보류: 설계 재검토 후)
 
 ### 7. 예외 처리 및 로깅
 
@@ -196,6 +236,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 - [x] BE 단독 compose (10-A 완료 후에도 H2 유지).
 - [x] 멀티스테이지 `Dockerfile`: JDK 17 Alpine에서 `bootJar`, JRE 17 Alpine 런타임 + `curl`(healthcheck).
 - [x] Phase B WebSocket 스모크 runbook (`scripts/smoke-websocket-phase-b.py`).
+- [x] Phase S Swagger·REST 회귀 runbook (`scripts/smoke-swagger-phase-s.py`).
 - [ ] 10-B MySQL merge 후 runbook 갱신.
 - [ ] 루트 통합 `docker-compose` (FE·DB·BE 합의 후).
 
@@ -288,10 +329,12 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 
 ## 작업 우선순위 (BE 담당자용)
 
-1. **Phase A-12-F** — environment API (선택)
-2. **Phase C** — analytics KPI, 오류 응답, 테스트 보강, 10-B
+1. **Phase S-4** — 설계 재검토 이슈 (`docs/API 정의.md`·화면 설계서 vs BE·FE·DAS MQTT)
+2. **Phase C** — analytics KPI, 공통 오류 응답 (재개 시)
+3. **12-F** — 환경 API (재검토 후, FE MQTT와 중복 여부 확인)
+4. **10-B** — MySQL (DB compose merge 후)
 
-**한 번에 하나의 Phase A 하위 태스크만** 진행한다 (`AGENTS.md` 규칙).
+**한 번에 하나의 하위 태스크만** 진행한다 (`AGENTS.md` 규칙). 기능 API는 **설계 재검토 합의 후** 착수한다.
 
 ---
 
@@ -324,7 +367,22 @@ docker compose up --build
 | AMRs (전체) | GET http://localhost:8080/api/v1/amrs |
 | Emergency stop | POST http://localhost:8080/api/v1/amrs/{amrId}/commands |
 | **WebSocket (B-1)** | `ws://localhost:8080/api/v1/stream?token=<accessToken>` |
-| Environment (Phase A-F 후) | GET http://localhost:8080/api/v1/environment/areas/current |
+| **Swagger UI** | http://localhost:8080/api/v1/swagger-ui/index.html |
+| **OpenAPI JSON** | http://localhost:8080/api/v1/v3/api-docs |
+
+**Swagger UI (Try it out, JWT):**
+
+1. `POST /auth/login` — Body `{"username":"admin","password":"demo123"}` (**Authorize 없이** 실행).
+2. 응답 `accessToken` 복사 → 상단 **Authorize** → 토큰만 붙여넣기 (`Bearer ` 접두사 없음).
+3. `GET /dashboard/summary` 등 보호 API Try it out.
+
+**Phase S 회귀 스모크 (REST + OpenAPI + JWT):**
+
+```bash
+cd BE
+docker compose up -d --build
+python scripts/smoke-swagger-phase-s.py
+```
 
 **Phase B WebSocket 스모크:**
 
@@ -336,6 +394,8 @@ python scripts/smoke-websocket-phase-b.py
 ```
 
 (PowerShell 대안: `scripts/smoke-websocket-phase-b.ps1` — 수신은 백그라운드 스레드 필요, **Python 스크립트 권장**.)
+
+**PR 전 권장:** 위 두 Python 스크립트 모두 ALL PASSED.
 
 ---
 
@@ -381,4 +441,4 @@ DEMO_USER_PASSWORD=demo123
 - 설계 변경 시 `docs/` 먼저 수정 후 구현.
 - 물리 스키마: `DB/init.sql`, `docs/데이터 스키마 설계.md`.
 - 화면·API 매핑: `docs/화면 설계서.md`.
-- PR 전: `BE/`에서 `docker compose up --build` + Phase A 검증(12-G) + Phase B 진행 시 B-4 WS 체크리스트.
+- PR 전: `docker compose up --build` + `python scripts/smoke-swagger-phase-s.py` + `python scripts/smoke-websocket-phase-b.py`.
