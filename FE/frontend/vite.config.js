@@ -11,6 +11,12 @@ module.exports = defineConfig({
   },
   server: {
     port: 3001,
-    strictPort: true
+    strictPort: true,
+    proxy: {
+      '/api/v1': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
   }
 })
