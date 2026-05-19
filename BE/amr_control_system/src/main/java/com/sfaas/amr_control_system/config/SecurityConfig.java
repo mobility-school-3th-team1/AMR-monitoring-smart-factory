@@ -1,6 +1,7 @@
 package com.sfaas.amr_control_system.config;
 
 import com.sfaas.amr_control_system.security.JwtAuthenticationFilter;
+import com.sfaas.amr_control_system.websocket.WebSocketConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/auth/logout").authenticated()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers(WebSocketConstants.STREAM_PATH).permitAll()
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
