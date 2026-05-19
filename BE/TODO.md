@@ -5,14 +5,17 @@
 AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 기술 스택: Java Spring Boot, Spring Security (JWT), RESTful API + WebSocket, MySQL (JPA/Hibernate).
 
-## 현재 상태 (dev, 2026-05-18 기준)
+## 현재 상태 (dev, 2026-05-19 기준)
 
-- BE 전용 Docker 실행 환경 구성 완료 (2026-05-17). `BE/docker-compose.yml` + H2.
+- **로컬 실행:** 호스트 JDK 없이 **Docker만** 사용. 빌드·실행은 `BE/docker-compose.yml` (`amr_control_system/Dockerfile` 내 `./gradlew bootJar`).
+- BE 전용 Docker 실행 환경 구성 완료 (2026-05-17). 프로파일 `docker` + H2 in-memory (`application-docker.yaml`).
 - **10-A (H2 물리 스키마 정합·API 스모크):** 완료 (2026-05-18).
+- **Phase A (REST 시연 경로):** 완료 (2026-05-18, Docker 스모크 검증).
+- **Phase B (WebSocket):** **완료** (2026-05-19). B-1~4 Docker WS 스모크 통과 (`scripts/smoke-websocket-phase-b.py`).
 - **설계 문서(dev):** `docs/API 정의.md`, `docs/데이터 스키마 설계.md`, `docs/화면 설계서.md`, `docs/ADR/20260518-1252-AMR-emergency-logic.md` 반영 완료 (PR #27 merge).
 - **DB 영역 Docker compose:** 미 merge. 당분간 **H2 + BE Docker**로 시연·개발.
 - **DAS·FE·BE 합의:** 비상 정지는 BE가 DB 갱신 후 `accepted` 응답, FE가 DAS(MQTT) 정지 고지. BE↔DAS 직접 연동 없음.
-- **시연 최우선 (BE):** REST 시연 경로 정합 → 비상 정지·자동 복구 → (여유 시) WebSocket.
+- **FE 실시간:** `FE/frontend/src/plugins/ws.js`는 **MQTT(DAS)** 용이며 `main.js`에서 비활성. BE `WS /api/v1/stream` FE 연동은 미착수 → BE는 **JWT query `?token=`(A안)** 으로 구현 중.
 
 ### 설계 대비 BE 구현 격차 (작업 기준)
 
@@ -26,7 +29,7 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | `GET /amrs` | `status` 콤마, `sort=unresolvedFirst`, 응답 `faultCode` | **12-E 완료** (`faultCode` 쿼리는 `docs/API 정의.md` §3 미정의) | — |
 | `GET /environment/areas/current` | SCR-01 ③ | 컨트롤러·서비스 없음 | **A-선택** |
 | `GET /analytics/kpis` | `errorCount`, `scheduleComplianceRate` | 필드 없음 | **B (시연 후)** |
-| `WS /api/v1/stream` | 5종 이벤트, JWT | 미구현 | **B (REST 후)** |
+| `WS /api/v1/stream` | 5종 이벤트, JWT | **시연 2종 완료:** handshake·`amrs.status.updated`·`dashboard.summary.updated` (Docker 스모크 검증). **잔여:** 선택 이벤트 3종 | — |
 | `AMR_COMMAND` | 명령 이력 | **12-C 완료** (emergencyStop INSERT) | — |
 
 > FE·DAS(MQTT 토픽·payload)는 BE 범위 밖. BE는 DB·REST·(선택) WebSocket만 담당.
@@ -40,13 +43,13 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 | ~~0~~ | ~~10-A 물리 스키마 정합~~ | **완료** (2026-05-18) | — |
 | ~~—~~ | ~~설계 문서 반영~~ | dev에 API·화면·ADR 반영 완료 | — |
 | **1** | **Phase A: REST 시연 경로** | 필수 REST·**12-G Docker 스모크** 완료. 잔여: **12-F** 선택 | **완료** |
-| **2** | **Phase B: WebSocket 최소** | `amrs.status.updated`, `dashboard.summary.updated` (+ 선택 위치 tick) | **지금** |
+| ~~2~~ | ~~**Phase B: WebSocket 최소**~~ | B-1~4 **완료** (2026-05-19) | — |
 | (병렬) | **FE·BE 통합** | CORS·프록시·runbook (FE/인프라) | BE: Security·헬스 URL 문서화 |
 | 3 | 공통 오류 응답 | API 실패 형식 통일 | 시연 직전·직후 |
 | (대기) | **10-B MySQL** | DB compose merge 후 | 시연 필수 아님 |
 | (후순) | Analytics KPI 확장, 테스트·CSV | `errorCount` 등 | 시연 후 |
 
-**현재 BE 1순위:** **Phase B-6** WebSocket 최소 (또는 **12-F** 환경 API 선택).
+**현재 BE 1순위:** **12-F** 환경 API(선택) 또는 **Phase C** (analytics KPI, 공통 오류 응답).
 
 ---
 
@@ -117,20 +120,42 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ## Phase B — WebSocket 최소 (Phase A 이후)
 
-`docs/API 정의.md` §8. 시연 v1에서는 FE **REST 폴링(3~10초)** 으로도 Phase A 시나리오 가능. 여유 있을 때 진행.
+`docs/API 정의.md` §8. FE는 당분간 REST 폴링(10초) 가능. BE→FE 스트림은 **JWT query `?token=`(A안)**.
 
-### 6. WebSocket 구현
+### B-1. 연결·인증 (handshake) — 완료 (2026-05-19)
 
-- [ ] `WebSocketConfig`: `WS /api/v1/stream`, handshake 시 JWT (`?token=` 또는 `Authorization` 중 팀 합의 1안).
-- [ ] `SecurityConfig`: stream 경로 인증 예외/필터 연동.
-- [ ] `StreamEventPublisher` (또는 동등 서비스): 공통 봉투 `{ event, timestamp, data }`.
-- [ ] **필수 발행 (시연)**
-  - `amrs.status.updated` — `sendCommand`·자동 복구 직후
-  - `dashboard.summary.updated` — 위 이벤트 직후 또는 summary 재계산 시
+- [x] `WebSocketConfig`: `WS /api/v1/stream` (`context-path` `/api/v1` + 핸들러 `/stream`).
+- [x] `WebSocketJwtHandshakeInterceptor`: query `token`으로 access JWT 검증 (`JwtUtil`·`UserDetailsService` 재사용).
+- [x] `SecurityConfig`: `/stream` permitAll (handshake에서 JWT 거부).
+- [x] `StreamWebSocketHandler` + `WebSocketSessionRegistry`: 세션 등록.
+- [x] 연결 확인용 `stream.connected` 이벤트 1회 전송 (API §8 필수 이벤트 아님).
+- [ ] **Docker WS 스모크** (B-4): `docker compose up --build` 후 wscat 등으로 연결·토큰 거부/수락 확인.
+
+### B-2. 이벤트 발행기 — 완료 (2026-05-19)
+
+- [x] `StreamEventDto`, `StreamEventPublisher`: 공통 봉투 `{ event, timestamp, data }`, `WebSocketSessionRegistry` 브로드캐스트.
+- [x] `AmrStatusUpdatedEventDataDto`, `publishAmrStatusUpdated` / `publishDashboardSummaryUpdated`.
+- [x] `StreamWebSocketHandler` → Publisher로 `stream.connected` 통일.
+
+### B-3. 비즈니스 연동 — 완료 (2026-05-19)
+
+- [x] **필수 발행 (시연)**
+  - `amrs.status.updated` — `AmrService.sendCommand`·`AmrAutoRecoveryService` 복구
+  - `dashboard.summary.updated` — `AmrStatusChangedStreamListener`에서 `getSummary()` payload
+- [x] `StreamNotificationService` + `TransactionSynchronizationManager.afterCommit` (commit 이후 WS 발행).
 - [ ] **선택 발행**
-  - `amrs.position.updated` — `@Scheduled` 3~5초마다 `pos_x`/`pos_y` 소폭 변경( DAS 없을 때 “움직임” 연출)
+  - `amrs.position.updated` — `@Scheduled` 3~5초마다 `pos_x`/`pos_y` 소폭 변경 (DAS 없을 때 연출)
   - `alarms.created`, `charging.forecast.updated` — 시연 후
-- [ ] Phase A의 명령·복구 서비스에서 publisher 호출 (트랜잭션 commit 이후).
+
+### B-4. Phase B Docker 검증 체크리스트 — 완료 (2026-05-19)
+
+- [x] `BE/`에서 `docker compose up -d --build` (코드 변경 시 `--no-cache` 권장).
+- [x] `POST /auth/login` → `accessToken`.
+- [x] `ws://localhost:8080/api/v1/stream?token=<accessToken>` → `stream.connected`.
+- [x] 토큰 없음 → 연결 거부.
+- [x] `emergencyStop`(amr-02) → `amrs.status.updated` + `dashboard.summary.updated`.
+- [x] 65초 대기 → IDLE 복구 이벤트, `amrError`/`amrErrorUnresolved` 0.
+- [x] 자동 실행: `python scripts/smoke-websocket-phase-b.py` (의존성: `pip install websocket-client`).
 
 ---
 
@@ -149,9 +174,10 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 ### 8. 테스트 및 검증
 
-- [ ] Service 단위 테스트 (dashboard 집계, emergencyStop, auto-recovery).
+- [x] `DashboardStatusNormalizerTest`, `AmrServiceTest` (일부 Service 단위 테스트).
+- [ ] dashboard 집계·auto-recovery 등 추가 Service 테스트.
 - [ ] Controller 통합 테스트 (MockMvc).
-- [ ] CI 또는 로컬 `docker compose` 스모크 스크립트 (선택).
+- [ ] CI 또는 `docker compose` 스모크 스크립트 (REST Phase A·WS Phase B).
 
 ### 9. 추가 기능
 
@@ -168,7 +194,9 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 ### 0. Docker (잔여)
 
 - [x] BE 단독 compose (10-A 완료 후에도 H2 유지).
-- [ ] 10-B 후 runbook 갱신.
+- [x] 멀티스테이지 `Dockerfile`: JDK 17 Alpine에서 `bootJar`, JRE 17 Alpine 런타임 + `curl`(healthcheck).
+- [x] Phase B WebSocket 스모크 runbook (`scripts/smoke-websocket-phase-b.py`).
+- [ ] 10-B MySQL merge 후 runbook 갱신.
 - [ ] 루트 통합 `docker-compose` (FE·DB·BE 합의 후).
 
 ---
@@ -214,6 +242,20 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 
 - `BE`에서 `docker compose up -d --build` → 로그인 → summary·amrs 필터·`emergencyStop`(amr-02) → 65초 대기 자동 복구·추가 엔드포인트(alarms, charging, work-histories, analytics) HTTP 200.
 
+### [완료] Phase B-1 WebSocket handshake (2026-05-19)
+
+- `WebSocketConfig`, `WebSocketJwtHandshakeInterceptor`, `StreamWebSocketHandler`, `WebSocketSessionRegistry`, `SecurityConfig` (`/stream` + query `token`).
+- 외부 URL: `ws://localhost:8080/api/v1/stream?token=<accessToken>`.
+
+### [완료] Phase B-2·B-3 StreamEventPublisher 및 서비스 연동 (2026-05-19)
+
+- `StreamEventPublisher`, `StreamEventDto`, `StreamNotificationService` (`afterCommit`).
+- `emergencyStop`·자동 복구 후 `amrs.status.updated` → `dashboard.summary.updated`.
+
+### [완료] Phase B-4 Docker WebSocket 스모크 (2026-05-19)
+
+- `scripts/smoke-websocket-phase-b.py` ALL PASSED (H2 fresh: `docker compose down -v` 후 기동).
+
 ---
 
 ## 개발 계획 (레거시 섹션·참고)
@@ -238,15 +280,16 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 - [x] `sendCommand` DB 트랜잭션 (`EMERGENCY_STOP`)
 - [x] commit 후 `accepted: true`
 - [x] 자동 복구(12-D)
-- [ ] (Phase B) WebSocket `amrs.status.updated` 발행
+- [x] (Phase B-1) WebSocket 연결·JWT handshake
+- [x] (Phase B-2~3) `amrs.status.updated`·`dashboard.summary.updated` 발행
+- [x] (Phase B-4) Docker WS 스모크
 
 ---
 
 ## 작업 우선순위 (BE 담당자용)
 
-1. **Phase B-6** — WebSocket 최소
-2. **Phase A-12-F** — environment API (선택)
-3. **Phase C** — analytics KPI, 오류 응답, 테스트, 10-B
+1. **Phase A-12-F** — environment API (선택)
+2. **Phase C** — analytics KPI, 오류 응답, 테스트 보강, 10-B
 
 **한 번에 하나의 Phase A 하위 태스크만** 진행한다 (`AGENTS.md` 규칙).
 
@@ -254,11 +297,23 @@ Docker, 엔티티(10-A 전 기반), DTO, Security, Controller, Service — [x] �
 
 ## Docker 실행 (BE 폴더)
 
+로컬에 Java를 설치하지 않아도 된다. **이미지 빌드 단계**에서 `amr_control_system/Dockerfile`이 `./gradlew bootJar -x test`를 실행한다.
+
+| 파일 | 역할 |
+|------|------|
+| `BE/docker-compose.yml` | 서비스 `be`, 포트 `8080:8080`, `SPRING_PROFILES_ACTIVE=docker`, `.env` 필수 |
+| `BE/.env.example` | `JWT_SECRET`, 토큰 만료, `DEMO_USER_PASSWORD` 템플릿 |
+| `BE/amr_control_system/Dockerfile` | multi-stage: JDK 17 빌드 → JRE 17 + `curl` |
+| `BE/amr_control_system/src/main/resources/application-docker.yaml` | H2 in-memory, `app.demo` 복구 60초 |
+
 ```bash
+cd BE
 cp .env.example .env
 # JWT_SECRET 설정 (아래 「다른 PC에서 JWT 키 갱신」)
 docker compose up --build
 ```
+
+코드 변경 후 반영: `docker compose up -d --build` (H2 시드 초기화가 필요하면 `docker compose down -v` 후 재기동).
 
 | 용도 | URL |
 |------|-----|
@@ -268,7 +323,19 @@ docker compose up --build
 | AMRs (에러 목록) | GET …/amrs?status=ERROR,EMERGENCY_STOP&sort=unresolvedFirst |
 | AMRs (전체) | GET http://localhost:8080/api/v1/amrs |
 | Emergency stop | POST http://localhost:8080/api/v1/amrs/{amrId}/commands |
+| **WebSocket (B-1)** | `ws://localhost:8080/api/v1/stream?token=<accessToken>` |
 | Environment (Phase A-F 후) | GET http://localhost:8080/api/v1/environment/areas/current |
+
+**Phase B WebSocket 스모크:**
+
+```bash
+cd BE
+docker compose up -d --build
+pip install websocket-client
+python scripts/smoke-websocket-phase-b.py
+```
+
+(PowerShell 대안: `scripts/smoke-websocket-phase-b.ps1` — 수신은 백그라운드 스레드 필요, **Python 스크립트 권장**.)
 
 ---
 
@@ -303,7 +370,7 @@ DEMO_USER_PASSWORD=demo123
 [6] BE  --(Phase B) WS-->  FE  amrs.status.updated / dashboard.summary.updated
 ```
 
-- `accepted: true`: **DB 반영 완료** (현재 코드는 미반영 → Phase A-12-C).
+- `accepted: true`: **DB 반영 완료** (Phase A-12-C 구현됨).
 - `emergencyStop` → `status = 'EMERGENCY_STOP'` (`ERROR`와 구분, `docs/ADR/20260518-1252-AMR-emergency-logic.md`).
 - MQTT 토픽·payload: FE·DAS 이슈.
 
@@ -314,4 +381,4 @@ DEMO_USER_PASSWORD=demo123
 - 설계 변경 시 `docs/` 먼저 수정 후 구현.
 - 물리 스키마: `DB/init.sql`, `docs/데이터 스키마 설계.md`.
 - 화면·API 매핑: `docs/화면 설계서.md`.
-- PR 전: `docker compose up --build` + Phase A 검증 체크리스트.
+- PR 전: `BE/`에서 `docker compose up --build` + Phase A 검증(12-G) + Phase B 진행 시 B-4 WS 체크리스트.

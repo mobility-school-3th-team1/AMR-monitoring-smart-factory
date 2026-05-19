@@ -6,7 +6,6 @@ import com.sfaas.amr_control_system.repository.AmrRepository;
 import com.sfaas.amr_control_system.repository.AmrStatusLogRepository;
 import com.sfaas.amr_control_system.repository.AmrTaskRepository;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -21,12 +20,14 @@ class AmrServiceTest {
         AmrTaskRepository amrTaskRepository = mock(AmrTaskRepository.class);
         AmrCommandRepository amrCommandRepository = mock(AmrCommandRepository.class);
         ObjectMapper objectMapper = new ObjectMapper();
+        StreamNotificationService streamNotificationService = mock(StreamNotificationService.class);
         AmrService amrService = new AmrService(
                 amrRepository,
                 amrStatusLogRepository,
                 amrTaskRepository,
                 amrCommandRepository,
-                objectMapper
+                objectMapper,
+                streamNotificationService
         );
 
         IllegalArgumentException exception = assertThrows(

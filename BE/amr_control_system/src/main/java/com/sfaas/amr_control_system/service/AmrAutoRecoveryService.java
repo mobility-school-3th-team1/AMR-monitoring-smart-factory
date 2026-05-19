@@ -26,6 +26,7 @@ public class AmrAutoRecoveryService {
 
     private final AmrStatusLogRepository amrStatusLogRepository;
     private final DemoRecoveryProperties demoRecoveryProperties;
+    private final StreamNotificationService streamNotificationService;
 
     @Scheduled(fixedDelayString = "${app.demo.recovery-check-interval-ms:10000}")
     @Transactional
@@ -72,6 +73,11 @@ public class AmrAutoRecoveryService {
         String amrLabel = statusLog.getAmr() != null
                 ? AmrIdentifierHelper.formatAmrId(statusLog.getAmr().getAmrId())
                 : "unknown";
+        streamNotificationService.publishAmrStatusChangeAfterCommit(
+                amrLabel,
+                DashboardStatusNormalizer.STATUS_IDLE,
+                null
+        );
         log.info("Auto-recovered AMR {} from {} to IDLE", amrLabel, normalizedStatus);
     }
 

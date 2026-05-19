@@ -64,6 +64,7 @@ public class AmrService {
     private final AmrTaskRepository amrTaskRepository;
     private final AmrCommandRepository amrCommandRepository;
     private final ObjectMapper objectMapper;
+    private final StreamNotificationService streamNotificationService;
 
     public AmrListResponseDto listAmrs(
             Integer page,
@@ -167,10 +168,17 @@ public class AmrService {
         cancelActiveTasksForEmergencyStop(amr, requestedAt);
         persistAmrCommand(amr, commandId, commandType, request, requestedAt);
 
+        String formattedAmrId = AmrIdentifierHelper.formatAmrId(amr.getAmrId());
+        streamNotificationService.publishAmrStatusChangeAfterCommit(
+                formattedAmrId,
+                DashboardStatusNormalizer.STATUS_EMERGENCY_STOP,
+                null
+        );
+
         AmrCommandResponseDto response = new AmrCommandResponseDto();
         response.setAccepted(true);
         response.setCommandId(commandId);
-        response.setAmrId(AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
+        response.setAmrId(formattedAmrId);
         return response;
     }
 
