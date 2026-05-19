@@ -39,7 +39,7 @@ public class StreamNotificationService {
         try {
             action.run();
         } catch (RuntimeException exception) {
-            log.warn("Stream notification failed on {}. transaction commit is already finalized.", triggerType, exception);
+            log.warn("Stream notification failed on {}, but transaction commit is already finalized.", triggerType, exception);
         }
     }
 }
