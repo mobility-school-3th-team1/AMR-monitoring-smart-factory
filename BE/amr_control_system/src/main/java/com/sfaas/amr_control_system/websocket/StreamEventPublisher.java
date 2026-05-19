@@ -23,28 +23,21 @@ public class StreamEventPublisher {
     private final ObjectMapper objectMapper;
 
     public void publish(String eventType, Object data) {
-        StreamEventDto envelope = new StreamEventDto(eventType, Instant.now().toString(), data);
-        String payload;
-        try {
-            payload = objectMapper.writeValueAsString(envelope);
-        } catch (JsonProcessingException exception) {
-            log.error("Failed to serialize stream event {}", eventType, exception);
+        TextMessage message = createMessage(eventType, data);
+        if (message == null) {
             return;
         }
-
-        TextMessage message = new TextMessage(payload);
         for (WebSocketSession session : sessionRegistry.getOpenSessions()) {
-            if (!session.isOpen()) {
-                sessionRegistry.unregister(session);
-                continue;
-            }
-            try {
-                session.sendMessage(message);
-            } catch (IOException exception) {
-                log.warn("Failed to send stream event {} to session {}", eventType, session.getId(), exception);
-                sessionRegistry.unregister(session);
-            }
+            sendMessageToSession(eventType, message, session);
         }
+    }
+
+    public void publishToSession(WebSocketSession session, String eventType, Object data) {
+        TextMessage message = createMessage(eventType, data);
+        if (message == null) {
+            return;
+        }
+        sendMessageToSession(eventType, message, session);
     }
 
     public void publishAmrStatusUpdated(String amrId, String status, String faultCode) {
@@ -56,5 +49,28 @@ public class StreamEventPublisher {
 
     public void publishDashboardSummaryUpdated(DashboardSummaryDto summary) {
         publish(WebSocketConstants.EVENT_DASHBOARD_SUMMARY_UPDATED, summary);
+    }
+
+    private TextMessage createMessage(String eventType, Object data) {
+        StreamEventDto envelope = new StreamEventDto(eventType, Instant.now().toString(), data);
+        try {
+            return new TextMessage(objectMapper.writeValueAsString(envelope));
+        } catch (JsonProcessingException exception) {
+            log.error("Failed to serialize stream event {}", eventType, exception);
+            return null;
+        }
+    }
+
+    private void sendMessageToSession(String eventType, TextMessage message, WebSocketSession session) {
+        if (!session.isOpen()) {
+            sessionRegistry.unregister(session);
+            return;
+        }
+        try {
+            session.sendMessage(message);
+        } catch (IOException exception) {
+            log.warn("Failed to send stream event {} to session {}", eventType, session.getId(), exception);
+            sessionRegistry.unregister(session);
+        }
     }
 }

@@ -20,7 +20,7 @@ public class StreamWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         sessionRegistry.register(session);
-        streamEventPublisher.publish(WebSocketConstants.EVENT_STREAM_CONNECTED, Map.of());
+        streamEventPublisher.publishToSession(session, WebSocketConstants.EVENT_STREAM_CONNECTED, Map.of());
         log.debug("WebSocket stream connected: sessionId={}", session.getId());
     }
 
