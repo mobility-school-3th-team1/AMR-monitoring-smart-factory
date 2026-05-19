@@ -74,9 +74,9 @@
           <div class="summary-box">
             <div class="donut-mini" :style="donutStyle" :data-total="totalChargingAmrs"></div>
             <div class="forecast-legend">
-              <div><span class="dot dot--g"></span> 30분 이내: {{ forecastSummary[0] }}대</div>
-              <div><span class="dot dot--b"></span> 1시간 이내: {{ forecastSummary[1] }}대</div>
-              <div><span class="dot dot--o"></span> 1시간 초과: {{ forecastSummary[2] }}대</div>
+              <div><span class="dot dot--g"></span> {{ forecastBucketLabels[0] }}: {{ forecastSummary[0] }}대</div>
+              <div><span class="dot dot--b"></span> {{ forecastBucketLabels[1] }}: {{ forecastSummary[1] }}대</div>
+              <div><span class="dot dot--o"></span> {{ forecastBucketLabels[2] }}: {{ forecastSummary[2] }}대</div>
             </div>
           </div>
         </div>
@@ -90,10 +90,13 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/plugins/axios'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import {
+  DEMO_FORECAST_BUCKET_LABELS,
   DEMO_PRIMARY_STATION_ID,
   forecastBucketsFromChargingAmrs,
   maxEtaFromChargingAmrs
 } from '@/config/demo-simulation'
+
+const forecastBucketLabels = DEMO_FORECAST_BUCKET_LABELS
 
 const stations = ref([])
 const queue = ref([])
@@ -120,19 +123,18 @@ function badgeStyle(r) {
 const forecastSummary = ref([0, 0, 0])
 
 const donutStyle = computed(() => {
-  const [within30, within60, over60] = forecastSummary.value
-  const total = within30 + within60 + over60
-  if (total === 0) {
-    return { borderTopColor: '#10b981', borderLeftColor: '#f59e0b' }
+  const [within5, within10, over10] = forecastSummary.value
+  const bucketTotal = within5 + within10 + over10
+  const chargingCount = totalChargingAmrs.value
+
+  if (chargingCount === 0 || bucketTotal === 0) {
+    return { background: '#e2e8f0' }
   }
-  const ratio30 = (within30 / total) * 100
-  const ratio60 = (within60 / total) * 100
+
+  const ratio5 = (within5 / bucketTotal) * 100
+  const ratio10 = (within10 / bucketTotal) * 100
   return {
-    borderTopColor: '#10b981',
-    borderRightColor: '#10b981',
-    borderBottomColor: '#3b82f6',
-    borderLeftColor: '#f59e0b',
-    background: `conic-gradient(#10b981 0 ${ratio30}%, #3b82f6 ${ratio30}% ${ratio30 + ratio60}%, #f59e0b ${ratio30 + ratio60}% 100%)`
+    background: `conic-gradient(#10b981 0 ${ratio5}%, #3b82f6 ${ratio5}% ${ratio5 + ratio10}%, #f59e0b ${ratio5 + ratio10}% 100%)`
   }
 })
 

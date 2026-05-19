@@ -3,8 +3,17 @@ export const DEMO_CHARGE_RATE_PCT_PER_SEC = 5
 export const DEMO_BATTERY_FULL_PCT = 100
 export const DEMO_PRIMARY_STATION_ID = 'station-1'
 
+export const DEMO_FORECAST_BUCKET_LABELS = [
+  '5초 이하',
+  '5초 초과 ~ 10초 이하',
+  '10초 초과'
+]
+
 export function estimateSecondsToFullCharge(batteryPercent) {
-  const battery = Number(batteryPercent) || 0
+  const battery = Number(batteryPercent)
+  if (!Number.isFinite(battery) || battery <= 0) {
+    return DEMO_BATTERY_FULL_PCT / DEMO_CHARGE_RATE_PCT_PER_SEC
+  }
   const remaining = Math.max(0, DEMO_BATTERY_FULL_PCT - battery)
   if (remaining === 0) {
     return 0
@@ -27,18 +36,17 @@ export function formatEtaLabel(secondsToFull) {
   return `${minutes}분 ${seconds}초`
 }
 
-/** 0-30분 / 30-60분 / 60분+ 버킷별 대수 */
+/** 5초 이하 / 5~10초 / 10초 초과 버킷별 대수 */
 export function forecastBucketsFromChargingAmrs(chargingAmrs) {
   const buckets = [0, 0, 0]
-  if (!Array.isArray(chargingAmrs)) {
+  if (!Array.isArray(chargingAmrs) || chargingAmrs.length === 0) {
     return buckets
   }
   for (const amr of chargingAmrs) {
     const secondsToFull = estimateSecondsToFullCharge(amr.batteryPercent)
-    const minutesToFull = secondsToFull / 60
-    if (minutesToFull <= 30) {
+    if (secondsToFull <= 5) {
       buckets[0] += 1
-    } else if (minutesToFull <= 60) {
+    } else if (secondsToFull <= 10) {
       buckets[1] += 1
     } else {
       buckets[2] += 1

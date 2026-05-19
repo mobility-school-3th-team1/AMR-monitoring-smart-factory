@@ -35,8 +35,14 @@ public class DemoSimulationProperties {
     /** 배터리 이하이면 STOPPED(%) */
     private int criticalStopBatteryThresholdPct = 5;
 
-    /** 충전 스테이션 맵 좌표(백분율 0~100). 0.5 → 50 */
-    private int chargingPositionXPercent = 50;
+    /** 충전 스테이션 맵 좌표(백분율 0~100, 원점 좌측 상단) */
+    private int chargingPositionXPercent = 5;
 
-    private int chargingPositionYPercent = 80;
+    private int chargingPositionYPercent = 15;
+
+    /** 충전소 도착 판정 허용 오차(%) */
+    private double chargingArrivalTolerancePercent = 1.0;
+
+    /** EN_ROUTE_CHARGING 시 충전소 방향 이동량(%/tick) */
+    private double chargeApproachStepPercent = 2.0;
 }

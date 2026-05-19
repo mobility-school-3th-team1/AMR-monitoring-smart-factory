@@ -75,6 +75,7 @@ public class AmrDemoSimulationService {
 
             switch (normalizedStatus) {
                 case DashboardStatusNormalizer.STATUS_CHARGING -> applyChargingTick(statusLog, now);
+                case DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING -> applyEnRouteChargingTick(statusLog, now);
                 case DashboardStatusNormalizer.STATUS_OPERATING -> {
                     applyBatteryDelta(statusLog, -demoSimulationProperties.getOperatingDischargePct(), now);
                     applyCriticalStopIfNeeded(statusLog, now);
@@ -110,6 +111,27 @@ public class AmrDemoSimulationService {
 
         AmrStatusLog selectedLog = idleCandidates.get(random.nextInt(idleCandidates.size()));
         assignTaskToAmr(selectedLog, LocalDateTime.now());
+    }
+
+    @Transactional
+    public void beginChargeApproach(AmrStatusLog statusLog, LocalDateTime now) {
+        if (statusLog.getAmr() == null) {
+            return;
+        }
+
+        if (isAtChargingPosition(statusLog)) {
+            activateChargingAtStation(statusLog, now);
+            return;
+        }
+
+        statusLog.setStatus(DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING);
+        statusLog.setUpdatedAt(now);
+        amrStatusLogRepository.save(statusLog);
+
+        log.info("AMR {} en route to charger ({}, {})",
+                AmrIdentifierHelper.formatAmrId(statusLog.getAmr().getAmrId()),
+                demoSimulationProperties.getChargingPositionXPercent(),
+                demoSimulationProperties.getChargingPositionYPercent());
     }
 
     private void completeOverdueTasks(LocalDateTime now) {
@@ -162,7 +184,7 @@ public class AmrDemoSimulationService {
         amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
                 .ifPresent(statusLog -> {
                     if (isLowBattery(statusLog)) {
-                        enterChargingState(statusLog, now);
+                        beginChargeApproach(statusLog, now);
                     } else {
                         statusLog.setStatus(DashboardStatusNormalizer.STATUS_IDLE);
                         statusLog.setArea(task.getToArea());
@@ -181,10 +203,57 @@ public class AmrDemoSimulationService {
         if (amrTaskRepository.findFirstByAmr_AmrIdAndDropTimeIsNullOrderByPickTimeDesc(statusLog.getAmr().getAmrId()).isPresent()) {
             return;
         }
-        enterChargingState(statusLog, now);
+        beginChargeApproach(statusLog, now);
     }
 
-    private void enterChargingState(AmrStatusLog statusLog, LocalDateTime now) {
+    private void applyEnRouteChargingTick(AmrStatusLog statusLog, LocalDateTime now) {
+        moveTowardChargingPosition(statusLog);
+        statusLog.setUpdatedAt(now);
+        amrStatusLogRepository.save(statusLog);
+
+        if (isAtChargingPosition(statusLog)) {
+            activateChargingAtStation(statusLog, now);
+        }
+    }
+
+    private void moveTowardChargingPosition(AmrStatusLog statusLog) {
+        int targetX = demoSimulationProperties.getChargingPositionXPercent();
+        int targetY = demoSimulationProperties.getChargingPositionYPercent();
+        double step = demoSimulationProperties.getChargeApproachStepPercent();
+
+        double currentX = statusLog.getPosX() == null ? targetX : statusLog.getPosX().doubleValue();
+        double currentY = statusLog.getPosY() == null ? targetY : statusLog.getPosY().doubleValue();
+
+        double deltaX = targetX - currentX;
+        double deltaY = targetY - currentY;
+
+        if (Math.abs(deltaX) <= step && Math.abs(deltaY) <= step) {
+            statusLog.setPosX(targetX);
+            statusLog.setPosY(targetY);
+            return;
+        }
+
+        if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+            currentX += Math.signum(deltaX) * Math.min(step, Math.abs(deltaX));
+        } else {
+            currentY += Math.signum(deltaY) * Math.min(step, Math.abs(deltaY));
+        }
+
+        statusLog.setPosX((int) Math.round(currentX));
+        statusLog.setPosY((int) Math.round(currentY));
+    }
+
+    private boolean isAtChargingPosition(AmrStatusLog statusLog) {
+        if (statusLog.getPosX() == null || statusLog.getPosY() == null) {
+            return false;
+        }
+        double tolerance = demoSimulationProperties.getChargingArrivalTolerancePercent();
+        double deltaX = Math.abs(statusLog.getPosX() - demoSimulationProperties.getChargingPositionXPercent());
+        double deltaY = Math.abs(statusLog.getPosY() - demoSimulationProperties.getChargingPositionYPercent());
+        return deltaX <= tolerance && deltaY <= tolerance;
+    }
+
+    private void activateChargingAtStation(AmrStatusLog statusLog, LocalDateTime now) {
         statusLog.setStatus(DashboardStatusNormalizer.STATUS_CHARGING);
         statusLog.setPosX(demoSimulationProperties.getChargingPositionXPercent());
         statusLog.setPosY(demoSimulationProperties.getChargingPositionYPercent());
@@ -211,13 +280,18 @@ public class AmrDemoSimulationService {
             amrChargingSessionRepository.save(session);
         }
 
-        log.info("AMR {} entered CHARGING at map ({}, {})",
+        log.info("AMR {} charging at map ({}, {})",
                 AmrIdentifierHelper.formatAmrId(amr.getAmrId()),
                 statusLog.getPosX(),
                 statusLog.getPosY());
     }
 
     private void applyChargingTick(AmrStatusLog statusLog, LocalDateTime now) {
+        if (!isAtChargingPosition(statusLog)) {
+            beginChargeApproach(statusLog, now);
+            return;
+        }
+
         int currentBattery = batteryPercent(statusLog);
         int nextBattery = Math.min(
                 demoSimulationProperties.getBatteryFullPct(),

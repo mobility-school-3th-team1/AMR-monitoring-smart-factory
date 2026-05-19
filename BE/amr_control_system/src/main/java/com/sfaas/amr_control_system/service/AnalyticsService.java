@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 public class AnalyticsService {
 
     private static final int DEFAULT_RANGE_HOURS = 24;
+    private static final String GROUP_BY_MINUTE = "minute";
     private static final String GROUP_BY_HOUR = "hour";
     private static final String GROUP_BY_DAY = "day";
     private static final String GROUP_BY_AMR = "amr";
@@ -177,10 +178,11 @@ public class AnalyticsService {
                     .toList();
         }
 
-        if (GROUP_BY_HOUR.equals(resolvedGroupBy)) {
+        if (GROUP_BY_MINUTE.equals(resolvedGroupBy) || GROUP_BY_HOUR.equals(resolvedGroupBy)) {
+            String timeGroupBy = resolvedGroupBy;
             return tasks.stream()
                     .collect(Collectors.groupingBy(
-                            task -> bucketKey(task.getPickTime(), GROUP_BY_HOUR),
+                            task -> bucketKey(task.getPickTime(), timeGroupBy),
                             LinkedHashMap::new,
                             Collectors.counting()
                     ))
@@ -236,6 +238,7 @@ public class AnalyticsService {
         }
         String normalized = groupBy.trim().toLowerCase(Locale.ROOT);
         if (GROUP_BY_DAY.equals(normalized) || GROUP_BY_HOUR.equals(normalized)
+                || GROUP_BY_MINUTE.equals(normalized)
                 || GROUP_BY_AMR.equals(normalized) || GROUP_BY_TASK_TYPE.equals(normalized)
                 || "task_type".equals(normalized)) {
             if ("task_type".equals(normalized)) {
@@ -344,6 +347,9 @@ public class AnalyticsService {
     private String bucketKey(LocalDateTime timestamp, String groupBy) {
         if (GROUP_BY_DAY.equals(groupBy)) {
             return timestamp.toLocalDate().atStartOfDay().toString();
+        }
+        if (GROUP_BY_MINUTE.equals(groupBy)) {
+            return timestamp.truncatedTo(ChronoUnit.MINUTES).toString();
         }
         return timestamp.truncatedTo(ChronoUnit.HOURS).toString();
     }

@@ -40,8 +40,10 @@ app:
     primary-charge-station-id: 1
     low-battery-charge-threshold-pct: 20
     critical-stop-battery-threshold-pct: 5
-    charging-position-x-percent: 50
-    charging-position-y-percent: 80
+    charging-position-x-percent: 5
+    charging-position-y-percent: 15
+    charging-arrival-tolerance-percent: 1.0
+    charge-approach-step-percent: 2.0
 
 springdoc:
   api-docs:

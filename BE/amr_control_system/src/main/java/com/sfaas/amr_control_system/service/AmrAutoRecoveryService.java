@@ -26,6 +26,7 @@ public class AmrAutoRecoveryService {
 
     private final AmrStatusLogRepository amrStatusLogRepository;
     private final DemoSimulationProperties demoSimulationProperties;
+    private final AmrDemoSimulationService amrDemoSimulationService;
     private final StreamNotificationService streamNotificationService;
 
     @Scheduled(fixedDelayString = "${app.demo.recovery-check-interval-ms:10000}")
@@ -79,9 +80,17 @@ public class AmrAutoRecoveryService {
         } else if (DashboardStatusNormalizer.STATUS_STOPPED.equals(normalizedStatus)) {
             int battery = statusLog.getBatteryPct() == null ? 0 : statusLog.getBatteryPct();
             if (battery <= demoSimulationProperties.getLowBatteryChargeThresholdPct()) {
-                targetStatus = DashboardStatusNormalizer.STATUS_CHARGING;
-                statusLog.setPosX(demoSimulationProperties.getChargingPositionXPercent());
-                statusLog.setPosY(demoSimulationProperties.getChargingPositionYPercent());
+                amrDemoSimulationService.beginChargeApproach(statusLog, recoveredAt);
+                String amrLabel = statusLog.getAmr() != null
+                        ? AmrIdentifierHelper.formatAmrId(statusLog.getAmr().getAmrId())
+                        : "unknown";
+                streamNotificationService.publishAmrStatusChangeAfterCommit(
+                        amrLabel,
+                        DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING,
+                        null
+                );
+                log.info("Auto-recovered AMR {} from STOPPED to charge approach", amrLabel);
+                return;
             }
         }
 

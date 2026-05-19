@@ -15,7 +15,7 @@
     >
       <div class="analysis-grid">
         <BaseCard class="analysis-card">
-          <p class="analysis-card__label">시간대별 작업 건수</p>
+          <p class="analysis-card__label">시간대별 작업 건수 (1분 단위, 최근 60분)</p>
           <div ref="hourlyChartRef" class="chart-host"></div>
         </BaseCard>
 
@@ -121,6 +121,38 @@ function formatWorkloadTimestamp(raw) {
   return parsed.format('HH:mm')
 }
 
+function buildMinuteWorkloadRange() {
+  const rangeEnd = dayjs()
+  const rangeStart = rangeEnd.subtract(59, 'minute').startOf('minute')
+  return {
+    from: rangeStart.format('YYYY-MM-DDTHH:mm:ss'),
+    to: rangeEnd.format('YYYY-MM-DDTHH:mm:ss')
+  }
+}
+
+function fillMinuteWorkloadGaps(rows) {
+  const rangeEnd = dayjs().startOf('minute')
+  const bucketMap = new Map()
+
+  for (const row of rows) {
+    const parsed = parseApiDateTime(row.timestamp)
+    if (!parsed?.isValid()) continue
+    const key = parsed.startOf('minute').format('YYYY-MM-DDTHH:mm:ss')
+    bucketMap.set(key, row.taskCount ?? 0)
+  }
+
+  const filled = []
+  for (let offset = 59; offset >= 0; offset -= 1) {
+    const bucketTime = rangeEnd.subtract(offset, 'minute')
+    const key = bucketTime.format('YYYY-MM-DDTHH:mm:ss')
+    filled.push({
+      timestamp: key,
+      taskCount: bucketMap.get(key) ?? 0
+    })
+  }
+  return filled
+}
+
 function mapResultLabel(result) {
   const key = String(result || '').toLowerCase()
   if (key === 'success') return '정상'
@@ -201,11 +233,15 @@ function renderAmrShareChart() {
 
 async function loadWorkloadAndHistory() {
   try {
+    const minuteRange = buildMinuteWorkloadRange()
     const [hourRes, amrRes] = await Promise.all([
-      api.get('/analytics/workload', { params: { groupBy: 'hour' } }),
+      api.get('/analytics/workload', {
+        params: { groupBy: 'minute', from: minuteRange.from, to: minuteRange.to }
+      }),
       api.get('/analytics/workload', { params: { groupBy: 'amr' } })
     ])
-    workloadByHour.value = Array.isArray(hourRes.data) ? hourRes.data : []
+    const minuteRows = Array.isArray(hourRes.data) ? hourRes.data : []
+    workloadByHour.value = fillMinuteWorkloadGaps(minuteRows)
     workloadByAmr.value = Array.isArray(amrRes.data) ? amrRes.data : []
   } catch (err) {
     console.error('WorkHistoryView workload', err)

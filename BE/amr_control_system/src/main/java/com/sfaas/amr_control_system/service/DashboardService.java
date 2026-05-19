@@ -56,7 +56,8 @@ public class DashboardService {
         for (AmrStatusLog statusLog : latestStatusPerAmr) {
             String normalizedStatus = DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus());
             switch (normalizedStatus) {
-                case DashboardStatusNormalizer.STATUS_OPERATING -> amrOperating++;
+                case DashboardStatusNormalizer.STATUS_OPERATING,
+                        DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING -> amrOperating++;
                 case DashboardStatusNormalizer.STATUS_CHARGING -> amrCharging++;
                 case DashboardStatusNormalizer.STATUS_IDLE -> amrWaiting++;
                 default -> {

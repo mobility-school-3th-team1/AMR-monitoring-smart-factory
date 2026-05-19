@@ -15,21 +15,30 @@
         <div class="kpi-value">{{ dashboardData.amrWaiting }}<span class="kpi-unit">대</span></div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">미해결 알람</div>
-        <div class="kpi-value">{{ dashboardData.activeAlarms }}<span class="kpi-unit">건</span></div>
+        <div class="kpi-label">에러 AMR의 수</div>
+        <div class="kpi-value">{{ dashboardData.amrError ?? 0 }}<span class="kpi-unit">대</span></div>
       </div>
     </section>
 
-    <div class="demo-emergency-bar">
+    <div class="demo-scenario-fab" aria-label="시연용 시나리오 버튼">
       <button
         type="button"
-        class="btn-emergency"
-        :disabled="emergencyBusy"
+        class="demo-scenario-btn demo-scenario-btn--emergency"
+        :disabled="demoScenarioBusy"
+        title="비상 상황 발생 (시연)"
         @click="triggerDemoEmergencyScenario"
       >
-        비상 상황 발생 (시연)
+        비상
       </button>
-      <span class="demo-emergency-hint">알림만 발생 · SCR-03에서 {{ DEFAULT_DEMO_EMERGENCY_AMR_ID }} 비상 정지 실행</span>
+      <button
+        type="button"
+        class="demo-scenario-btn demo-scenario-btn--charging"
+        :disabled="demoScenarioBusy"
+        title="충전 상황 발생 (시연)"
+        @click="triggerDemoChargingScenario"
+      >
+        충전
+      </button>
     </div>
 
     <!-- 에러 메시지 -->
@@ -64,7 +73,7 @@
           <div class="status-strip">
             <div class="strip-item"><div class="k">운행 중 AMR</div><div class="v status-ok">{{ dashboardData.amrOperating }}대</div></div>
             <div class="strip-item"><div class="k">대기 AMR</div><div class="v status-warn">{{ dashboardData.amrWaiting }}대</div></div>
-            <div class="strip-item"><div class="k">주의 AMR</div><div class="v status-critical">{{ dashboardData.activeAlarms }}건</div></div>
+            <div class="strip-item"><div class="k">에러 AMR</div><div class="v status-critical">{{ dashboardData.amrError ?? 0 }}대</div></div>
             <div class="strip-item"><div class="k">가동률</div><div class="v status-ok">{{ Math.round((dashboardData.amrOperating || 0) / Math.max(1, (dashboardData.amrOperating || 0) + (dashboardData.amrWaiting || 0)) * 100) }}%</div></div>
           </div>
         </div>
@@ -175,6 +184,7 @@ import factoryLayoutAssetUrl from '@/assets/factory-layout.png'
 // 기본값 — API 응답에서 누락된 필드를 0으로 보호
 const DASHBOARD_DEFAULTS = {
   activeAlarms: 0,
+  amrError: 0,
   amrOperating: 0,
   amrCharging: 0,
   amrWaiting: 0,
@@ -254,7 +264,8 @@ const amrPositionMap = ref({})
 const environmentAreas = ref({ ...DASHBOARD_DUMMY_ENVIRONMENT })
 const recentAlarms = ref([])
 const recentLogs = ref([])
-const emergencyBusy = ref(false)
+const demoScenarioBusy = ref(false)
+const DEFAULT_DEMO_CHARGING_AMR_ID = 'amr-02'
 
 // 플로어맵에 표시할 AMR 최대 8개 — 매 렌더마다 slice 재계산을 막기 위해 computed 사용
 const visibleAmrList = computed(() => {
@@ -402,31 +413,49 @@ const handleAmrPositionPayload = (payload) => {
   amrPositionMap.value = nextPositionMap
 }
 
-function triggerDemoEmergencyScenario() {
-  if (emergencyBusy.value) return
+async function triggerDemoEmergencyScenario() {
+  if (demoScenarioBusy.value) return
 
   const confirmAction = window.confirm(
-    `비상 상황 알림을 발생시킵니까? (${DEFAULT_DEMO_EMERGENCY_AMR_ID})\n개별 관제에서 비상 정지를 직접 실행해야 합니다.`
+    `비상 상황을 발생시킵니까? (${DEFAULT_DEMO_EMERGENCY_AMR_ID} → ERROR 상태)`
   )
   if (!confirmAction) return
 
-  emergencyBusy.value = true
+  demoScenarioBusy.value = true
   try {
+    await api.post('/demo/scenarios/emergency', { amrId: DEFAULT_DEMO_EMERGENCY_AMR_ID })
+
     const scenario = buildDemoEmergencyScenario(DEFAULT_DEMO_EMERGENCY_AMR_ID)
     writeDemoEmergencyScenario(scenario)
 
-    const alarmEntry = {
-      id: `demo-scenario-${Date.now()}`,
-      level: 'CRITICAL',
-      title: scenario.title,
-      message: scenario.message,
-      occurredAt: scenario.occurredAt
-    }
-    recentAlarms.value = [alarmEntry, ...recentAlarms.value].slice(0, 5)
-
-    window.alert(`${scenario.message}\n\nAMR 개별 관제(SCR-03)로 이동해 비상 정지 버튼을 눌러 주세요.`)
+    await fetchDashboardData(false)
+    window.alert(`${DEFAULT_DEMO_EMERGENCY_AMR_ID}에 오류가 발생했습니다.`)
+  } catch (scenarioError) {
+    console.error('Demo emergency scenario', scenarioError)
+    window.alert(scenarioError.response?.data?.message || '비상 시나리오 적용에 실패했습니다.')
   } finally {
-    emergencyBusy.value = false
+    demoScenarioBusy.value = false
+  }
+}
+
+async function triggerDemoChargingScenario() {
+  if (demoScenarioBusy.value) return
+
+  const confirmAction = window.confirm(
+    `충전 상황을 발생시킵니까? (${DEFAULT_DEMO_CHARGING_AMR_ID} 배터리 20% 이하 → 충전소 이동)`
+  )
+  if (!confirmAction) return
+
+  demoScenarioBusy.value = true
+  try {
+    await api.post('/demo/scenarios/charging', { amrId: DEFAULT_DEMO_CHARGING_AMR_ID })
+    await fetchDashboardData(false)
+    window.alert(`${DEFAULT_DEMO_CHARGING_AMR_ID}가 충전소로 이동합니다.`)
+  } catch (scenarioError) {
+    console.error('Demo charging scenario', scenarioError)
+    window.alert(scenarioError.response?.data?.message || '충전 시나리오 적용에 실패했습니다.')
+  } finally {
+    demoScenarioBusy.value = false
   }
 }
 
@@ -468,39 +497,47 @@ onUnmounted(() => {
 
 <style scoped>
 
-.demo-emergency-bar {
+.demo-scenario-fab {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  background: #fff5f5;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0.55;
 }
 
-.demo-emergency-hint {
-  font-size: 0.72rem;
-  color: #7f1d1d;
-  font-weight: 600;
+.demo-scenario-fab:hover {
+  opacity: 0.95;
 }
 
-.btn-emergency {
-  padding: 8px 14px;
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-weight: 800;
+.demo-scenario-btn {
+  padding: 4px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #475569;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
 }
 
-.btn-emergency:hover:not(:disabled) {
+.demo-scenario-btn--emergency {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.demo-scenario-btn--charging {
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.demo-scenario-btn:hover:not(:disabled) {
   background: #dc2626;
 }
 
-.btn-emergency:disabled {
+.demo-scenario-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

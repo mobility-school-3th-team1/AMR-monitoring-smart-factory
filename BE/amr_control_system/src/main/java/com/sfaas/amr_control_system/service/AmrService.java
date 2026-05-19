@@ -271,9 +271,10 @@ public class AmrService {
         AmrDto dto = new AmrDto();
         dto.setId(AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
         dto.setName(amr.getAmrName());
-        dto.setStatus(latestLog == null
+        String normalizedStatus = latestLog == null
                 ? DashboardStatusNormalizer.STATUS_IDLE
-                : DashboardStatusNormalizer.normalizeAmrStatus(latestLog.getStatus()));
+                : DashboardStatusNormalizer.normalizeAmrStatus(latestLog.getStatus());
+        dto.setStatus(mapAmrDtoStatus(normalizedStatus));
         if (latestLog != null) {
             dto.setFaultCode(latestLog.getFaultCode());
             dto.setFaultMessage(latestLog.getFaultMessage());
@@ -284,7 +285,7 @@ public class AmrService {
         dto.setTotalMileageKm(amr.getTotalMileage());
         dto.setPosition(latestLog == null ? null : toPositionDto(latestLog.getArea(), latestLog.getPosX(), latestLog.getPosY()));
         dto.setDestination(activeTask == null ? null : toPositionDto(activeTask.getToArea(), null, null));
-        dto.setCurrentTask(resolveCurrentTaskLabel(activeTask));
+        dto.setCurrentTask(resolveCurrentTaskLabel(activeTask, normalizedStatus));
         dto.setLastSeenAt(latestLog != null ? latestLog.getUpdatedAt() : null);
         return dto;
     }
@@ -319,7 +320,17 @@ public class AmrService {
         return position;
     }
 
-    private String resolveCurrentTaskLabel(AmrTask task) {
+    private String mapAmrDtoStatus(String normalizedStatus) {
+        if (DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING.equals(normalizedStatus)) {
+            return DashboardStatusNormalizer.STATUS_OPERATING;
+        }
+        return normalizedStatus;
+    }
+
+    private String resolveCurrentTaskLabel(AmrTask task, String normalizedStatus) {
+        if (DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING.equals(normalizedStatus)) {
+            return "충전 스테이션으로 이동 중";
+        }
         if (task == null) {
             return null;
         }

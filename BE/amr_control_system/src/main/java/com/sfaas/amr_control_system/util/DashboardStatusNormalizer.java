@@ -12,12 +12,14 @@ public final class DashboardStatusNormalizer {
     public static final String STATUS_ERROR = "ERROR";
     public static final String STATUS_EMERGENCY_STOP = "EMERGENCY_STOP";
     public static final String STATUS_STOPPED = "STOPPED";
+    public static final String STATUS_EN_ROUTE_CHARGING = "EN_ROUTE_CHARGING";
     public static final String SUPPORTED_AMR_QUERY_STATUS_VALUES =
-            "OPERATING, IDLE, CHARGING, ERROR, EMERGENCY_STOP, STOPPED";
+            "OPERATING, IDLE, CHARGING, EN_ROUTE_CHARGING, ERROR, EMERGENCY_STOP, STOPPED";
     private static final Set<String> SUPPORTED_AMR_QUERY_STATUSES = Set.of(
             STATUS_OPERATING,
             STATUS_IDLE,
             STATUS_CHARGING,
+            STATUS_EN_ROUTE_CHARGING,
             STATUS_ERROR,
             STATUS_EMERGENCY_STOP,
             STATUS_STOPPED
@@ -45,6 +47,10 @@ public final class DashboardStatusNormalizer {
         if (STATUS_CHARGING.equals(upper)) {
             return STATUS_CHARGING;
         }
+        if (STATUS_EN_ROUTE_CHARGING.equals(upper)
+                || "ENROUTECHARGING".equals(upper.replace("_", ""))) {
+            return STATUS_EN_ROUTE_CHARGING;
+        }
         if (STATUS_ERROR.equals(upper) || "FAULT".equals(upper)) {
             return STATUS_ERROR;
         }
@@ -62,6 +68,9 @@ public final class DashboardStatusNormalizer {
         }
         if (lower.contains("비상") || lower.contains("emergency")) {
             return STATUS_EMERGENCY_STOP;
+        }
+        if (lower.contains("충전 스테이션") || lower.contains("충전소") || lower.contains("en route")) {
+            return STATUS_EN_ROUTE_CHARGING;
         }
         if (lower.contains("충전") || lower.contains("charging")) {
             return STATUS_CHARGING;
