@@ -79,6 +79,8 @@ import BaseCard from '../components/atoms/BaseCard.vue'
 import SectionPanel from '../components/molecules/SectionPanel.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import api from '@/plugins/axios'
+import { publish } from '@/plugins/ws'
 
 const route = useRoute()
 
@@ -107,9 +109,35 @@ onMounted(() => {
   amrData.value = sample[q] || sample['AMR-01']
 })
 
-function triggerEmergency() {
-  // placeholder: integrate with API/WS to send emergency stop
-  alert(`비상 정지 명령 전송: ${amrId.value}`)
+async function triggerEmergency() {
+  const confirmAction = window.confirm(`비상 정지 명령을 전송하시겠습니까? (AMR: ${amrId.value})`)
+  if (!confirmAction) return
+
+  try {
+    // Send REST command
+    const resp = await api.post(`/amrs/${encodeURIComponent(amrId.value)}/commands`, { command: 'emergencyStop' })
+    const accepted = resp?.data?.accepted === true
+
+    if (accepted) {
+      amrData.value.error = 'EMERGENCY_STOP'
+      amrData.value.status = 'EMERGENCY_STOP'
+      // notify user
+      alert('비상 정지 명령이 수락되었습니다.')
+    } else {
+      alert('비상 정지 요청이 전송되었으나 서버에서 수락 응답을 받지 못했습니다.')
+    }
+
+    // Publish MQTT command (best-effort)
+    try {
+      publish('factory/amr/command', { amrId: amrId.value, command: 'emergencyStop', timestamp: new Date().toISOString() })
+    } catch (pubErr) {
+      console.warn('MQTT publish failed (best-effort):', pubErr)
+    }
+  } catch (err) {
+    console.error('triggerEmergency error', err)
+    const msg = err?.response?.data?.message || '비상 정지 요청 중 오류가 발생했습니다.'
+    alert(msg)
+  }
 }
 
 // small chart mock
