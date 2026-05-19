@@ -100,6 +100,8 @@ src/main/java/com/{group}/{artifact}/
 ### REST API 구현
 
 - 기본 경로: `/api/v1`
+- **Swagger UI (Docker):** `http://localhost:8080/api/v1/swagger-ui/index.html` — `POST /auth/login` 후 **Authorize**에 Bearer 토큰 입력
+- **OpenAPI JSON:** `http://localhost:8080/api/v1/v3/api-docs`
 - 인증: JWT 기반 (`Authorization: Bearer <token>`)
 - 목록 API 기본값: `page=1`, `limit=20`
 - 날짜/시간: ISO 8601 UTC

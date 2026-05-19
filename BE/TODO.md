@@ -169,12 +169,13 @@ AMR 스마트 팩토리 통합 모니터링 시스템의 백엔드 구현.
 **범위:** REST 8개 컨트롤러 영역, JWT Bearer Try it out.  
 **범위 외:** WebSocket `/stream`, DAS/MQTT, FE UI, 12-F·Phase C 신규 API.
 
-### S-1. 의존성·설정
+### S-1. 의존성·설정 — 완료 (2026-05-19)
 
-- [ ] `build.gradle`: `springdoc-openapi-starter-webmvc-ui` (Spring Boot 3.5 호환)
-- [ ] `OpenApiConfig`: API 메타, 서버 URL `http://localhost:8080/api/v1`, JWT Bearer security scheme
-- [ ] `SecurityConfig`: `/v3/api-docs/**`, `/swagger-ui/**` permit (springdoc 기본 경로 — 구현 후 확정·문서화)
-- [ ] `context-path: /api/v1`에서 Swagger UI·Try it out base path 정상
+- [x] `build.gradle`: `springdoc-openapi-starter-webmvc-ui:2.8.8`
+- [x] `OpenApiConfig`, `OpenApiDocumentationConstants`: API 메타, 서버 `http://localhost:8080/api/v1`, JWT Bearer `bearerAuth`
+- [x] `SecurityConfig`: `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` permitAll
+- [x] `application.yaml` / `application-docker.yaml`: springdoc 경로
+- [x] Docker: `GET /api/v1/v3/api-docs`·Swagger UI HTML 200 (S-2 Try it out·JWT는 다음)
 
 ### S-2. 노출·인증 검증
 

@@ -32,6 +32,15 @@ app:
     recovery-seconds: 60
     recovery-check-interval-ms: 10000
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false
+
 management:
   endpoints:
     web:

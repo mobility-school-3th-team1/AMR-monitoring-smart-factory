@@ -33,6 +33,11 @@ public class SecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers(WebSocketConstants.STREAM_PATH).permitAll()
+                .requestMatchers(
+                        OpenApiDocumentationConstants.API_DOCS_PATH_PATTERN,
+                        OpenApiDocumentationConstants.SWAGGER_UI_PATH_PATTERN,
+                        OpenApiDocumentationConstants.SWAGGER_UI_HTML_PATH
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
