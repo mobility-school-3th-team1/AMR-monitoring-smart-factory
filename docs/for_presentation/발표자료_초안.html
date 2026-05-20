@@ -313,6 +313,17 @@
     }
     .slide.trouble-slide ul.compact { font-size: 0.92rem; margin-top: 0.35rem; }
     .slide.trouble-slide ul.compact li { margin-bottom: 0.25rem; }
+    .slide.ai-slide-compact h2 { font-size: 1.45rem; margin-bottom: 0.5rem; }
+    .slide.ai-slide-compact .thesis-line { font-size: 0.95rem; margin-bottom: 0.6rem; }
+    .slide.ai-slide-compact h3 { font-size: 1rem; margin: 0 0 0.4rem; }
+    .slide.ai-slide-compact .tool-role-list li { font-size: 0.9rem; margin-bottom: 0.3rem; }
+    .slide.appendix-slide .section-tag {
+      color: var(--muted);
+      background: var(--surface-2);
+      border-color: var(--border);
+    }
+    .slide.appendix-cover h1 { font-size: 2rem; }
+    .slide.appendix-cover .subtitle { font-size: 1rem; }
     .hero-meta { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 2rem; }
     .hero-meta span { color: var(--muted); font-size: 0.95rem; }
     .nav {
@@ -1017,171 +1028,45 @@ erDiagram
     <p class="note">BE와 DAS는 직접 연동하지 않으며, FE가 DB 반영 결과와 MQTT 정지를 연결한다 (<code>docs/ADR/20260518-1252-AMR-emergency-logic.md</code>).</p>
   </section>
 
-  <!-- 4-6 AI 개요 -->
-  <section class="slide ai-slide" data-title="4.6 AI 프로세스 개요">
+  <!-- 4-6 AI (본편 1페이지) -->
+  <section class="slide ai-slide ai-slide-compact" data-title="4.6 AI 보조 개발">
     <span class="section-tag">4.6 AI 기반 개발</span>
-    <h2>4.6 AI 기반 개발 프로세스: 개요</h2>
-    <p class="thesis-line">본 프로젝트는 AI를 <strong>만능 개발 도구</strong>로 쓰지 않고, <strong>특성을 이해한 뒤 역할에 맞게 배치</strong>하고, <strong>AGENTS.md로 환경을 고정</strong>한 다음 <strong>Copilot 리뷰와 팀 검증</strong>으로 바이브 코딩의 위험을 줄였습니다.</p>
-    <div class="grid-2 ai-cards">
-      <div class="card">
-        <h3>단순 AI 활용이 아닌 점</h3>
-        <ul>
-          <li>도구 나열이 아니라 <strong>입력·절차·검증</strong>을 저장소에 문서화</li>
-          <li>루트·FE·BE·DB <code>AGENTS.md</code> + 영역별 <code>TODO.md</code></li>
-          <li>설계 선행(<code>docs/</code>) → 구현 → PR 게이트의 반복 루프</li>
+    <h2>4.6 AI 보조 개발 (통제된 활용)</h2>
+    <p class="thesis-line">AI 출력은 <strong>초안</strong>입니다. 확정, 병합, 운영 책임은 팀이 둡니다. 도구 나열이 아니라 <strong>입력, 절차, 검증</strong>을 저장소에 문서화했습니다.</p>
+    <div class="grid-2" style="gap:1rem;align-items:start;">
+      <div>
+        <h3>3단 필터</h3>
+        <div class="gate-step">
+          <span class="gate-num">1</span>
+          <p><strong>AGENTS.md + TODO.md</strong><br>범위, 순서, 금지 사항 고정. Copilot, Cursor가 동일 저장소 규칙을 공유합니다.</p>
+        </div>
+        <div class="gate-step">
+          <span class="gate-num">2</span>
+          <p><strong>docs/ 기준 구현 + 로컬 검증</strong><br>명세 정합 확인, API 스모크, Docker 통합 기동 후 PR.</p>
+        </div>
+        <div class="gate-step">
+          <span class="gate-num">3</span>
+          <p><strong>Copilot PR Review + 팀 approve</strong><br>보안, 과다 변경을 코멘트로 조기 발견. merge는 팀이 최종 결정합니다.</p>
+        </div>
+        <p style="font-size:0.88rem;color:var(--muted);margin-top:0.45rem;">Design-first: <code>docs/</code> 명세 선행 후 구현</p>
+      </div>
+      <div>
+        <h3>도구 역할</h3>
+        <ul class="tool-role-list">
+          <li><strong>Gemini</strong> 도메인, 논문, 기사 조사</li>
+          <li><strong>ChatGPT</strong> API, 화면, 발표 문서 초안</li>
+          <li><strong>GitHub Copilot</strong> FE, BE, DB 코드 생성, PR Review</li>
+          <li><strong>Cursor</strong> BE 구현, 설계 정합성 검토, TODO 갱신</li>
         </ul>
-      </div>
-      <div class="card">
-        <h3>달성하고자 한 것</h3>
-        <ul>
-          <li>담당자·도구가 달라도 <strong>비슷한 품질·순서</strong>로 작업</li>
-          <li>AI 초안의 속도 + 팀이 확정한 <strong>명세의 정합성</strong></li>
-          <li>재현성 한계를 인정하고, <strong>프로세스로 보완</strong></li>
-        </ul>
-      </div>
-    </div>
-    <p class="note" style="margin-top:0.75rem;">상세: <code>docs/for_presentation/AI 기반 개발 프로세스 적용 산출물.md</code></p>
-  </section>
-
-  <!-- 4-6 AI 특성 -->
-  <section class="slide ai-slide" data-title="4.6 AI 특성과 한계">
-    <span class="section-tag">4.6 AI 기반 개발</span>
-    <h2>AI의 특성: 왜 통제가 필요한가</h2>
-    <div class="grid-2 ai-cards">
-      <div class="card">
-        <h3>출력의 변동성</h3>
-        <p>같은 질문이라도 <strong>프롬프트·맥락·도구</strong>에 따라 결과가 크게 달라집니다. 팀원마다 다른 스타일의 코드·문서가 나올 수 있습니다.</p>
-      </div>
-      <div class="card">
-        <h3>재현성 비보장</h3>
-        <p>동일 사용자가 동일하게 요청해도 <strong>매번 같은 답을 받는다고 보장되지 않습니다.</strong> 어제 되던 방식이 오늘은 빗나갈 수 있습니다.</p>
-      </div>
-      <div class="card">
-        <h3>환각·과잉 변경</h3>
-        <p>그럴듯하지만 틀린 API·스키마, 요청 범위를 넘는 리팩터, 시크릿 커밋 등 <strong>바이브 코딩</strong>에서 흔한 리스크가 있습니다.</p>
-      </div>
-      <div class="card">
-        <h3>우리의 전제</h3>
-        <p>AI 출력은 <strong>초안</strong>입니다. 속도는 AI에, <strong>확정·병합·운영 책임</strong>은 팀에 둡니다.</p>
+        <p class="note" style="margin-top:0.65rem;font-size:0.88rem;">상세 자료는 발표 종료 후 「부록 A」 및 <code>AI 기반 개발 프로세스 적용 산출물.md</code></p>
       </div>
     </div>
   </section>
-
-  <!-- 4-6 AGENTS.md -->
-  <section class="slide ai-slide" data-title="4.6 AGENTS.md">
-    <span class="section-tag">4.6 AI 기반 개발</span>
-    <h2>AGENTS.md로 AI 환경 제어</h2>
-    <p class="thesis-line"><code>AGENTS.md</code>는 Copilot·Cursor 등 에이전트가 따를 <strong>프로젝트 규칙·컨텍스트</strong>입니다. 개인 프롬프트 실력 차이를 줄이고, AI가 이 저장소에서 허용된 방식으로 움직이게 합니다.</p>
-    <table>
-      <tr><th>문서</th><th>제어 내용</th><th>효과</th></tr>
-      <tr><td>루트 <code>AGENTS.md</code></td><td>설계 문서 경로, Git·PR 규칙, Design-first, 에이전트 행동 16항</td><td>공통 언어·금지 사항 통일</td></tr>
-      <tr><td><code>FE/</code>·<code>BE/</code>·<code>DB/AGENTS.md</code></td><td>스택별 패키지 구조, API·ERD 참조, 네이밍·레이어 규칙</td><td>영역별 구현 편차 축소</td></tr>
-      <tr><td>영역별 <code>TODO.md</code></td><td>한 번에 한 태스크, Phase·스모크 단위 분해</td><td>동시 다발·무계획 구현 방지</td></tr>
-    </table>
-    <h3>에이전트 행동 규칙 (발췌)</h3>
-    <ul style="font-size:0.92rem;">
-      <li>근거 없는 추측 금지, 설계 변경 시 <code>docs/</code> 선행 수정</li>
-      <li>요청 범위 외 변경·관련 없는 코드 삭제 금지, 파일 단위·한 번에 편집</li>
-      <li>시크릿 하드코딩 금지, 명시적 변수명·프로젝트 스타일 준수</li>
-    </ul>
-  </section>
-
-  <!-- 4-6 3단 게이트 -->
-  <section class="slide ai-slide" data-title="4.6 품질 게이트">
-    <span class="section-tag">4.6 AI 기반 개발</span>
-    <h2>3단 필터: 바이브 코딩 리스크 완화</h2>
-    <div class="gate-step">
-      <span class="gate-num">1</span>
-      <p><strong>AGENTS.md + TODO.md (사전 통제)</strong><br>무엇을 읽고, 어떤 순서로, 무엇을 하지 말아야 하는지 고정. Copilot·Cursor가 동일 저장소 규칙을 공유합니다.</p>
-    </div>
-    <div class="gate-step">
-      <span class="gate-num">2</span>
-      <p><strong>구현 + 로컬 검증</strong><br><code>docs/</code> 명세 기준 구현, API 스모크·Docker 통합 기동으로 확인 후 PR. AI 생성물을 그대로 믿지 않습니다.</p>
-    </div>
-    <div class="gate-step">
-      <span class="gate-num">3</span>
-      <p><strong>Copilot PR Review + 팀 approve (사후 필터)</strong><br><code>jwt.secret</code> 원격 커밋, <code>node_modules</code> 711파일 추적 등을 코멘트로 조기 발견. 수용·거부는 팀이 최종 결정합니다.</p>
-    </div>
-    <p class="note">시행착오(4.7)는 이 3단 구조가 실제로 작동한 사례입니다. AI만 믿었다면 운영·보안 사고로 이어질 수 있었습니다.</p>
-  </section>
-
-  <!-- 4-6 도구별 역할 -->
-  <section class="slide ai-slide" data-title="4.6 도구별 역할">
-    <span class="section-tag">4.6 AI 기반 개발</span>
-    <h2>도구별 역할 분담 (적재적소)</h2>
-    <p style="font-size:0.92rem;color:var(--muted);margin-bottom:0.5rem;">각 도구의 강점만 쓰고, 검증 책임은 팀·프로세스에 둡니다.</p>
-    <table>
-      <tr><th>도구</th><th>적합한 역할</th><th>하지 않는 것</th><th>대표 산출물</th></tr>
-      <tr><td>Gemini</td><td>논문·기사 조사, Git·운영 힌트</td><td>코드 확정·병합 판단</td><td>프로젝트 정의서 배경, 고도화 비전</td></tr>
-      <tr><td>ChatGPT</td><td>문서·API·발표 초안 문장</td><td>저장소 전체 정합 실행 검증</td><td>API 정의.md 초안</td></tr>
-      <tr><td>GitHub Copilot</td><td>FE/BE/DB 보일러플레이트, PR Review</td><td>요구사항·일정 최종 확정</td><td>소스, jwt.secret 발견</td></tr>
-      <tr><td>Cursor</td><td>BE 구현, 설계 교차 검토, TODO 갱신</td><td>단독 merge 승인</td><td>BE/TODO.md, ADR, 스모크</td></tr>
-    </table>
-  </section>
-
-  <!-- 4-6 워크플로 -->
-  <section class="slide ai-slide" data-title="4.6 AI 워크플로">
-    <span class="section-tag">4.6 AI 기반 개발</span>
-    <h2>AI 활용 워크플로우 (전체 흐름)</h2>
-    <div class="mermaid">
-flowchart LR
-  subgraph phase1 ["기획·설계"]
-    A["조사 Gemini/ChatGPT"] --> B["설계 초안 AI"]
-    B --> C["팀 확정 docs/"]
-  end
-  subgraph phase2 ["환경 고정"]
-    C --> D["AGENTS.md TODO.md"]
-    D --> E["정합성 재검토 Cursor"]
-  end
-  subgraph phase3 ["구현·검증"]
-    E --> F["구현 Copilot/Cursor"]
-    F --> G["로컬 스모크"]
-    G --> H["PR Copilot Review"]
-    H --> I["팀 approve merge"]
-  end
-    </div>
-    <p style="font-size:0.9rem;margin-top:0.5rem;">핵심: <strong>AI 초안 → AGENTS로 구현 통제 → Copilot·팀으로 2차 필터</strong>. Design-first로 API·ERD·화면·ADR을 먼저 맞춘 뒤 코드에 반영합니다.</p>
-  </section>
-
-  <!-- 4-6 적용 사례 -->
-  <section class="slide ai-slide" data-title="4.6 적용 사례">
-    <span class="section-tag">4.6 AI 기반 개발</span>
-    <h2>적용 사례와 산출물</h2>
-    <table>
-      <tr><th>사례</th><th>AI 역할</th><th>팀·프로세스 역할</th><th>산출물</th></tr>
-      <tr>
-        <td>배경·수요 도출</td>
-        <td>Gemini 조사, ChatGPT 문장 정리</td>
-        <td>근거 선별·재서술</td>
-        <td>프로젝트 정의서, 고도화 비전</td>
-      </tr>
-      <tr>
-        <td>통합 설계·BE</td>
-        <td>API·계층 초안, Cursor 구현·TODO</td>
-        <td>ADR 확정, Docker 통합 검증</td>
-        <td>API 정의, 비상정지 ADR, REST API</td>
-      </tr>
-      <tr>
-        <td>협업 표준</td>
-        <td>AGENTS·TODO 초안·갱신</td>
-        <td>규칙 합의, 한 태스크씩 진행</td>
-        <td>루트·영역 AGENTS.md, BE/TODO.md</td>
-      </tr>
-      <tr>
-        <td>품질 게이트</td>
-        <td>Copilot 코드·PR Review</td>
-        <td>이슈 수정, merge 결정</td>
-        <td>시행착오.md 기록 사례</td>
-      </tr>
-    </table>
-    <p class="screen-goal" style="margin-top:0.75rem;"><strong>의의:</strong> AI Assisted Development를 도구 사용이 아니라 <strong>특성 이해 + 환경 통제 + 다단 검증</strong>이 있는 프로세스로 내재화했습니다.</p>
-  </section>
-
   <!-- 4-7 트러블슈팅 개요 -->
   <section class="slide ai-slide trouble-slide" data-title="4.7 트러블슈팅 개요">
     <span class="section-tag">4.7 트러블슈팅</span>
     <h2>4.7 트러블슈팅: 개요</h2>
-    <p class="warn-line">AI 보조 개발 중 실제로 발생한 이슈입니다. <strong>Copilot PR Review와 팀 검증</strong> 없이 병합했다면 보안 사고, 리뷰 마비, 명세 불일치로 이어질 수 있었습니다.</p>
+    <p class="warn-line">멀티 스택 병행 개발 중 실제로 발생한 이슈입니다. 조기 발견과 재정합 없이 진행했다면 보안, 리뷰, 명세 불일치로 이어질 수 있었습니다.</p>
     <table>
       <tr><th>사례</th><th>무엇이 문제였나</th><th>어떻게 해결했나</th></tr>
       <tr><td>① jwt.secret</td><td>인증 키가 원격 저장소에 노출</td><td>profile 분리 + gitignore, PR 리뷰로 발견</td></tr>
@@ -1210,7 +1095,7 @@ flowchart LR
       <li><code>application.yaml</code>을 공용 설정과 분리, <code>jwt.secret</code>은 로컬, 테스트 전용 파일에만 둠.</li>
       <li>해당 파일은 <code>.gitignore</code>에 추가해 원격에 올라가지 않게 함.</li>
     </ul>
-    <p class="screen-goal"><strong>교훈:</strong> AI 생성 설정 파일은 커밋 전에 diff와 PR 리뷰로 반드시 확인합니다.</p>
+    <p class="screen-goal"><strong>교훈:</strong> 자동 생성 설정 파일은 커밋 전에 diff와 PR 리뷰로 반드시 확인합니다.</p>
   </section>
 
   <!-- 4-7 사례2 node_modules -->
@@ -1266,11 +1151,11 @@ flowchart LR
     <h2>시행착오에서 얻은 점</h2>
     <div class="grid-2 ai-cards">
       <div class="card">
-        <h3>프로세스와의 연결</h3>
+        <h3>사례별 요약</h3>
         <ul>
-          <li>①, ②는 <strong>Copilot PR Review</strong> 단계에서 걸러지거나 해결됨</li>
-          <li>③은 <strong>Design-first + 정합성 재검토</strong>로 예방 가능</li>
-          <li>AGENTS.md, TODO 순차 작업이 무작정 AI에 맡기지 않는 이유</li>
+          <li>① 보안: 민감 설정은 profile 분리와 gitignore로 차단</li>
+          <li>② 협업: PR 변경 범위를 줄여 리뷰 가능 상태 유지</li>
+          <li>③ 설계: API, 화면 우선으로 ERD, 엔티티 재정합</li>
         </ul>
       </div>
       <div class="card">
@@ -1278,11 +1163,11 @@ flowchart LR
         <ul>
           <li>PR 전: diff 범위, <code>.gitignore</code>, 시크릿 파일 확인</li>
           <li>설계 변경 시: API, ERD, 화면, ADR 동시 갱신</li>
-          <li>AI 출력은 초안, merge는 팀 approve만</li>
+          <li>merge는 팀 approve 후에만 반영</li>
         </ul>
       </div>
     </div>
-    <p class="note">바이브 코딩의 속도는 활용하되, 검증 없이 병합하지 않는 것이 본 프로젝트의 운영 원칙입니다.</p>
+    <p class="note">속도와 자동화는 활용하되, 검증 없이 병합하지 않는 것이 본 프로젝트의 운영 원칙입니다.</p>
   </section>
 
   <!-- 5 로드맵 -->
@@ -1326,10 +1211,157 @@ flowchart LR
       <li>저장소: AMR-monitoring-smart-factory</li>
       <li>설계: docs/프로젝트 정의서.md, 화면 설계서.md, API 정의.md</li>
       <li>기동: 루트 compose.yml (FE :3000, BE :8080, Node-RED :1880)</li>
-      <li>AI 산출물: docs/for_presentation/AI 기반 개발 프로세스 적용 산출물.md</li>
+      <li>AI 상세 부록: 발표 종료 후 「부록 A」 슬라이드 (또는 <code>AI 기반 개발 프로세스 적용 산출물.md</code>)</li>
     </ul>
   </section>
 
+
+  <!-- 부록 A 표지 -->
+  <section class="slide appendix-slide appendix-cover" data-title="부록 A 표지">
+    <span class="section-tag">부록</span>
+    <h1>부록 A. AI 기반 개발 프로세스 (상세)</h1>
+    <p class="subtitle">본편 4.6은 1페이지 요약입니다. 아래 슬라이드는 발표 본문에서 생략한 보충 자료입니다.</p>
+    <p style="font-size:0.92rem;color:var(--muted);margin-top:1.5rem;">원문: <code>docs/for_presentation/AI 기반 개발 프로세스 적용 산출물.md</code></p>
+  </section>
+
+  <!-- 부록 A-1 -->
+  <section class="slide appendix-slide ai-slide" data-title="부록 A-1 배경과 목표">
+    <span class="section-tag">부록 A</span>
+    <h2>AI 활용 배경과 목표</h2>
+    <div class="grid-2 ai-cards">
+      <div class="card">
+        <h3>단순 AI 활용이 아닌 점</h3>
+        <ul>
+          <li>도구 나열이 아니라 <strong>입력·절차·검증</strong>을 저장소에 문서화</li>
+          <li>루트·FE·BE·DB <code>AGENTS.md</code> + 영역별 <code>TODO.md</code></li>
+          <li>설계 선행(<code>docs/</code>) → 구현 → PR 게이트의 반복 루프</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>달성하고자 한 것</h3>
+        <ul>
+          <li>담당자·도구가 달라도 <strong>비슷한 품질·순서</strong>로 작업</li>
+          <li>AI 초안의 속도 + 팀이 확정한 <strong>명세의 정합성</strong></li>
+          <li>재현성 한계를 인정하고, <strong>프로세스로 보완</strong></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 부록 A-2 -->
+  <section class="slide appendix-slide ai-slide" data-title="부록 A-2 AI 특성">
+    <span class="section-tag">부록 A</span>
+    <h2>AI의 특성: 왜 통제가 필요한가</h2>
+    <div class="grid-2 ai-cards">
+      <div class="card">
+        <h3>출력의 변동성</h3>
+        <p>같은 질문이라도 <strong>프롬프트·맥락·도구</strong>에 따라 결과가 크게 달라집니다. 팀원마다 다른 스타일의 코드·문서가 나올 수 있습니다.</p>
+      </div>
+      <div class="card">
+        <h3>재현성 비보장</h3>
+        <p>동일 사용자가 동일하게 요청해도 <strong>매번 같은 답을 받는다고 보장되지 않습니다.</strong> 어제 되던 방식이 오늘은 빗나갈 수 있습니다.</p>
+      </div>
+      <div class="card">
+        <h3>환각·과잉 변경</h3>
+        <p>그럴듯하지만 틀린 API·스키마, 요청 범위를 넘는 리팩터, 시크릿 커밋 등 <strong>바이브 코딩</strong>에서 흔한 리스크가 있습니다.</p>
+      </div>
+      <div class="card">
+        <h3>전제</h3>
+        <p>AI 출력은 <strong>초안</strong>입니다. 속도는 AI에, <strong>확정·병합·운영 책임</strong>은 팀에 둡니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 부록 A-3 -->
+  <section class="slide appendix-slide ai-slide" data-title="부록 A-3 AGENTS.md">
+    <span class="section-tag">부록 A</span>
+    <h2>AGENTS.md로 AI 환경 제어</h2>
+    <p class="thesis-line"><code>AGENTS.md</code>는 Copilot·Cursor 등 에이전트가 따를 <strong>프로젝트 규칙·컨텍스트</strong>입니다. 개인 프롬프트 실력 차이를 줄이고, AI가 이 저장소에서 허용된 방식으로 움직이게 합니다.</p>
+    <table>
+      <tr><th>문서</th><th>제어 내용</th><th>효과</th></tr>
+      <tr><td>루트 <code>AGENTS.md</code></td><td>설계 문서 경로, Git·PR 규칙, Design-first, 에이전트 행동 16항</td><td>공통 언어·금지 사항 통일</td></tr>
+      <tr><td><code>FE/</code>·<code>BE/</code>·<code>DB/AGENTS.md</code></td><td>스택별 패키지 구조, API·ERD 참조, 네이밍·레이어 규칙</td><td>영역별 구현 편차 축소</td></tr>
+      <tr><td>영역별 <code>TODO.md</code></td><td>한 번에 한 태스크, Phase·스모크 단위 분해</td><td>동시 다발·무계획 구현 방지</td></tr>
+    </table>
+    <h3>에이전트 행동 규칙 (발췌)</h3>
+    <ul style="font-size:0.92rem;">
+      <li>근거 없는 추측 금지, 설계 변경 시 <code>docs/</code> 선행 수정</li>
+      <li>요청 범위 외 변경·관련 없는 코드 삭제 금지, 파일 단위·한 번에 편집</li>
+      <li>시크릿 하드코딩 금지, 명시적 변수명·프로젝트 스타일 준수</li>
+    </ul>
+  </section>
+
+  <!-- 부록 A-4 -->
+  <section class="slide appendix-slide ai-slide" data-title="부록 A-4 도구별 역할">
+    <span class="section-tag">부록 A</span>
+    <h2>도구별 역할 분담 (적재적소)</h2>
+    <p style="font-size:0.92rem;color:var(--muted);margin-bottom:0.5rem;">각 도구의 강점만 쓰고, 검증 책임은 팀·프로세스에 둡니다.</p>
+    <table>
+      <tr><th>도구</th><th>적합한 역할</th><th>하지 않는 것</th><th>대표 산출물</th></tr>
+      <tr><td>Gemini</td><td>논문·기사 조사, Git·운영 힌트</td><td>코드 확정·병합 판단</td><td>프로젝트 정의서 배경, 고도화 비전</td></tr>
+      <tr><td>ChatGPT</td><td>문서·API·발표 초안 문장</td><td>저장소 전체 정합 실행 검증</td><td>API 정의.md 초안</td></tr>
+      <tr><td>GitHub Copilot</td><td>FE/BE/DB 보일러플레이트, PR Review</td><td>요구사항·일정 최종 확정</td><td>소스, jwt.secret 발견</td></tr>
+      <tr><td>Cursor</td><td>BE 구현, 설계 교차 검토, TODO 갱신</td><td>단독 merge 승인</td><td>BE/TODO.md, ADR, 스모크</td></tr>
+    </table>
+  </section>
+
+  <!-- 부록 A-5 -->
+  <section class="slide appendix-slide ai-slide" data-title="부록 A-5 워크플로">
+    <span class="section-tag">부록 A</span>
+    <h2>AI 활용 워크플로우 (전체 흐름)</h2>
+    <div class="mermaid">
+flowchart LR
+  subgraph phase1 ["기획·설계"]
+    A["조사 Gemini/ChatGPT"] --> B["설계 초안 AI"]
+    B --> C["팀 확정 docs/"]
+  end
+  subgraph phase2 ["환경 고정"]
+    C --> D["AGENTS.md TODO.md"]
+    D --> E["정합성 재검토 Cursor"]
+  end
+  subgraph phase3 ["구현·검증"]
+    E --> F["구현 Copilot/Cursor"]
+    F --> G["로컬 스모크"]
+    G --> H["PR Copilot Review"]
+    H --> I["팀 approve merge"]
+  end
+    </div>
+    <p style="font-size:0.9rem;margin-top:0.5rem;">핵심: <strong>AI 초안 → AGENTS로 구현 통제 → Copilot·팀으로 2차 필터</strong>. Design-first로 API·ERD·화면·ADR을 먼저 맞춘 뒤 코드에 반영합니다.</p>
+  </section>
+
+  <!-- 부록 A-6 -->
+  <section class="slide appendix-slide ai-slide" data-title="부록 A-6 적용 사례">
+    <span class="section-tag">부록 A</span>
+    <h2>적용 사례와 산출물</h2>
+    <table>
+      <tr><th>사례</th><th>AI 역할</th><th>팀·프로세스 역할</th><th>산출물</th></tr>
+      <tr>
+        <td>배경·수요 도출</td>
+        <td>Gemini 조사, ChatGPT 문장 정리</td>
+        <td>근거 선별·재서술</td>
+        <td>프로젝트 정의서, 고도화 비전</td>
+      </tr>
+      <tr>
+        <td>통합 설계·BE</td>
+        <td>API·계층 초안, Cursor 구현·TODO</td>
+        <td>ADR 확정, Docker 통합 검증</td>
+        <td>API 정의, 비상정지 ADR, REST API</td>
+      </tr>
+      <tr>
+        <td>협업 표준</td>
+        <td>AGENTS·TODO 초안·갱신</td>
+        <td>규칙 합의, 한 태스크씩 진행</td>
+        <td>루트·영역 AGENTS.md, BE/TODO.md</td>
+      </tr>
+      <tr>
+        <td>품질 게이트</td>
+        <td>Copilot 코드·PR Review</td>
+        <td>이슈 수정, merge 결정</td>
+        <td>PR 리뷰 기록, 시행착오.md</td>
+      </tr>
+    </table>
+    <p class="screen-goal" style="margin-top:0.75rem;"><strong>의의:</strong> AI Assisted Development를 도구 사용이 아니라 <strong>특성 이해 + 환경 통제 + 다단 검증</strong>이 있는 프로세스로 내재화했습니다.</p>
+  </section>
 </div>
 
 <nav class="nav">
