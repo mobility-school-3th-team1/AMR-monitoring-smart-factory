@@ -165,7 +165,7 @@ public class AmrDemoSimulationService {
         }
 
         Area fromArea = areas.get(random.nextInt(areas.size()));
-        Area toArea = areas.get(random.nextInt(areas.size()));
+        Area toArea = pickDifferentArea(areas, fromArea);
 
         AmrTask task = new AmrTask();
         task.setAmr(amr);
@@ -378,6 +378,25 @@ public class AmrDemoSimulationService {
         }
         LocalDateTime allowedAfter = chargingBatteryAllowedAfter.get(amrId);
         return allowedAfter != null && !now.isBefore(allowedAfter);
+    }
+
+    private Area pickDifferentArea(List<Area> areas, Area fromArea) {
+        if (areas.size() < 2) {
+            return fromArea;
+        }
+        Area candidate = fromArea;
+        int attempts = 0;
+        while (candidate.getAreaId().equals(fromArea.getAreaId()) && attempts < 8) {
+            candidate = areas.get(random.nextInt(areas.size()));
+            attempts++;
+        }
+        if (candidate.getAreaId().equals(fromArea.getAreaId())) {
+            return areas.stream()
+                    .filter(area -> !area.getAreaId().equals(fromArea.getAreaId()))
+                    .findFirst()
+                    .orElse(fromArea);
+        }
+        return candidate;
     }
 
     private AmrStatusLog copyStatusSnapshot(AmrStatusLog source) {

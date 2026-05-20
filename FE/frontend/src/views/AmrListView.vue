@@ -46,9 +46,34 @@
             </div>
           </a>
         </div>
-        <div class="mini-note">스크롤해서 AMR을 선택하면 상세 화면으로 이동합니다.</div>
+        <div class="mini-note">AMR을 선택하면 상세 정보 모달이 열립니다.</div>
       </div>
     </aside>
+
+    <Teleport to="body">
+      <div
+        v-if="detailModalOpen"
+        class="amr-detail-modal-backdrop"
+        role="presentation"
+        @click.self="closeDetailModal"
+      >
+        <div
+          class="amr-detail-modal-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="amr-detail-modal-title"
+        >
+          <h2 id="amr-detail-modal-title" class="amr-detail-modal-title">AMR 개별 관제</h2>
+          <AmrDetailView
+            v-if="selectedAmrId"
+            :amr-id="selectedAmrId"
+            embedded
+            @close="closeDetailModal"
+            @updated="loadAmrs"
+          />
+        </div>
+      </div>
+    </Teleport>
 
     <section class="dashboard-panel">
       <div class="summary-row">
@@ -67,7 +92,12 @@
                 <tr><th>AMR ID</th><th>상태</th><th>배터리</th><th>현재 위치</th><th>목적지</th><th>현재 작업</th><th>이동 속도</th></tr>
               </thead>
               <tbody>
-                <tr v-for="r in robots" :key="r.rawId">
+                <tr
+                  v-for="r in robots"
+                  :key="r.rawId"
+                  class="amr-table-row"
+                  @click="openDetail(r.rawId)"
+                >
                   <td>{{ r.id }}</td>
                   <td><span class="badge" :class="r.tagClass">{{ r.tagDisplay }}</span></td>
                   <td>{{ r.battery }}%</td>
@@ -86,12 +116,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import api from '@/plugins/axios'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
+import AmrDetailView from './AmrDetailView.vue'
 
-const router = useRouter()
+const detailModalOpen = ref(false)
+const selectedAmrId = ref('')
 
 const AMR_LIST_LIMIT = 50
 
@@ -224,11 +255,37 @@ onMounted(() => {
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
   window.removeEventListener('demo-scenario-applied', handleDemoScenarioApplied)
+  document.body.style.overflow = ''
+  window.removeEventListener('keydown', handleEscapeKey)
 })
 
 function openDetail(amrId) {
-  router.push({ path: '/amr-detail', query: { amr: amrId } })
+  if (!amrId) return
+  selectedAmrId.value = amrId
+  detailModalOpen.value = true
 }
+
+function closeDetailModal() {
+  detailModalOpen.value = false
+  selectedAmrId.value = ''
+  loadAmrs()
+}
+
+function handleEscapeKey(event) {
+  if (event.key === 'Escape' && detailModalOpen.value) {
+    closeDetailModal()
+  }
+}
+
+watch(detailModalOpen, (isOpen) => {
+  if (isOpen) {
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleEscapeKey)
+  } else {
+    document.body.style.overflow = ''
+    window.removeEventListener('keydown', handleEscapeKey)
+  }
+})
 </script>
 
 <style scoped>
@@ -255,6 +312,37 @@ function openDetail(amrId) {
 .amr-select-foot { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; font-size:0.64rem; color:#475569; }
 .amr-select-loc { font-size:0.6rem; color:#64748b; }
 .mini-note { font-size:0.58rem; color:#64748b; margin-top:6px; }
+
+.amr-detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.amr-detail-modal-panel {
+  width: min(720px, 100%);
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
+  padding: 16px 18px 20px;
+  border-radius: 12px;
+  background: #f8fafc;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.amr-detail-modal-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.amr-table-row { cursor: pointer; }
+.amr-table-row:hover td { background: #f8fafc; }
 
 .dashboard-panel { flex:1; display:flex; flex-direction:column; gap:8px; min-width:0; }
 .summary-row { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; flex-shrink:0; }

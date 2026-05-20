@@ -3,7 +3,6 @@ import { useAuthStore } from '@/store'
 
 import AuthLayout from '../layouts/AuthLayout.vue'
 import WorkspaceLayout from '../layouts/WorkspaceLayout.vue'
-import AmrDetailView from '../views/AmrDetailView.vue'
 import AmrListView from '../views/AmrListView.vue'
 import BatteryView from '../views/BatteryView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -41,12 +40,7 @@ const routes = [
       },
       {
         path: 'amr-detail',
-        component: AmrDetailView,
-        meta: {
-          title: 'AMR 개별 관제',
-          description: '선택한 장비의 상세 상태와 비상 제어를 다룹니다.',
-          requiresAuth: true
-        }
+        redirect: '/amr-list'
       },
       {
         path: 'battery',

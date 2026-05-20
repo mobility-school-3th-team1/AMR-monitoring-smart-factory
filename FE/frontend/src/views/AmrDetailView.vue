@@ -1,13 +1,17 @@
 <template>
-  <div class="detail-layout">
+  <div class="detail-layout" :class="{ 'detail-layout--embedded': embedded }">
     <SectionPanel
       eyebrow="AMR 개별 관제"
       title="선택 장비 상태"
       subtitle="REST 상세 조회 및 비상 정지 명령"
     >
+      <div v-if="embedded" class="modal-toolbar">
+        <button type="button" class="modal-close-btn" @click="emitClose">닫기</button>
+      </div>
+
       <div v-if="loadError" class="error-banner">{{ loadError }}</div>
 
-      <div class="amr-picker-row">
+      <div v-if="!embedded" class="amr-picker-row">
         <label class="amr-picker-label" for="amr-number-input">AMR 번호</label>
         <input
           id="amr-number-input"
@@ -62,7 +66,6 @@
 import BaseCard from '../components/atoms/BaseCard.vue'
 import SectionPanel from '../components/molecules/SectionPanel.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import {
   clearDemoEmergencyScenario,
   readDemoEmergencyScenario
@@ -71,8 +74,18 @@ import api from '@/plugins/axios'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import { publish } from '@/plugins/ws'
 
-const route = useRoute()
-const router = useRouter()
+const props = defineProps({
+  amrId: {
+    type: String,
+    default: ''
+  },
+  embedded: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['close', 'updated'])
 
 const MQTT_TOPIC_AMR_COMMAND = 'factory/amr/command'
 
@@ -147,6 +160,10 @@ const lastSeenLabel = computed(() => {
   return `최종 수신: ${date.toLocaleString('ko-KR')}`
 })
 
+function emitClose() {
+  emit('close')
+}
+
 function formatAmrIdFromNumber(amrNumber) {
   const parsed = Number(amrNumber)
   if (!Number.isFinite(parsed) || parsed < 1) {
@@ -168,25 +185,25 @@ function refreshDemoScenarioBanner() {
   }
 }
 
+function resolveActiveAmrId() {
+  if (props.embedded) {
+    return String(props.amrId || '').trim()
+  }
+  return formatAmrIdFromNumber(amrNumberInput.value)
+}
+
 function loadAmrByNumber() {
   const amrId = formatAmrIdFromNumber(amrNumberInput.value)
   if (!amrId) {
     loadError.value = '1 이상의 AMR 번호를 입력하세요.'
     return
   }
-  router.push({ path: '/amr-detail', query: { amr: amrId } })
-}
-
-function resolveAmrIdFromRoute() {
-  const queryAmr = route.query.amr
-  if (typeof queryAmr === 'string' && queryAmr.trim()) return queryAmr.trim()
-  const paramAmr = route.params.amr
-  if (typeof paramAmr === 'string' && paramAmr.trim()) return paramAmr.trim()
-  return ''
+  resolvedAmrId.value = amrId
+  loadAmrDetail()
 }
 
 async function loadAmrDetail() {
-  const amrId = resolveAmrIdFromRoute()
+  const amrId = resolveActiveAmrId()
   resolvedAmrId.value = amrId
   if (!amrId) {
     loadError.value = 'AMR 식별자가 없습니다. 목록에서 장비를 선택하세요.'
@@ -203,6 +220,7 @@ async function loadAmrDetail() {
       amrNumberInput.value = matchedNumber
     }
     refreshDemoScenarioBanner()
+    emit('updated')
   } catch (err) {
     loadError.value = err.response?.data?.message || 'AMR 상세를 불러오지 못했습니다.'
     detail.value = null
@@ -251,21 +269,36 @@ function handleDemoScenarioApplied() {
   loadAmrDetail()
 }
 
-onMounted(() => {
-  loadAmrDetail()
+function startPolling() {
+  if (refreshTimer) return
   refreshTimer = setInterval(loadAmrDetail, DEMO_REST_POLLING_INTERVAL_MS)
+}
+
+function stopPolling() {
+  if (!refreshTimer) return
+  clearInterval(refreshTimer)
+  refreshTimer = null
+}
+
+onMounted(() => {
+  if (props.embedded || props.amrId) {
+    loadAmrDetail()
+    startPolling()
+  }
   window.addEventListener('demo-scenario-applied', handleDemoScenarioApplied)
 })
 
 onUnmounted(() => {
-  if (refreshTimer) clearInterval(refreshTimer)
+  stopPolling()
   window.removeEventListener('demo-scenario-applied', handleDemoScenarioApplied)
 })
 
 watch(
-  () => [route.query.amr, route.params.amr],
+  () => props.amrId,
   () => {
-    loadAmrDetail()
+    if (props.embedded) {
+      loadAmrDetail()
+    }
   }
 )
 </script>
@@ -273,6 +306,33 @@ watch(
 <style scoped>
 .detail-layout {
   display: grid;
+}
+
+.detail-layout--embedded :deep(.section-panel) {
+  box-shadow: none;
+  border: none;
+  padding: 0;
+}
+
+.modal-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.modal-close-btn {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  background: #f8fafc;
 }
 
 .amr-picker-row {
