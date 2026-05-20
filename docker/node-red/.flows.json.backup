@@ -3,8 +3,16 @@
         "id": "56b1ad1a6ae62587",
         "type": "tab",
         "label": "플로우 1",
-        "disabled": false,
+        "disabled": true,
         "info": "",
+        "env": []
+    },
+    {
+        "id": "b701e8a4c3d25f10",
+        "type": "tab",
+        "label": "시연 MVP",
+        "disabled": false,
+        "info": "녹화 MVP: env 1s, AMR pos 0.5s (DB status), MySQL sync 1s, factory/amr/command",
         "env": []
     },
     {
@@ -449,12 +457,319 @@
         "tosidebar": true,
         "console": false,
         "tostatus": false,
-        "complete": "payload.areas.AREA_ASSEMBLE_01.sensor1",
+        "complete": "payload.areas.AREA_LOAD_LC.sensor1",
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
         "x": 1020,
         "y": 420,
         "wires": []
+    },
+    {
+        "id": "b702e8a4c3d25f11",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "MVP init",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.2,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 80,
+        "wires": [
+            [
+                "b703e8a4c3d25f12"
+            ]
+        ]
+    },
+    {
+        "id": "b703e8a4c3d25f12",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "init_mvp_seed",
+        "func": "const sensor = (temp, humid, particle, cogas) => ({ temp, humid, particle, cogas });\nconst fourSensors = (t, h, p, c) => ({\n    sensor1: sensor(t, h, p, c),\n    sensor2: sensor(t + 1, h, p, c),\n    sensor3: sensor(t, h + 1, p + 1, c),\n    sensor4: sensor(t, h, p, c + 1)\n});\n\nconst envSeed = {\n    AREA_LOAD_LC: fourSensors(25, 33, 22, 5),\n    AREA_ASSEMBLE_01: fourSensors(24, 32, 21, 4),\n    AREA_ASSEMBLE_02: fourSensors(26, 34, 23, 6),\n    AREA_OUT_BSA: fourSensors(25, 33, 22, 5)\n};\n\nglobal.set('envSeed', envSeed);\nglobal.set('amrPositions', [\n    { amrId: 'amr-01', x: 25, y: 50 },\n    { amrId: 'amr-02', x: 40, y: 30 },\n    { amrId: 'amr-03', x: 55, y: 45 },\n    { amrId: 'amr-04', x: 70, y: 60 },\n    { amrId: 'amr-05', x: 15, y: 75 }\n]);\nglobal.set('mqttStopLatch', {});\nglobal.set('amrStatusesFromDb', {});\n\nmsg.payload = 'MVP seed initialized';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b70cf001syncinj",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "db status 1s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 120,
+        "wires": [
+            [
+                "b70cf002syncfn"
+            ]
+        ]
+    },
+    {
+        "id": "b70cf002syncfn",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "sync_amr_status_from_db",
+        "func": "const { host, database, user, password } = global.get('demoMysqlConfig');\n\nlet pool = global.get('demoMysqlPool');\nif (!pool) {\n    pool = mysql.createPool({\n        host,\n        user,\n        password,\n        database,\n        waitForConnections: true,\n        connectionLimit: 3\n    });\n    global.set('demoMysqlPool', pool);\n}\n\nconst sql = `\nSELECT\n  CONCAT('amr-', LPAD(CAST(s.amr_id AS CHAR), 2, '0')) AS amrId,\n  s.status\nFROM AMR_STATUS_LOG s\nINNER JOIN (\n  SELECT amr_id, MAX(updated_at) AS max_updated_at\n  FROM AMR_STATUS_LOG\n  GROUP BY amr_id\n) latest ON s.amr_id = latest.amr_id AND s.updated_at = latest.max_updated_at\n`;\n\ntry {\n    const [rows] = await pool.query(sql);\n    const statusesFromDb = {};\n    const mqttStopLatch = global.get('mqttStopLatch') || {};\n\n    for (const row of rows) {\n        statusesFromDb[row.amrId] = row.status;\n        if (row.status !== 'EMERGENCY_STOP') {\n            delete mqttStopLatch[row.amrId];\n        }\n    }\n\n    global.set('amrStatusesFromDb', statusesFromDb);\n    global.set('mqttStopLatch', mqttStopLatch);\n} catch (error) {\n    node.warn('MySQL status sync failed: ' + error.message);\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "mysql",
+                "module": "mysql2/promise"
+            }
+        ],
+        "x": 360,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b704e8a4c3d25f13",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "env 10s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.5",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 180,
+        "wires": [
+            [
+                "b705e8a4c3d25f14"
+            ]
+        ]
+    },
+    {
+        "id": "b705e8a4c3d25f14",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "build_environment",
+        "func": "const areas = global.get('envSeed');\nif (!areas) {\n    node.warn('envSeed not initialized');\n    return null;\n}\n\nconst bump = (value, delta, min, max) => {\n    const next = Number(value) + delta;\n    return Math.min(max, Math.max(min, Math.round(next * 10) / 10));\n};\n\nObject.keys(areas).forEach((areaId) => {\n    const area = areas[areaId];\n    ['sensor1', 'sensor2', 'sensor3', 'sensor4'].forEach((sensorKey) => {\n        const sensor = area[sensorKey];\n        if (!sensor) return;\n        const sign = Math.random() < 0.5 ? -1 : 1;\n        sensor.temp = bump(sensor.temp, sign * 0.1, 20, 30);\n        sensor.humid = bump(sensor.humid, sign * 0.1, 28, 38);\n        sensor.particle = bump(sensor.particle, sign * 0.1, 15, 28);\n        sensor.cogas = bump(sensor.cogas, sign * 0.1, 3, 8);\n    });\n});\n\nglobal.set('envSeed', areas);\n\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    areas\n});\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b706e8a4c3d25f15",
+        "type": "mqtt out",
+        "z": "b701e8a4c3d25f10",
+        "name": "pub environment",
+        "topic": "factory/environment/current",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 580,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "b707e8a4c3d25f16",
+        "type": "inject",
+        "z": "b701e8a4c3d25f10",
+        "name": "amr 0.5s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "0.5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.8",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 280,
+        "wires": [
+            [
+                "b708e8a4c3d25f17"
+            ]
+        ]
+    },
+    {
+        "id": "b708e8a4c3d25f17",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "build_amr_positions",
+        "func": "const OPERATING_STATUS = 'OPERATING';\nconst EN_ROUTE_STATUS = 'EN_ROUTE_CHARGING';\nconst CHARGING_STATUS = 'CHARGING';\nconst CHARGING_X = 5;\nconst CHARGING_Y = 15;\nconst step = 1.5;\nconst ARRIVAL_TOLERANCE = 1.0;\n\nconst AMR_ZONES = {\n    'amr-01': { minX: 4, maxX: 23, minY: 14, maxY: 94 },\n    'amr-02': { minX: 26, maxX: 48, minY: 14, maxY: 94 },\n    'amr-03': { minX: 49, maxX: 77, minY: 14, maxY: 88 },\n    'amr-04': { minX: 4, maxX: 95, minY: 14, maxY: 94 },\n    'amr-05': { minX: 4, maxX: 23, minY: 14, maxY: 94 }\n};\n\nconst clamp = (value, min, max) => Math.min(max, Math.max(min, value));\nconst round1 = (value) => Math.round(value * 10) / 10;\n\nconst moveTowardCharge = (x, y) => {\n    let nextX = Number(x);\n    let nextY = Number(y);\n    const dx = CHARGING_X - nextX;\n    const dy = CHARGING_Y - nextY;\n    if (Math.abs(dx) <= step && Math.abs(dy) <= step) {\n        return { x: CHARGING_X, y: CHARGING_Y };\n    }\n    if (Math.abs(dx) >= Math.abs(dy)) {\n        nextX += Math.sign(dx) * Math.min(step, Math.abs(dx));\n    } else {\n        nextY += Math.sign(dy) * Math.min(step, Math.abs(dy));\n    }\n    return { x: round1(nextX), y: round1(nextY) };\n};\n\nconst moveInZone = (item, zone) => {\n    const stateKey = 'amrPath_' + item.amrId;\n    let state = global.get(stateKey) || { axis: 'x', dir: 1 };\n    let x = Number(item.x);\n    let y = Number(item.y);\n\n    if (state.axis === 'x') {\n        x += state.dir * step;\n        if (x <= zone.minX || x >= zone.maxX) {\n            x = clamp(x, zone.minX, zone.maxX);\n            state.dir *= -1;\n            state.axis = 'y';\n        }\n    } else {\n        y += state.dir * step;\n        if (y <= zone.minY || y >= zone.maxY) {\n            y = clamp(y, zone.minY, zone.maxY);\n            state.dir *= -1;\n            state.axis = 'x';\n        }\n    }\n\n    global.set(stateKey, state);\n    return { x: round1(x), y: round1(y) };\n};\n\nconst base = global.get('amrPositions') || [];\nconst statusesFromDb = global.get('amrStatusesFromDb') || {};\nconst mqttStopLatch = global.get('mqttStopLatch') || {};\n\nconst nextPositions = base.map((item) => {\n    const dbStatus = statusesFromDb[item.amrId] || 'IDLE';\n    const zone = AMR_ZONES[item.amrId] || AMR_ZONES['amr-01'];\n\n    if (dbStatus === CHARGING_STATUS) {\n        const atDock = Math.abs(Number(item.x) - CHARGING_X) <= ARRIVAL_TOLERANCE\n            && Math.abs(Number(item.y) - CHARGING_Y) <= ARRIVAL_TOLERANCE;\n        if (atDock) {\n            return { amrId: item.amrId, x: CHARGING_X, y: CHARGING_Y };\n        }\n        const moved = moveTowardCharge(item.x, item.y);\n        return { amrId: item.amrId, x: moved.x, y: moved.y };\n    }\n\n    if (dbStatus === EN_ROUTE_STATUS) {\n        const moved = moveTowardCharge(item.x, item.y);\n        return { amrId: item.amrId, x: moved.x, y: moved.y };\n    }\n\n    const canMove = dbStatus === OPERATING_STATUS && !mqttStopLatch[item.amrId];\n    if (!canMove) {\n        return { amrId: item.amrId, x: item.x, y: item.y };\n    }\n\n    const moved = moveInZone(item, zone);\n    return { amrId: item.amrId, x: moved.x, y: moved.y };\n});\n\nglobal.set('amrPositions', nextPositions);\nmsg.payload = JSON.stringify(nextPositions);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 280,
+        "wires": [
+            [
+                "b709e8a4c3d25f18"
+            ]
+        ]
+    },
+    {
+        "id": "b709e8a4c3d25f18",
+        "type": "mqtt out",
+        "z": "b701e8a4c3d25f10",
+        "name": "pub amr positions",
+        "topic": "factory/amrs/positions",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "aa220a166400682c",
+        "x": 590,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "b70ae8a4c3d25f19",
+        "type": "mqtt in",
+        "z": "b701e8a4c3d25f10",
+        "name": "sub amr command",
+        "topic": "factory/amr/command",
+        "qos": "1",
+        "datatype": "utf8",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 400,
+        "wires": [
+            [
+                "b70be8a4c3d25f1a"
+            ]
+        ]
+    },
+    {
+        "id": "b70be8a4c3d25f1a",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "handle_emergency_stop",
+        "func": "let command;\ntry {\n    command = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    node.warn('Invalid command payload');\n    return null;\n}\n\nif (command.command !== 'emergencyStop' || !command.amrId) {\n    return null;\n}\n\nconst mqttStopLatch = global.get('mqttStopLatch') || {};\nmqttStopLatch[command.amrId] = true;\nglobal.set('mqttStopLatch', mqttStopLatch);\n\nnode.status({ fill: 'red', shape: 'dot', text: command.amrId + ' stopped' });\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "bceb8a003b500495",
+        "type": "modbus-read",
+        "z": "b701e8a4c3d25f10",
+        "name": "온습도 읽기",
+        "topic": "sensor/temp_humid",
+        "showStatusActivities": false,
+        "logIOActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "1",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "2",
+        "rate": "1",
+        "rateUnit": "s",
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "server": "30a7902ccb1ce4eb",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 100,
+        "y": 240,
+        "wires": [
+            [
+                "5629c48e4e2eb509"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "5629c48e4e2eb509",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "read_hum_temp",
+        "func": "// Node-RED Context 변수를 사용하여 이전 값을 저장 (변동성 제어용)\nlet lastData = context.get('lastData') || {\n    p: 22, // particle 초기값\n    c: 5   // cogas 초기값\n};\n\nlet default_temp = 23.2;\nlet default_humid = 35;\n\n// 1. 데이터 추출 및 계산 (온도/습도)\nconst humRaw = msg.payload[0];\nconst tempRaw = msg.payload[1];\n\ntry {\n    let humidity = parseFloat((humRaw / 10.0).toFixed(1));\n    let temperature = 0;\n\n    if (tempRaw >= 0x8000) {\n        temperature = -(0x10000 - tempRaw) / 10.0;\n    } else {\n        temperature = tempRaw / 10.0;\n    }\n    // 소수점 첫째 자리 고정\n    temperature = parseFloat(temperature.toFixed(1));\n\n    // 2. 변동 범위 제어 함수 (Random Walk)\n    // 기존 값에서 step 범위 내로만 변동\n    const getClampedValue = (current, step, min, max) => {\n        let change = (Math.random() * (step * 2) - step); // -step ~ +step 사이값\n        let newValue = current + change;\n        return parseFloat(Math.max(min, Math.min(max, newValue)).toFixed(1));\n    };\n\n    // 정수형 변동 함수 (Particle, CoGas용)\n    const getClampedInt = (current, step, min, max) => {\n        let change = Math.floor(Math.random() * (step * 2 + 1)) - step; // -step ~ +step 사이 정수\n        let newValue = current + change;\n        return Math.max(min, Math.min(max, newValue));\n    };\n\n    // 3. 데이터 업데이트\n    lastData.p = getClampedInt(lastData.p, 1, 10, 150); // ±2 변동\n    lastData.c = getClampedInt(lastData.c, 1, 0, 20);   // ±2 변동\n    context.set('lastData', lastData); // 변 변경된 값 저장\n\n    // 4. 결과 구조 편성\n    msg.payload = {\n        \"timestamp\": new Date().toISOString(),\n        \"areas\": {\n            \"AREA_LOAD_LC\": {\n                \"sensor1\": { \n                    \"temp\": temperature, \n                    \"humid\": humidity, \n                    \"particle\": lastData.p, \n                    \"cogas\": lastData.c \n                },\n            },\n            \"AREA_ASSEMBLE_01\": { \n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n                // 필요 시 위와 동일한 방식으로 센서 추가 가능\n            },\n            \"AREA_ASSEMBLE_02\": {\n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n            },\n            \"AREA_OUT_BSA\": {\n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n            }\n        }\n    };\n\n    return msg;\n} catch (e) {\n    node.error(\"데이터 파싱 오류: \" + e.message);\n    return null;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "b706e8a4c3d25f15"
+            ]
+        ]
     }
 ]

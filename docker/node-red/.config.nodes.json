@@ -430,8 +430,8 @@
     "node-red-contrib-modbus": {
         "name": "node-red-contrib-modbus",
         "version": "5.45.2",
-        "local": true,
-        "user": true,
+        "local": false,
+        "user": false,
         "nodes": {
             "Modbus-Client": {
                 "name": "Modbus-Client",
@@ -439,10 +439,10 @@
                     "modbus-client"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-client.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-client.js"
             },
             "Modbus-Response": {
                 "name": "Modbus-Response",
@@ -450,10 +450,10 @@
                     "modbus-response"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-response.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-response.js"
             },
             "Modbus-Read": {
                 "name": "Modbus-Read",
@@ -461,10 +461,10 @@
                     "modbus-read"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-read.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-read.js"
             },
             "Modbus-Getter": {
                 "name": "Modbus-Getter",
@@ -472,10 +472,10 @@
                     "modbus-getter"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-getter.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-getter.js"
             },
             "Modbus-Flex-Getter": {
                 "name": "Modbus-Flex-Getter",
@@ -483,10 +483,10 @@
                     "modbus-flex-getter"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-flex-getter.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-flex-getter.js"
             },
             "Modbus-Write": {
                 "name": "Modbus-Write",
@@ -494,10 +494,10 @@
                     "modbus-write"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-write.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-write.js"
             },
             "Modbus-Flex-Write": {
                 "name": "Modbus-Flex-Write",
@@ -505,10 +505,10 @@
                     "modbus-flex-write"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-flex-write.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-flex-write.js"
             },
             "Modbus-Server": {
                 "name": "Modbus-Server",
@@ -516,10 +516,10 @@
                     "modbus-server"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-server.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-server.js"
             },
             "Modbus-Queue-Info": {
                 "name": "Modbus-Queue-Info",
@@ -527,10 +527,10 @@
                     "modbus-queue-info"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-queue-info.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-queue-info.js"
             },
             "Modbus-Flex-Connector": {
                 "name": "Modbus-Flex-Connector",
@@ -538,10 +538,10 @@
                     "modbus-flex-connector"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-flex-connector.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-flex-connector.js"
             },
             "Modbus-IO-Config": {
                 "name": "Modbus-IO-Config",
@@ -549,10 +549,10 @@
                     "modbus-io-config"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-io-config.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-io-config.js"
             },
             "Modbus-Response-Filter": {
                 "name": "Modbus-Response-Filter",
@@ -560,10 +560,10 @@
                     "modbus-response-filter"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-response-filter.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-response-filter.js"
             },
             "Modbus-Flex-Sequencer": {
                 "name": "Modbus-Flex-Sequencer",
@@ -571,10 +571,10 @@
                     "modbus-flex-sequencer"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-flex-sequencer.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-flex-sequencer.js"
             },
             "Modbus-Flex-Fc": {
                 "name": "Modbus-Flex-Fc",
@@ -582,10 +582,10 @@
                     "modbus-flex-fc"
                 ],
                 "enabled": true,
-                "local": true,
+                "local": false,
                 "user": false,
                 "module": "node-red-contrib-modbus",
-                "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-flex-fc.js"
+                "file": "/usr/src/node-red/node_modules/node-red-contrib-modbus/modbus/modbus-flex-fc.js"
             }
         }
     }

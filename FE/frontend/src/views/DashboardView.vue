@@ -52,7 +52,6 @@
       <!-- 플로어맵 (좌측) -->
       <section class="dashboard-panel compact-map-panel">
         <div class="floor-map-wrap">
-          <div class="map-label-chip">AMR 위치 현황도</div>
           <div class="floor-map">
             <div class="floor-map-grid">
               <img class="floor-map-image" :src="factoryLayoutAssetUrl" alt="공장 레이아웃" />

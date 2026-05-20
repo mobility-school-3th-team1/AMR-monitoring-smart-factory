@@ -8,6 +8,14 @@
         "env": []
     },
     {
+        "id": "b701e8a4c3d25f10",
+        "type": "tab",
+        "label": "시연 MVP",
+        "disabled": false,
+        "info": "녹화 MVP: env 1s, AMR pos 0.5s (DB status), MySQL sync 1s, factory/amr/command",
+        "env": []
+    },
+    {
         "id": "aa220a166400682c",
         "type": "mqtt-broker",
         "name": "",
@@ -458,14 +466,6 @@
         "wires": []
     },
     {
-        "id": "b701e8a4c3d25f10",
-        "type": "tab",
-        "label": "시연 MVP",
-        "disabled": false,
-        "info": "녹화 MVP: env 1s, AMR pos 0.5s (DB status), MySQL sync 1s, factory/amr/command",
-        "env": []
-    },
-    {
         "id": "b702e8a4c3d25f11",
         "type": "inject",
         "z": "b701e8a4c3d25f10",
@@ -596,9 +596,7 @@
         "x": 340,
         "y": 180,
         "wires": [
-            [
-                "b706e8a4c3d25f15"
-            ]
+            []
         ]
     },
     {
@@ -720,5 +718,95 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "bceb8a003b500495",
+        "type": "modbus-read",
+        "z": "b701e8a4c3d25f10",
+        "name": "온습도 읽기",
+        "topic": "sensor/temp_humid",
+        "showStatusActivities": false,
+        "logIOActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "unitid": "1",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "2",
+        "rate": "1",
+        "rateUnit": "s",
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "server": "30a7902ccb1ce4eb",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 100,
+        "y": 240,
+        "wires": [
+            [
+                "5629c48e4e2eb509"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "5629c48e4e2eb509",
+        "type": "function",
+        "z": "b701e8a4c3d25f10",
+        "name": "read_hum_temp",
+        "func": "// Node-RED Context 변수를 사용하여 이전 값을 저장 (변동성 제어용)\nlet lastData = context.get('lastData') || {\n    p: 22, // particle 초기값\n    c: 5   // cogas 초기값\n};\n\nlet default_temp = 23.2;\nlet default_humid = 35;\n\n// 1. 데이터 추출 및 계산 (온도/습도)\nconst humRaw = msg.payload[0];\nconst tempRaw = msg.payload[1];\n\ntry {\n    let humidity = parseFloat((humRaw / 10.0).toFixed(1));\n    let temperature = 0;\n\n    if (tempRaw >= 0x8000) {\n        temperature = -(0x10000 - tempRaw) / 10.0;\n    } else {\n        temperature = tempRaw / 10.0;\n    }\n    // 소수점 첫째 자리 고정\n    temperature = parseFloat(temperature.toFixed(1));\n\n    // 2. 변동 범위 제어 함수 (Random Walk)\n    // 기존 값에서 step 범위 내로만 변동\n    const getClampedValue = (current, step, min, max) => {\n        let change = (Math.random() * (step * 2) - step); // -step ~ +step 사이값\n        let newValue = current + change;\n        return parseFloat(Math.max(min, Math.min(max, newValue)).toFixed(1));\n    };\n\n    // 정수형 변동 함수 (Particle, CoGas용)\n    const getClampedInt = (current, step, min, max) => {\n        let change = Math.floor(Math.random() * (step * 2 + 1)) - step; // -step ~ +step 사이 정수\n        let newValue = current + change;\n        return Math.max(min, Math.min(max, newValue));\n    };\n\n    // 3. 데이터 업데이트\n    lastData.p = getClampedInt(lastData.p, 1, 10, 150); // ±2 변동\n    lastData.c = getClampedInt(lastData.c, 1, 0, 20);   // ±2 변동\n    context.set('lastData', lastData); // 변 변경된 값 저장\n\n    // 4. 결과 구조 편성\n    msg.payload = {\n        \"timestamp\": new Date().toISOString(),\n        \"areas\": {\n            \"AREA_LOAD_LC\": {\n                \"sensor1\": { \n                    \"temp\": temperature, \n                    \"humid\": humidity, \n                    \"particle\": lastData.p, \n                    \"cogas\": lastData.c \n                },\n            },\n            \"AREA_ASSEMBLE_01\": { \n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n                // 필요 시 위와 동일한 방식으로 센서 추가 가능\n            },\n            \"AREA_ASSEMBLE_02\": {\n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n            },\n            \"AREA_OUT_BSA\": {\n                \"sensor1\": { \"temp\": default_temp, \"humid\": default_humid, \"particle\": getClampedInt(lastData.p, 2, 10, 150), \"cogas\": getClampedInt(lastData.c, 2, 0, 20) }\n            }\n        }\n    };\n\n    return msg;\n} catch (e) {\n    node.error(\"데이터 파싱 오류: \" + e.message);\n    return null;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "b706e8a4c3d25f15"
+            ]
+        ]
+    },
+    {
+        "id": "1654cd9116acfadc",
+        "type": "mqtt in",
+        "z": "b701e8a4c3d25f10",
+        "name": "",
+        "topic": "factory/environment/current",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "aa220a166400682c",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 850,
+        "y": 180,
+        "wires": [
+            [
+                "8f468b4e9bae05c1"
+            ]
+        ]
+    },
+    {
+        "id": "8f468b4e9bae05c1",
+        "type": "debug",
+        "z": "b701e8a4c3d25f10",
+        "name": "debug 7",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1080,
+        "y": 180,
+        "wires": []
     }
 ]
