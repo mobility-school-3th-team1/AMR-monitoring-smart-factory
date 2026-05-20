@@ -45,4 +45,7 @@ public class DemoSimulationProperties {
 
     /** EN_ROUTE_CHARGING 시 충전소 방향 이동량(%/tick) */
     private double chargeApproachStepPercent = 2.0;
+
+    /** 충전소 도착(CHARGING 전환) 후 실제 배터리 충전 시작까지 대기(초) */
+    private int chargeStartDelaySeconds = 2;
 }

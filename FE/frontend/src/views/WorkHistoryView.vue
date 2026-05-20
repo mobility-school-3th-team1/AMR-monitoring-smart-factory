@@ -15,7 +15,7 @@
     >
       <div class="analysis-grid">
         <BaseCard class="analysis-card">
-          <p class="analysis-card__label">시간대별 작업 건수 (1분 단위, 최근 60분)</p>
+          <p class="analysis-card__label">시간대별 작업 건수</p>
           <div ref="hourlyChartRef" class="chart-host"></div>
         </BaseCard>
 
@@ -71,6 +71,7 @@ import { ref, shallowRef, computed, onMounted, onUnmounted, nextTick } from 'vue
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
 import api from '@/plugins/axios'
+import { parseApiDateTime } from '@/utils/api-datetime'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 const WORK_HISTORY_PAGE_LIMIT = 20
 
@@ -99,21 +100,6 @@ const statCards = computed(() => [
     tone: 'green'
   }
 ])
-
-function parseApiDateTime(raw) {
-  if (!raw) return null
-  if (typeof raw === 'string') return dayjs(raw)
-  if (Array.isArray(raw) && raw.length >= 3) {
-    const year = raw[0]
-    const month = raw[1]
-    const day = raw[2]
-    const hour = raw.length > 3 ? raw[3] : 0
-    const minute = raw.length > 4 ? raw[4] : 0
-    const second = raw.length > 5 ? raw[5] : 0
-    return dayjs(new Date(year, month - 1, day, hour, minute, second))
-  }
-  return dayjs(raw)
-}
 
 function formatWorkloadTimestamp(raw) {
   const parsed = parseApiDateTime(raw)

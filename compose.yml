@@ -81,6 +81,7 @@ services:
         required: false
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      TZ: Asia/Seoul
       JWT_SECRET: ${JWT_SECRET:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}

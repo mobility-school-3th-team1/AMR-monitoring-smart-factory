@@ -86,6 +86,10 @@ const displayName = computed(() => detail.value?.name || detail.value?.id || res
 
 const statusLabel = computed(() => {
   const raw = String(detail.value?.status || '').toUpperCase()
+  const taskLine = String(detail.value?.currentTask || '')
+  if (taskLine.includes('충전 스테이션')) {
+    return '운행 중'
+  }
   const labels = {
     OPERATING: '운행 중',
     IDLE: '대기',
@@ -243,13 +247,19 @@ async function triggerEmergency() {
 
 let refreshTimer = null
 
+function handleDemoScenarioApplied() {
+  loadAmrDetail()
+}
+
 onMounted(() => {
   loadAmrDetail()
   refreshTimer = setInterval(loadAmrDetail, DEMO_REST_POLLING_INTERVAL_MS)
+  window.addEventListener('demo-scenario-applied', handleDemoScenarioApplied)
 })
 
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
+  window.removeEventListener('demo-scenario-applied', handleDemoScenarioApplied)
 })
 
 watch(

@@ -31,7 +31,7 @@ export function buildDemoEmergencyScenario(amrId = DEFAULT_DEMO_EMERGENCY_AMR_ID
     active: true,
     amrId,
     title: '비상 상황 감지',
-    message: `${amrId} 구역 이상 감지. AMR 개별 관제 화면에서 비상 정지를 실행하세요.`,
+    message: `${amrId} 기능 고장(ERROR)이 발생했습니다. 개별 관제에서 상태를 확인하세요.`,
     occurredAt: new Date().toISOString()
   }
 }

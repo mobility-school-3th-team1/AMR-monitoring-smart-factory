@@ -22,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,6 +49,7 @@ public class AmrDemoSimulationService {
     private final AreaRepository areaRepository;
     private final Random random = new Random();
     private final AtomicInteger simulationTickCounter = new AtomicInteger(0);
+    private final Map<Integer, LocalDateTime> chargingBatteryAllowedAfter = new ConcurrentHashMap<>();
 
     @Scheduled(fixedRate = 1000)
     @Transactional
@@ -124,9 +127,10 @@ public class AmrDemoSimulationService {
             return;
         }
 
-        statusLog.setStatus(DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING);
-        statusLog.setUpdatedAt(now);
-        amrStatusLogRepository.save(statusLog);
+        AmrStatusLog enRouteLog = copyStatusSnapshot(statusLog);
+        enRouteLog.setStatus(DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING);
+        enRouteLog.setUpdatedAt(now);
+        amrStatusLogRepository.save(enRouteLog);
 
         log.info("AMR {} en route to charger ({}, {})",
                 AmrIdentifierHelper.formatAmrId(statusLog.getAmr().getAmrId()),
@@ -150,6 +154,11 @@ public class AmrDemoSimulationService {
 
     private void assignTaskToAmr(AmrStatusLog statusLog, LocalDateTime now) {
         Amr amr = statusLog.getAmr();
+        String normalizedStatus = DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus());
+        if (isProtectedFromAutomaticStatusChange(normalizedStatus)) {
+            return;
+        }
+
         List<Area> areas = areaRepository.findAll();
         if (areas.size() < 2) {
             return;
@@ -183,6 +192,10 @@ public class AmrDemoSimulationService {
         Amr amr = task.getAmr();
         amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
                 .ifPresent(statusLog -> {
+                    String normalizedStatus = DashboardStatusNormalizer.normalizeAmrStatus(statusLog.getStatus());
+                    if (isProtectedFromAutomaticStatusChange(normalizedStatus)) {
+                        return;
+                    }
                     if (isLowBattery(statusLog)) {
                         beginChargeApproach(statusLog, now);
                     } else {
@@ -261,6 +274,10 @@ public class AmrDemoSimulationService {
         amrStatusLogRepository.save(statusLog);
 
         Amr amr = statusLog.getAmr();
+        chargingBatteryAllowedAfter.put(
+                amr.getAmrId(),
+                now.plusSeconds(demoSimulationProperties.getChargeStartDelaySeconds())
+        );
         boolean hasActiveSession = amrChargingSessionRepository.findByEndTimeIsNull().stream()
                 .anyMatch(session -> session.getAmr() != null
                         && session.getAmr().getAmrId().equals(amr.getAmrId()));
@@ -292,6 +309,10 @@ public class AmrDemoSimulationService {
             return;
         }
 
+        if (!isChargingBatteryAllowed(statusLog.getAmr().getAmrId(), now)) {
+            return;
+        }
+
         int currentBattery = batteryPercent(statusLog);
         int nextBattery = Math.min(
                 demoSimulationProperties.getBatteryFullPct(),
@@ -312,6 +333,7 @@ public class AmrDemoSimulationService {
         statusLog.setStatus(DashboardStatusNormalizer.STATUS_IDLE);
         statusLog.setUpdatedAt(now);
         amrStatusLogRepository.save(statusLog);
+        chargingBatteryAllowedAfter.remove(amr.getAmrId());
 
         amrChargingSessionRepository.findByEndTimeIsNull().stream()
                 .filter(session -> session.getAmr() != null && session.getAmr().getAmrId().equals(amr.getAmrId()))
@@ -348,6 +370,39 @@ public class AmrDemoSimulationService {
 
     private int batteryPercent(AmrStatusLog statusLog) {
         return statusLog.getBatteryPct() == null ? 0 : statusLog.getBatteryPct();
+    }
+
+    private boolean isChargingBatteryAllowed(Integer amrId, LocalDateTime now) {
+        if (amrId == null) {
+            return false;
+        }
+        LocalDateTime allowedAfter = chargingBatteryAllowedAfter.get(amrId);
+        return allowedAfter != null && !now.isBefore(allowedAfter);
+    }
+
+    private AmrStatusLog copyStatusSnapshot(AmrStatusLog source) {
+        AmrStatusLog copy = new AmrStatusLog();
+        copy.setAmr(source.getAmr());
+        copy.setArea(source.getArea());
+        copy.setStatus(source.getStatus());
+        copy.setFaultCode(source.getFaultCode());
+        copy.setFaultMessage(source.getFaultMessage());
+        copy.setFaultRecoveredAt(source.getFaultRecoveredAt());
+        copy.setEmergencyResolvedAt(source.getEmergencyResolvedAt());
+        copy.setPosX(source.getPosX());
+        copy.setPosY(source.getPosY());
+        copy.setYaw(source.getYaw());
+        copy.setLoadWeight(source.getLoadWeight());
+        copy.setBatteryPct(source.getBatteryPct());
+        copy.setSohPct(source.getSohPct());
+        copy.setBatteryTemp(source.getBatteryTemp());
+        return copy;
+    }
+
+    private boolean isProtectedFromAutomaticStatusChange(String normalizedStatus) {
+        return DashboardStatusNormalizer.isErrorStatus(normalizedStatus)
+                || DashboardStatusNormalizer.STATUS_EN_ROUTE_CHARGING.equals(normalizedStatus)
+                || DashboardStatusNormalizer.STATUS_CHARGING.equals(normalizedStatus);
     }
 
     private List<AmrStatusLog> findLatestStatusPerAmr() {

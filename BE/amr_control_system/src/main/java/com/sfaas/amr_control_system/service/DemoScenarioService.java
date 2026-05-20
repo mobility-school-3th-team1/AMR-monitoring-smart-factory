@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +24,6 @@ import java.time.LocalDateTime;
 public class DemoScenarioService {
 
     private static final String TASK_STATUS_CANCELLED = "CANCELLED";
-    private static final String TASK_STATUS_IN_PROGRESS = "IN_PROGRESS";
     private static final String DEMO_EMERGENCY_FAULT_CODE = "DEMO_E001";
     private static final int DEMO_LOW_BATTERY_PCT = 18;
 
@@ -42,20 +42,13 @@ public class DemoScenarioService {
 
         cancelActiveTask(amr, now);
 
-        AmrStatusLog statusLog = amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
-                .orElseGet(() -> {
-                    AmrStatusLog newLog = new AmrStatusLog();
-                    newLog.setAmr(amr);
-                    return newLog;
-                });
-
-        statusLog.setStatus(DashboardStatusNormalizer.STATUS_ERROR);
-        statusLog.setFaultCode(DEMO_EMERGENCY_FAULT_CODE);
-        statusLog.setFaultMessage(formattedAmrId + " 기능 고장 감지 (시연 비상 시나리오)");
-        statusLog.setFaultRecoveredAt(null);
-        statusLog.setEmergencyResolvedAt(null);
-        statusLog.setUpdatedAt(now);
-        amrStatusLogRepository.save(statusLog);
+        AmrStatusLog previousLog = findLatestStatusLog(amr);
+        AmrStatusLog statusLog = appendStatusSnapshot(previousLog, DashboardStatusNormalizer.STATUS_ERROR, log -> {
+            log.setFaultCode(DEMO_EMERGENCY_FAULT_CODE);
+            log.setFaultMessage(formattedAmrId + " 기능 고장 감지 (시연 비상 시나리오)");
+            log.setFaultRecoveredAt(null);
+            log.setEmergencyResolvedAt(null);
+        });
 
         Alarm alarm = new Alarm();
         alarm.setSourceType("amr");
@@ -82,30 +75,60 @@ public class DemoScenarioService {
 
         cancelActiveTask(amr, now);
 
-        AmrStatusLog statusLog = amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
-                .orElseGet(() -> {
-                    AmrStatusLog newLog = new AmrStatusLog();
-                    newLog.setAmr(amr);
-                    return newLog;
-                });
-
-        statusLog.setBatteryPct(DEMO_LOW_BATTERY_PCT);
-        statusLog.setUpdatedAt(now);
-        amrStatusLogRepository.save(statusLog);
+        AmrStatusLog previousLog = findLatestStatusLog(amr);
+        AmrStatusLog statusLog = appendStatusSnapshot(previousLog, previousLog.getStatus(), log -> {
+            log.setFaultCode(null);
+            log.setFaultMessage(null);
+            log.setFaultRecoveredAt(null);
+            log.setEmergencyResolvedAt(null);
+            log.setBatteryPct(DEMO_LOW_BATTERY_PCT);
+        });
 
         amrDemoSimulationService.beginChargeApproach(statusLog, now);
 
         log.info("Demo low-battery charge approach for {}", AmrIdentifierHelper.formatAmrId(amr.getAmrId()));
     }
 
+    private AmrStatusLog appendStatusSnapshot(
+            AmrStatusLog previousLog,
+            String status,
+            Consumer<AmrStatusLog> customizer
+    ) {
+        AmrStatusLog nextLog = new AmrStatusLog();
+        nextLog.setAmr(previousLog.getAmr());
+        nextLog.setArea(previousLog.getArea());
+        nextLog.setStatus(status);
+        nextLog.setPosX(previousLog.getPosX());
+        nextLog.setPosY(previousLog.getPosY());
+        nextLog.setYaw(previousLog.getYaw());
+        nextLog.setLoadWeight(previousLog.getLoadWeight());
+        nextLog.setBatteryPct(previousLog.getBatteryPct());
+        nextLog.setSohPct(previousLog.getSohPct());
+        nextLog.setBatteryTemp(previousLog.getBatteryTemp());
+        nextLog.setFaultCode(previousLog.getFaultCode());
+        nextLog.setFaultMessage(previousLog.getFaultMessage());
+        nextLog.setFaultRecoveredAt(previousLog.getFaultRecoveredAt());
+        nextLog.setEmergencyResolvedAt(previousLog.getEmergencyResolvedAt());
+        customizer.accept(nextLog);
+        nextLog.setUpdatedAt(LocalDateTime.now());
+        return amrStatusLogRepository.save(nextLog);
+    }
+
+    private AmrStatusLog findLatestStatusLog(Amr amr) {
+        return amrStatusLogRepository.findFirstByAmr_AmrIdOrderByUpdatedAtDesc(amr.getAmrId())
+                .orElseGet(() -> {
+                    AmrStatusLog newLog = new AmrStatusLog();
+                    newLog.setAmr(amr);
+                    return newLog;
+                });
+    }
+
     private void cancelActiveTask(Amr amr, LocalDateTime cancelledAt) {
         amrTaskRepository.findFirstByAmr_AmrIdAndDropTimeIsNullOrderByPickTimeDesc(amr.getAmrId())
                 .ifPresent(activeTask -> {
-                    if (TASK_STATUS_IN_PROGRESS.equals(activeTask.getStatus())) {
-                        activeTask.setStatus(TASK_STATUS_CANCELLED);
-                        activeTask.setDropTime(cancelledAt);
-                        amrTaskRepository.save(activeTask);
-                    }
+                    activeTask.setStatus(TASK_STATUS_CANCELLED);
+                    activeTask.setDropTime(cancelledAt);
+                    amrTaskRepository.save(activeTask);
                 });
     }
 

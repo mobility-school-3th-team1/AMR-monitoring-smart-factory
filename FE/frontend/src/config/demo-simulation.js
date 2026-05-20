@@ -37,6 +37,39 @@ export function formatEtaLabel(secondsToFull) {
 }
 
 /** 5초 이하 / 5~10초 / 10초 초과 버킷별 대수 */
+const FORECAST_BUCKET_COLORS = ['#10b981', '#3b82f6', '#f59e0b']
+
+/** 0건 버킷은 호 제외한 conic-gradient 스타일 */
+export function buildForecastDonutStyle(bucketCounts) {
+  const counts = Array.isArray(bucketCounts) ? bucketCounts : []
+  const bucketTotal = counts.reduce((sum, count) => sum + count, 0)
+  if (bucketTotal === 0) {
+    return { background: '#e2e8f0' }
+  }
+
+  let accumulatedPercent = 0
+  const gradientStops = []
+  counts.forEach((count, index) => {
+    if (count <= 0) {
+      return
+    }
+    const slicePercent = (count / bucketTotal) * 100
+    const endPercent = accumulatedPercent + slicePercent
+    gradientStops.push(
+      `${FORECAST_BUCKET_COLORS[index]} ${accumulatedPercent}% ${endPercent}%`
+    )
+    accumulatedPercent = endPercent
+  })
+
+  if (gradientStops.length === 0) {
+    return { background: '#e2e8f0' }
+  }
+
+  return {
+    background: `conic-gradient(${gradientStops.join(', ')})`
+  }
+}
+
 export function forecastBucketsFromChargingAmrs(chargingAmrs) {
   const buckets = [0, 0, 0]
   if (!Array.isArray(chargingAmrs) || chargingAmrs.length === 0) {

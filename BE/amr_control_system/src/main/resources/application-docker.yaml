@@ -44,6 +44,7 @@ app:
     charging-position-y-percent: 15
     charging-arrival-tolerance-percent: 1.0
     charge-approach-step-percent: 2.0
+    charge-start-delay-seconds: 2
 
 springdoc:
   api-docs:

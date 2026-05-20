@@ -117,7 +117,7 @@ function normalizeStatus(rawStatus) {
   if (!rawStatus) return 'waiting'
   const s = String(rawStatus).trim().toUpperCase()
   // Backend may use OPERATING, IDLE, CHARGING, ERROR, etc.
-  if (s === 'OPERATING' || s === 'RUNNING' || s === 'DRIVING') return 'running'
+  if (s === 'OPERATING' || s === 'RUNNING' || s === 'DRIVING' || s === 'EN_ROUTE_CHARGING') return 'running'
   if (s === 'CHARGING') return 'charging'
   if (s === 'IDLE' || s === 'PAUSED' || s === 'STANDBY') return 'waiting'
   if (s === 'STOPPED') return 'error'
@@ -135,7 +135,9 @@ function mapAmr(raw) {
     rawStatus:   String(raw.status || '').toUpperCase(),
     class:       s.cardClass,
     tag:         s.tag,
-    tagDisplay:  s.tagDisplay,
+    tagDisplay:  raw.currentTask && String(raw.currentTask).includes('충전 스테이션')
+      ? raw.currentTask
+      : s.tagDisplay,
     tagClass:    s.tagClass,
     battery:     raw.batteryPercent ?? 0,
     meta:        `${s.tagDisplay}, 배터리 ${raw.batteryPercent ?? 0}%`,
@@ -209,13 +211,19 @@ async function loadAmrs() {
 
 let refreshTimer = null
 
+function handleDemoScenarioApplied() {
+  loadAmrs()
+}
+
 onMounted(() => {
   loadAmrs()
   refreshTimer = setInterval(loadAmrs, DEMO_REST_POLLING_INTERVAL_MS)
+  window.addEventListener('demo-scenario-applied', handleDemoScenarioApplied)
 })
 
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
+  window.removeEventListener('demo-scenario-applied', handleDemoScenarioApplied)
 })
 
 function openDetail(amrId) {

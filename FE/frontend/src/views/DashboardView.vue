@@ -429,6 +429,7 @@ async function triggerDemoEmergencyScenario() {
     writeDemoEmergencyScenario(scenario)
 
     await fetchDashboardData(false)
+    window.dispatchEvent(new CustomEvent('demo-scenario-applied'))
     window.alert(`${DEFAULT_DEMO_EMERGENCY_AMR_ID}에 오류가 발생했습니다.`)
   } catch (scenarioError) {
     console.error('Demo emergency scenario', scenarioError)
@@ -450,6 +451,7 @@ async function triggerDemoChargingScenario() {
   try {
     await api.post('/demo/scenarios/charging', { amrId: DEFAULT_DEMO_CHARGING_AMR_ID })
     await fetchDashboardData(false)
+    window.dispatchEvent(new CustomEvent('demo-scenario-applied'))
     window.alert(`${DEFAULT_DEMO_CHARGING_AMR_ID}가 충전소로 이동합니다.`)
   } catch (scenarioError) {
     console.error('Demo charging scenario', scenarioError)

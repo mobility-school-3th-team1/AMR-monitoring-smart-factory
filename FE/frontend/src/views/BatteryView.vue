@@ -92,6 +92,7 @@ import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
 import {
   DEMO_FORECAST_BUCKET_LABELS,
   DEMO_PRIMARY_STATION_ID,
+  buildForecastDonutStyle,
   forecastBucketsFromChargingAmrs,
   maxEtaFromChargingAmrs
 } from '@/config/demo-simulation'
@@ -122,21 +123,7 @@ function badgeStyle(r) {
 
 const forecastSummary = ref([0, 0, 0])
 
-const donutStyle = computed(() => {
-  const [within5, within10, over10] = forecastSummary.value
-  const bucketTotal = within5 + within10 + over10
-  const chargingCount = totalChargingAmrs.value
-
-  if (chargingCount === 0 || bucketTotal === 0) {
-    return { background: '#e2e8f0' }
-  }
-
-  const ratio5 = (within5 / bucketTotal) * 100
-  const ratio10 = (within10 / bucketTotal) * 100
-  return {
-    background: `conic-gradient(#10b981 0 ${ratio5}%, #3b82f6 ${ratio5}% ${ratio5 + ratio10}%, #f59e0b ${ratio5 + ratio10}% 100%)`
-  }
-})
+const donutStyle = computed(() => buildForecastDonutStyle(forecastSummary.value))
 
 const chargingAmrsForForecast = ref([])
 
@@ -162,7 +149,12 @@ async function fetchChargingAmrsForForecast() {
   try {
     const response = await api.get('/amrs?status=CHARGING&limit=50')
     const list = response.data?.data ?? []
-    return Array.isArray(list) ? list.map(mapApiAmrToChargingRow) : []
+    if (!Array.isArray(list)) {
+      return []
+    }
+    return list
+      .filter((amr) => String(amr.status || '').toUpperCase() === 'CHARGING')
+      .map(mapApiAmrToChargingRow)
   } catch (fetchError) {
     console.error('BatteryView charging amrs', fetchError)
     return []
@@ -303,8 +295,39 @@ td { padding:6px 8px; border-bottom:1px solid #f1f5f9 }
 .dot--g { background:#10b981; }
 .dot--b { background:#3b82f6; }
 .dot--o { background:#f59e0b; }
-.donut-mini { width:70px; height:70px; border-radius:50%; border:10px solid #10b981; border-top-color:#f59e0b; border-left-color:#3b82f6; position:relative }
-.donut-mini::before { content:'총 ' attr(data-total) '대'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.55rem; font-weight:700; width:40px; text-align:center }
+.donut-mini {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: none;
+  position: relative;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+.donut-mini::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+.donut-mini::before {
+  content: '총 ' attr(data-total) '대';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  font-size: 0.55rem;
+  font-weight: 700;
+  width: 40px;
+  text-align: center;
+  color: #334155;
+}
 
 @media (max-width: 1200px) { .row-bottom { grid-template-columns: 1fr } }
 
