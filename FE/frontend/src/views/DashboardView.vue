@@ -82,7 +82,6 @@
       <!-- 공정 구역 환경 현황 (우측 상단) -->
       <section class="dashboard-panel compact-map-panel">
         <div class="floor-map-wrap">
-          <div class="map-label-chip">공정 구역 환경 현황</div>
           <div class="floor-map">
             <div class="floor-map-grid env-grid">
               <img class="floor-map-image" :src="factoryLayoutAssetUrl" alt="공장 레이아웃" />
