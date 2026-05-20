@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store'
 import AuthLayout from '../layouts/AuthLayout.vue'
 import WorkspaceLayout from '../layouts/WorkspaceLayout.vue'
 import AmrListView from '../views/AmrListView.vue'
+import AmrDetailView from '../views/AmrDetailView.vue'
 import BatteryView from '../views/BatteryView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -40,7 +41,12 @@ const routes = [
       },
       {
         path: 'amr-detail',
-        redirect: '/amr-list'
+        component: AmrDetailView,
+        meta: {
+          title: 'AMR 상세',
+          description: '선택한 AMR의 상태, 작업 이력 및 통계를 확인합니다.',
+          requiresAuth: true
+        }
       },
       {
         path: 'battery',

@@ -61,14 +61,13 @@
           class="amr-detail-modal-panel"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="amr-detail-modal-title"
+          aria-label="AMR 상세"
         >
-          <h2 id="amr-detail-modal-title" class="amr-detail-modal-title">AMR 개별 관제</h2>
-          <AmrDetailView
+          <AmrDetailModalPanel
             v-if="selectedAmrId"
             :amr-id="selectedAmrId"
-            embedded
             @close="closeDetailModal"
+            @open-detail-page="openDetailPage"
             @updated="loadAmrs"
           />
         </div>
@@ -119,7 +118,10 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import api from '@/plugins/axios'
 import { DEMO_REST_POLLING_INTERVAL_MS } from '@/config/demo-intervals'
-import AmrDetailView from './AmrDetailView.vue'
+import { useRouter } from 'vue-router'
+import AmrDetailModalPanel from '@/components/amr/AmrDetailModalPanel.vue'
+
+const router = useRouter()
 
 const detailModalOpen = ref(false)
 const selectedAmrId = ref('')
@@ -269,6 +271,13 @@ function closeDetailModal() {
   detailModalOpen.value = false
   selectedAmrId.value = ''
   loadAmrs()
+}
+
+function openDetailPage() {
+  const amrId = selectedAmrId.value
+  if (!amrId) return
+  closeDetailModal()
+  router.push({ path: '/amr-detail', query: { amr: amrId } })
 }
 
 function handleEscapeKey(event) {

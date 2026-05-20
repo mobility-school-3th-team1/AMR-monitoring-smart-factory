@@ -33,6 +33,14 @@ import AppTopBar from '../components/molecules/AppTopBar.vue'
 .workspace-layout__content {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-layout__content > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 </style>

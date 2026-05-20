@@ -9,6 +9,7 @@
     </section>
 
     <SectionPanel
+      class="chart-section"
       eyebrow="작업 이력 및 분석"
       title="분석 요약"
       subtitle="GET /analytics/workload 기반 차트, 최근 작업 이력은 GET /work-histories"
@@ -27,12 +28,14 @@
     </SectionPanel>
 
     <SectionPanel
+      class="table-section"
       eyebrow="작업 내역"
       title="세부 기록 테이블"
       subtitle="페이지 단위 조회 (기본 20건)"
     >
       <div v-if="tableError" class="table-error">{{ tableError }}</div>
-      <table class="simple-table">
+      <div class="table-scroll">
+        <table class="simple-table">
         <thead>
           <tr>
             <th>작업 시간</th>
@@ -58,7 +61,8 @@
             </tr>
           </template>
         </tbody>
-      </table>
+        </table>
+      </div>
     </SectionPanel>
   </div>
 </template>
@@ -186,7 +190,7 @@ function renderHourlyChart() {
   const values = sorted.map((row) => row.taskCount ?? 0)
   hourlyChartInstance.value.setOption({
     tooltip: { trigger: 'axis' },
-    grid: { left: 40, right: 16, top: 24, bottom: 32 },
+    grid: { left: 36, right: 12, top: 16, bottom: 28 },
     xAxis: { type: 'category', data: categories, axisLabel: { rotate: 30 } },
     yAxis: { type: 'value', minInterval: 1 },
     series: [{ type: 'bar', data: values, itemStyle: { color: '#2563eb' } }]
@@ -276,41 +280,125 @@ onUnmounted(() => {
 .view-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
+  font-size: 0.92rem;
 }
 
 .view-stack__stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
   flex: 0 0 auto;
 }
 
-.analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.analysis-card { padding: 12px; }
+.view-stack :deep(.stat-card) {
+  padding: 10px 12px;
+}
+
+.view-stack :deep(.stat-label) {
+  margin-bottom: 6px;
+  font-size: 0.74rem;
+}
+
+.view-stack :deep(.stat-value) {
+  font-size: 1.35rem;
+}
+
+.view-stack :deep(.stat-description) {
+  margin-top: 4px;
+  font-size: 0.7rem;
+}
+
+.view-stack :deep(.section-panel) {
+  padding: 12px 14px;
+}
+
+.view-stack :deep(.section-panel__header) {
+  margin-bottom: 10px;
+}
+
+.view-stack :deep(.section-panel__eyebrow) {
+  margin-bottom: 4px;
+  font-size: 0.68rem;
+}
+
+.view-stack :deep(.section-panel__title) {
+  font-size: 0.9rem;
+}
+
+.view-stack :deep(.section-panel__subtitle) {
+  font-size: 0.74rem;
+}
+
+.chart-section {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.table-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-section :deep(.section-panel) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-section :deep(.section-panel__body) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analysis-card {
+  padding: 8px;
+}
 
 .analysis-card__label {
-  margin: 0 0 10px;
-  font-size: 0.9rem;
+  margin: 0 0 6px;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
 .chart-host {
-  min-height: 220px;
+  height: 150px;
   width: 100%;
 }
 
 .table-error {
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
   background: #fff4f4;
   border: 1px solid #fbcaca;
   color: #b91c1c;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  border: 1px solid rgba(217, 228, 240, 0.95);
+  border-radius: 6px;
 }
 
 .simple-table {
@@ -320,27 +408,28 @@ onUnmounted(() => {
 
 .simple-table th,
 .simple-table td {
-  padding: 10px 10px;
+  padding: 6px 8px;
   border-bottom: 1px solid rgba(217, 228, 240, 0.95);
   text-align: left;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
+}
+
+.simple-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .empty-cell {
   text-align: center;
   color: #94a3b8;
-}
-
-.view-stack > .section-panel { min-height: 0; }
-.view-stack > .section-panel:last-of-type { flex: 1 1 auto; min-height: 0; }
-.view-stack > .section-panel:last-of-type .section-panel__body { overflow: auto; }
-
-.simple-table th {
-  color: var(--color-text-muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  padding: 14px;
 }
 
 @media (max-width: 1440px) {
